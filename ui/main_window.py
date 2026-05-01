@@ -4,12 +4,14 @@ from PySide6.QtWidgets import (
     QMessageBox, QStatusBar, QFrame
 )
 from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QKeySequence, QShortcut
 
 from ui.block_panel import BlockPanel
 from ui.canvas import Canvas
 from ui.properties_panel import PropertiesPanel
 from ui.log_panel import LogPanel
+from ui.variables_panel import VariablesPanel
+from ui.command_palette import CommandPalette
 from ui.flow_manager_dialog import FlowManagerDialog
 from ui.scheduler_dialog import SchedulerDialog, get_signals as get_scheduler_signals
 from ui.settings_dialog import SettingsDialog
@@ -21,7 +23,7 @@ from engine.flow_exporter import FlowExporter
 class RunnerThread(QThread):
     step_started = Signal(int, str)
     step_done    = Signal(int, str, bool, str)
-    step_retry   = Signal(int, str, int, int)   # index, name, attempt, max
+    step_retry   = Signal(int, str, int, int)
     run_finished = Signal(int, int)
 
     def __init__(self, steps):
@@ -45,15 +47,40 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("PyFlow RPA")
-        self.setMinimumSize(1200, 720)
+        self.setMinimumSize(1280, 720)
         self.flow_manager      = FlowManager()
         self.flow_exporter     = FlowExporter()
         self._scheduler_dialog = None
+        self._palette          = None
         self._build_ui()
         self._build_menu()
         self._connect_block_signals()
         self._connect_scheduler_signals()
         self._apply_styles()
+
+    # ── Atalhos de teclado ────────────────────────────────────────────
+
+    def keyPressEvent(self, event):
+        """Captura atalhos globais independente do widget com foco."""
+        key  = event.key()
+        ctrl = event.modifiers() & Qt.ControlModifier
+
+        if ctrl and key == Qt.Key_P:
+            self._on_open_palette()
+            return
+        if ctrl and key == Qt.Key_S:
+            self._on_save()
+            return
+        if ctrl and key == Qt.Key_Return:
+            self._on_run()
+            return
+        if ctrl and key == Qt.Key_L:
+            self._on_clear()
+            return
+
+        super().keyPressEvent(event)
+
+    # ── Sinais ────────────────────────────────────────────────────────
 
     def _connect_block_signals(self):
         from blocks.control.show_message import get_signaller
@@ -91,6 +118,8 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.log_panel.log("error", f"Erro no agendador: {str(e)}")
 
+    # ── UI ────────────────────────────────────────────────────────────
+
     def _build_ui(self):
         central = QWidget()
         self.setCentralWidget(central)
@@ -98,7 +127,7 @@ class MainWindow(QMainWindow):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # ── Toolbar ──────────────────────────────────────────────────
+        # ── Toolbar ───────────────────────────────────────────────────
         toolbar = QWidget()
         toolbar.setObjectName("toolbar")
         tb = QHBoxLayout(toolbar)
@@ -110,20 +139,33 @@ class MainWindow(QMainWindow):
 
         self.btn_run = QPushButton("▶  Executar")
         self.btn_run.setObjectName("btn_run")
+        self.btn_run.setToolTip("Executar fluxo  [Ctrl+Enter]")
         self.btn_run.clicked.connect(self._on_run)
 
         self.btn_stop = QPushButton("■  Parar")
         self.btn_stop.setObjectName("btn_stop")
         self.btn_stop.setEnabled(False)
 
+        self.btn_palette = QPushButton("⚡  Ctrl+P")
+        self.btn_palette.setObjectName("btn_palette")
+        self.btn_palette.setToolTip("Buscar blocos  [Ctrl+P]")
+        self.btn_palette.clicked.connect(self._on_open_palette)
+
         self.btn_scheduler = QPushButton("⏰  Agendar")
         self.btn_scheduler.setObjectName("btn_scheduler")
         self.btn_scheduler.clicked.connect(self._on_open_scheduler)
 
+        self.btn_vars = QPushButton("⚡  Variáveis")
+        self.btn_vars.setObjectName("btn_vars")
+        self.btn_vars.setCheckable(True)
+        self.btn_vars.setChecked(True)
+        self.btn_vars.setToolTip("Mostrar/ocultar painel de variáveis")
+        self.btn_vars.clicked.connect(self._on_toggle_vars)
+
         self.btn_settings = QPushButton("⚙")
         self.btn_settings.setObjectName("btn_settings")
         self.btn_settings.setFixedWidth(36)
-        self.btn_settings.setToolTip("Configurações de execução (retry, comportamento)")
+        self.btn_settings.setToolTip("Configurações de execução")
         self.btn_settings.clicked.connect(self._on_open_settings)
 
         self.btn_flows = QPushButton("📁  Fluxos")
@@ -132,6 +174,7 @@ class MainWindow(QMainWindow):
 
         self.btn_save = QPushButton("💾  Salvar")
         self.btn_save.setObjectName("btn_secondary")
+        self.btn_save.setToolTip("Salvar fluxo  [Ctrl+S]")
         self.btn_save.clicked.connect(self._on_save)
 
         self.btn_export = QPushButton("🐍  Exportar .py")
@@ -140,21 +183,22 @@ class MainWindow(QMainWindow):
 
         self.btn_clear = QPushButton("🗑  Limpar")
         self.btn_clear.setObjectName("btn_secondary")
+        self.btn_clear.setToolTip("Limpar canvas  [Ctrl+L]")
         self.btn_clear.clicked.connect(self._on_clear)
 
-        # Indicador de retry ativo
         self.lbl_retry = QLabel("↻ Retry ON")
         self.lbl_retry.setObjectName("retry_badge")
-        self.lbl_retry.setToolTip("Retry automático ativado")
         self.lbl_retry.hide()
 
         tb.addWidget(title)
         tb.addWidget(self.lbl_retry)
         tb.addStretch()
+        tb.addWidget(self.btn_palette)
         tb.addWidget(self.btn_clear)
         tb.addWidget(self.btn_flows)
         tb.addWidget(self.btn_save)
         tb.addWidget(self.btn_export)
+        tb.addWidget(self.btn_vars)
         tb.addWidget(self.btn_scheduler)
         tb.addWidget(self.btn_settings)
         tb.addWidget(self.btn_stop)
@@ -163,25 +207,43 @@ class MainWindow(QMainWindow):
         root.addWidget(toolbar)
 
         # ── Área principal ────────────────────────────────────────────
-        splitter = QSplitter(Qt.Horizontal)
-        splitter.setObjectName("main_splitter")
+        self.splitter = QSplitter(Qt.Horizontal)
+        self.splitter.setObjectName("main_splitter")
 
         self.block_panel = BlockPanel()
         self.canvas      = Canvas()
+
+        right_panel = QWidget()
+        right_panel.setObjectName("right_panel")
+        right_layout = QVBoxLayout(right_panel)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(0)
+
         self.props_panel = PropertiesPanel()
+        self.vars_panel  = VariablesPanel()
+        self.vars_panel.setFixedWidth(280)
+        self.vars_panel.setMaximumHeight(280)
+
+        sep_mid = QFrame()
+        sep_mid.setFrameShape(QFrame.HLine)
+        sep_mid.setObjectName("log_top_sep")
+
+        right_layout.addWidget(self.props_panel, 1)
+        right_layout.addWidget(sep_mid)
+        right_layout.addWidget(self.vars_panel)
 
         self.canvas.block_selected.connect(self.props_panel.show_block)
         self.canvas.canvas_clicked.connect(self.props_panel.clear)
         self.canvas.block_updated.connect(self._on_block_updated)
 
-        splitter.addWidget(self.block_panel)
-        splitter.addWidget(self.canvas)
-        splitter.addWidget(self.props_panel)
-        splitter.setSizes([220, 720, 280])
-        splitter.setCollapsible(0, False)
-        splitter.setCollapsible(2, False)
+        self.splitter.addWidget(self.block_panel)
+        self.splitter.addWidget(self.canvas)
+        self.splitter.addWidget(right_panel)
+        self.splitter.setSizes([220, 720, 280])
+        self.splitter.setCollapsible(0, False)
+        self.splitter.setCollapsible(2, False)
 
-        root.addWidget(splitter, 1)
+        root.addWidget(self.splitter, 1)
 
         # ── Log ───────────────────────────────────────────────────────
         sep = QFrame()
@@ -196,35 +258,60 @@ class MainWindow(QMainWindow):
         self.status = QStatusBar()
         self.status.setObjectName("status_bar")
         self.setStatusBar(self.status)
-        self.status.showMessage("Pronto. Arraste blocos para o canvas para começar.")
+        self.status.showMessage(
+            "Pronto  •  Ctrl+P buscar blocos  •  Ctrl+Enter executar  •  Ctrl+S salvar"
+        )
 
     def _build_menu(self):
         menu = self.menuBar()
+
         file_menu = menu.addMenu("Arquivo")
-        file_menu.addAction(QAction("Novo fluxo",        self, triggered=self._on_clear))
-        file_menu.addAction(QAction("Salvar",             self, triggered=self._on_save))
-        file_menu.addAction(QAction("Gerenciar fluxos",   self, triggered=self._on_open_flow_manager))
-        file_menu.addAction(QAction("Exportar como .py",  self, triggered=self._on_export))
+        file_menu.addAction(QAction("Novo fluxo  [Ctrl+L]",       self, triggered=self._on_clear))
+        file_menu.addAction(QAction("Salvar  [Ctrl+S]",           self, triggered=self._on_save))
+        file_menu.addAction(QAction("Gerenciar fluxos",           self, triggered=self._on_open_flow_manager))
+        file_menu.addAction(QAction("Exportar como .py",          self, triggered=self._on_export))
         file_menu.addSeparator()
-        file_menu.addAction(QAction("Sair",               self, triggered=self.close))
+        file_menu.addAction(QAction("Sair",                       self, triggered=self.close))
+
+        view_menu = menu.addMenu("Ver")
+        view_menu.addAction(QAction("Buscar blocos  [Ctrl+P]",    self, triggered=self._on_open_palette))
+        view_menu.addAction(QAction("Variáveis ao vivo",          self, triggered=self._on_toggle_vars))
 
         run_menu = menu.addMenu("Executar")
-        run_menu.addAction(QAction("Executar fluxo",      self, triggered=self._on_run))
-        run_menu.addAction(QAction("Agendador",           self, triggered=self._on_open_scheduler))
+        run_menu.addAction(QAction("Executar fluxo  [Ctrl+Enter]",self, triggered=self._on_run))
+        run_menu.addAction(QAction("Agendador",                   self, triggered=self._on_open_scheduler))
         run_menu.addSeparator()
-        run_menu.addAction(QAction("Configurações",       self, triggered=self._on_open_settings))
+        run_menu.addAction(QAction("Configurações",               self, triggered=self._on_open_settings))
+
+    # ── Command Palette ───────────────────────────────────────────────
+
+    def _on_open_palette(self):
+        if self._palette and self._palette.isVisible():
+            self._palette.close()
+            return
+        self._palette = CommandPalette(self)
+        self._palette.block_selected.connect(self._on_palette_block_selected)
+        self._palette.show()
+
+    def _on_palette_block_selected(self, block_cls):
+        from ui.param_dialog import ParamDialog
+        block_instance = block_cls()
+        default_params = {s["name"]: s.get("default", "") for s in block_cls.params_schema}
+        dialog = ParamDialog(block_instance, default_params, self)
+        if dialog.exec():
+            self.canvas._add_block(block_instance, dialog.get_params())
+            self.status.showMessage(f"Bloco adicionado: {block_cls.name}")
+            self.log_panel.log("info", f"✚ Adicionado via Ctrl+P: {block_cls.name}")
+
+    # ── Handlers ──────────────────────────────────────────────────────
+
+    def _on_toggle_vars(self):
+        self.vars_panel.setVisible(self.btn_vars.isChecked())
 
     def _on_open_settings(self):
-        dialog = SettingsDialog(self)
-        if dialog.exec():
+        if SettingsDialog(self).exec():
             cfg = get_runner_config()
             self.lbl_retry.setVisible(cfg.retry_enabled)
-            if cfg.retry_enabled:
-                self.status.showMessage(
-                    f"Retry ativado: {cfg.retry_attempts}x com {cfg.retry_delay}s de intervalo."
-                )
-            else:
-                self.status.showMessage("Retry desativado.")
 
     def _on_open_scheduler(self):
         if self._scheduler_dialog is None or not self._scheduler_dialog.isVisible():
@@ -253,14 +340,16 @@ class MainWindow(QMainWindow):
         if not steps:
             self.status.showMessage("Nada para exportar.")
             return
-        path, _ = QFileDialog.getSaveFileName(self, "Exportar como Python", "exports/", "Python (*.py)")
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Exportar como Python", "exports/", "Python (*.py)")
         if not path:
             return
         import os
-        flow_name  = os.path.splitext(os.path.basename(path))[0]
-        output_dir = os.path.dirname(path)
         try:
-            filepath = self.flow_exporter.export(flow_name, steps, output_dir=output_dir)
+            filepath = self.flow_exporter.export(
+                os.path.splitext(os.path.basename(path))[0],
+                steps, output_dir=os.path.dirname(path)
+            )
             self.status.showMessage(f"Exportado: {filepath}")
             self.log_panel.log("success", f"🐍 Script exportado: {filepath}")
             QMessageBox.information(self, "Exportação concluída",
@@ -284,7 +373,9 @@ class MainWindow(QMainWindow):
 
         if cfg.retry_enabled:
             self.log_panel.log("info",
-                f"↻ Retry ativado: {cfg.retry_attempts}x com {cfg.retry_delay}s de intervalo")
+                f"↻ Retry: {cfg.retry_attempts}x com {cfg.retry_delay}s de intervalo")
+
+        self.vars_panel.start_live()
 
         self.runner_thread = RunnerThread(steps)
         self.runner_thread.step_started.connect(self._on_step_started)
@@ -301,6 +392,7 @@ class MainWindow(QMainWindow):
             self.btn_run.setEnabled(True)
             self.btn_stop.setEnabled(False)
             self.status.showMessage("Execução interrompida.")
+            self.vars_panel.stop_live()
 
     def _on_step_started(self, index, name):
         self.canvas.set_block_state(index, "running")
@@ -309,9 +401,7 @@ class MainWindow(QMainWindow):
 
     def _on_step_retry(self, index, name, attempt, max_attempts):
         self.canvas.set_block_state(index, "running")
-        self.log_panel.log("running",
-            f"↻ Retry {attempt}/{max_attempts}: {name}")
-        self.status.showMessage(f"Retry {attempt}/{max_attempts}: {name}...")
+        self.log_panel.log("running", f"↻ Retry {attempt}/{max_attempts}: {name}")
 
     def _on_step_done(self, index, name, success, message):
         self.canvas.set_block_state(index, "success" if success else "error")
@@ -322,13 +412,15 @@ class MainWindow(QMainWindow):
         self.btn_stop.setEnabled(False)
         self.log_panel.log_run_end(ok, total)
         self.status.showMessage(f"Concluído: {ok}/{total} passos com sucesso.")
+        self.vars_panel.stop_live()
 
     def _on_save(self):
         steps = self.canvas.get_serialized_steps()
         if not steps:
             self.status.showMessage("Nada para salvar.")
             return
-        path, _ = QFileDialog.getSaveFileName(self, "Salvar fluxo", "flows/", "JSON (*.json)")
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Salvar fluxo", "flows/", "JSON (*.json)")
         if path:
             name = path.split("/")[-1].replace(".json", "")
             self.flow_manager.save(name, steps)
@@ -386,10 +478,16 @@ class MainWindow(QMainWindow):
             #btn_secondary:hover { background-color: #45475a; }
             #btn_export { background-color: #1e3a5f; color: #89b4fa; border: 1px solid #89b4fa; }
             #btn_export:hover { background-color: #1c3a5e; }
-            #btn_scheduler { background-color: #2a1e3f; color: #cba6f7; border: 1px solid #cba6f7; }
-            #btn_scheduler:hover { background-color: #3a2e5f; }
+            #btn_palette { background-color: #2a1e3f; color: #cba6f7; border: 1px solid #cba6f7; font-weight: 600; }
+            #btn_palette:hover { background-color: #3a2e5f; }
+            #btn_scheduler { background-color: #313244; color: #cdd6f4; }
+            #btn_scheduler:hover { background-color: #45475a; }
+            #btn_vars { background-color: #1e2a1e; color: #a6e3a1; border: 1px solid #a6e3a1; }
+            #btn_vars:hover { background-color: #2a3a2a; }
+            #btn_vars:checked { background-color: #a6e3a1; color: #1e1e2e; }
             #btn_settings { background-color: #313244; color: #6c7086; font-size: 15px; }
             #btn_settings:hover { background-color: #45475a; color: #cdd6f4; }
+            #right_panel { background-color: #181825; }
             QSplitter::handle { background-color: #313244; width: 1px; }
             #log_top_sep { color: #313244; }
             #status_bar {
