@@ -15,6 +15,7 @@ from blocks.browser.press_key            import PressKeyBlock
 from blocks.browser.scroll_page          import ScrollPageBlock
 from blocks.browser.get_current_url      import GetCurrentUrlBlock
 from blocks.browser.mouse_action         import MouseActionBlock
+from blocks.browser.smart_wait           import SmartWaitBlock
 from blocks.browser.nav_controls         import (
     NavigateToUrlBlock, GoBackBlock, GoForwardBlock,
     RefreshPageBlock, OpenNewTabBlock, CloseTabBlock,
@@ -45,6 +46,7 @@ AVAILABLE_BLOCKS = [
     GetCurrentUrlBlock,
     ScreenshotBlock,
     MouseActionBlock,
+    SmartWaitBlock,
     NavigateToUrlBlock,
     GoBackBlock,
     GoForwardBlock,

@@ -5,125 +5,27 @@ Execute: python map_project.py
 """
 import os
 import ast
-import importlib.util
+import json
 from datetime import datetime
 
 OUTPUT_FILE = "project_map.txt"
 
-# Pastas e arquivos a ignorar
 IGNORE_DIRS  = {"__pycache__", ".git", "venv", ".venv", "node_modules", ".idea", ".vscode"}
 IGNORE_FILES = {".pyc", ".pyo", ".pyd", ".git", ".DS_Store"}
 
-# Categorias conhecidas do projeto
 CATEGORY_LABELS = {
     "blocks/browser":     "🌐 Blocos de Navegador",
     "blocks/control":     "🔧 Blocos de Controle",
     "blocks/files":       "📁 Blocos de Arquivos",
     "blocks/integration": "🔌 Blocos de Integração",
+    "blocks/system":      "💻 Blocos de Sistema",
     "engine":             "⚙️  Motor de Execução",
     "ui":                 "🖥️  Interface Gráfica",
     "flows":              "💾 Fluxos Salvos",
 }
 
 
-def get_python_info(filepath: str) -> dict:
-    """Extrai classes, funções e docstring de um arquivo Python."""
-    info = {"classes": [], "functions": [], "docstring": ""}
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            source = f.read()
-        tree = ast.parse(source)
-
-        # Docstring do módulo
-        if (isinstance(tree.body[0], ast.Expr) and
-                isinstance(tree.body[0].value, ast.Constant)):
-            info["docstring"] = tree.body[0].value.s.strip().split("\n")[0]
-
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef):
-                # Pega docstring da classe
-                class_doc = ""
-                if (node.body and isinstance(node.body[0], ast.Expr) and
-                        isinstance(node.body[0].value, ast.Constant)):
-                    class_doc = node.body[0].value.s.strip().split("\n")[0]
-
-                # Métodos públicos
-                methods = [
-                    n.name for n in ast.walk(node)
-                    if isinstance(n, ast.FunctionDef) and not n.name.startswith("_")
-                ]
-                info["classes"].append({
-                    "name": node.name,
-                    "doc": class_doc,
-                    "methods": methods
-                })
-
-            elif isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
-                # Apenas funções de nível de módulo (não dentro de classes)
-                if any(isinstance(p, ast.Module) for p in ast.walk(tree)
-                       if hasattr(p, 'body') and node in getattr(p, 'body', [])):
-                    info["functions"].append(node.name)
-
-    except Exception:
-        pass
-    return info
-
-
-def get_json_info(filepath: str) -> dict:
-    """Extrai info básica de um arquivo JSON de fluxo."""
-    import json
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return {
-            "flow_name": data.get("flow_name", "?"),
-            "steps": len(data.get("steps", [])),
-            "created_at": data.get("created_at", "")[:10]
-        }
-    except Exception:
-        return {}
-
-
-def build_tree(root: str) -> list:
-    """Constrói a árvore de arquivos do projeto."""
-    entries = []
-    for dirpath, dirnames, filenames in os.walk(root):
-        # Filtra pastas ignoradas
-        dirnames[:] = sorted([d for d in dirnames if d not in IGNORE_DIRS])
-
-        rel_dir = os.path.relpath(dirpath, root).replace("\\", "/")
-        if rel_dir == ".":
-            rel_dir = ""
-
-        depth = rel_dir.count("/") + 1 if rel_dir else 0
-
-        if rel_dir:
-            entries.append({"type": "dir", "path": rel_dir, "depth": depth})
-
-        for filename in sorted(filenames):
-            ext = os.path.splitext(filename)[1]
-            if ext in IGNORE_FILES or filename.startswith("."):
-                continue
-            filepath = os.path.join(dirpath, filename)
-            rel_file = os.path.join(rel_dir, filename).replace("\\", "/").lstrip("/")
-            entries.append({
-                "type": "file",
-                "path": rel_file,
-                "name": filename,
-                "ext": ext,
-                "abs": filepath,
-                "depth": depth + 1
-            })
-
-    return entries
-
-
-def get_category_label(path: str) -> str:
-    for prefix, label in CATEGORY_LABELS.items():
-        if path.startswith(prefix):
-            return label
-    return ""
-
+# ── Utilidades de arquivo ─────────────────────────────────────────────
 
 def count_lines(filepath: str) -> int:
     try:
@@ -133,123 +35,247 @@ def count_lines(filepath: str) -> int:
         return 0
 
 
-def format_size(filepath: str) -> str:
+def get_category_label(path: str) -> str:
+    for prefix, label in CATEGORY_LABELS.items():
+        if path.startswith(prefix):
+            return label
+    return ""
+
+
+# ── Extração de info de arquivos ──────────────────────────────────────
+
+def _extract_module_docstring(tree: ast.Module) -> str:
+    if (tree.body
+            and isinstance(tree.body[0], ast.Expr)
+            and isinstance(tree.body[0].value, ast.Constant)):
+        return tree.body[0].value.s.strip().split("\n")[0]
+    return ""
+
+
+def _extract_class_info(node: ast.ClassDef) -> dict:
+    doc = ""
+    if (node.body
+            and isinstance(node.body[0], ast.Expr)
+            and isinstance(node.body[0].value, ast.Constant)):
+        doc = node.body[0].value.s.strip().split("\n")[0]
+    methods = [
+        n.name for n in ast.walk(node)
+        if isinstance(n, ast.FunctionDef) and not n.name.startswith("_")
+    ]
+    return {"name": node.name, "doc": doc, "methods": methods}
+
+
+def get_python_info(filepath: str) -> dict:
+    info = {"classes": [], "functions": [], "docstring": ""}
     try:
-        size = os.path.getsize(filepath)
-        if size < 1024:
-            return f"{size}B"
-        return f"{size // 1024}KB"
+        with open(filepath, "r", encoding="utf-8") as f:
+            source = f.read()
+        tree = ast.parse(source)
+        info["docstring"] = _extract_module_docstring(tree)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                info["classes"].append(_extract_class_info(node))
     except Exception:
-        return "?"
+        pass
+    return info
 
 
-def map_project(root: str = ".") -> str:
-    lines = []
-    now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+def get_json_info(filepath: str) -> dict:
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return {
+            "flow_name":  data.get("flow_name", "?"),
+            "steps":      len(data.get("steps", [])),
+            "created_at": data.get("created_at", "")[:10],
+        }
+    except Exception:
+        return {}
 
-    lines.append("=" * 70)
-    lines.append("  PyFlow RPA — Mapa de Arquitetura do Projeto")
-    lines.append(f"  Gerado em: {now}")
-    lines.append("=" * 70)
-    lines.append("")
 
-    # ── Sumário ──────────────────────────────────────────────────────────
-    total_py = total_json = total_lines = 0
-    all_blocks = []
+# ── Árvore de arquivos ────────────────────────────────────────────────
 
-    entries = build_tree(root)
+def build_tree(root: str) -> list:
+    entries = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(d for d in dirnames if d not in IGNORE_DIRS)
+        rel_dir = os.path.relpath(dirpath, root).replace("\\", "/")
+        rel_dir = "" if rel_dir == "." else rel_dir
+        depth   = rel_dir.count("/") + 1 if rel_dir else 0
+
+        if rel_dir:
+            entries.append({"type": "dir", "path": rel_dir, "depth": depth})
+
+        for filename in sorted(filenames):
+            ext = os.path.splitext(filename)[1]
+            if ext in IGNORE_FILES or filename.startswith("."):
+                continue
+            rel_file = os.path.join(rel_dir, filename).replace("\\", "/").lstrip("/")
+            entries.append({
+                "type": "file",
+                "path": rel_file,
+                "name": filename,
+                "ext":  ext,
+                "abs":  os.path.join(dirpath, filename),
+                "depth": depth + 1,
+            })
+    return entries
+
+
+# ── Coleta de dados ───────────────────────────────────────────────────
+
+def collect_blocks(entries: list) -> list:
+    blocks = []
     for e in entries:
-        if e["type"] == "file":
-            if e["ext"] == ".py":
-                total_py += 1
-                total_lines += count_lines(e["abs"])
-                if e["path"].startswith("blocks/"):
-                    info = get_python_info(e["abs"])
-                    for cls in info["classes"]:
-                        if cls["name"].endswith("Block"):
-                            all_blocks.append((cls["name"], e["path"], cls.get("doc", "")))
-            elif e["ext"] == ".json":
-                total_json += 1
+        if e["type"] == "file" and e["ext"] == ".py" and e["path"].startswith("blocks/"):
+            for cls in get_python_info(e["abs"])["classes"]:
+                if cls["name"].endswith("Block"):
+                    blocks.append((cls["name"], e["path"], cls.get("doc", "")))
+    return blocks
 
-    lines.append("📊 SUMÁRIO")
-    lines.append("-" * 40)
-    lines.append(f"  Arquivos Python : {total_py}")
-    lines.append(f"  Fluxos JSON     : {total_json}")
-    lines.append(f"  Linhas de código: {total_lines:,}")
-    lines.append(f"  Blocos RPA      : {len(all_blocks)}")
-    lines.append("")
 
-    # ── Blocos disponíveis ────────────────────────────────────────────────
-    lines.append("🧩 BLOCOS DISPONÍVEIS")
-    lines.append("-" * 40)
+def collect_stats(entries: list) -> dict:
+    py = json_ = lines = 0
+    for e in entries:
+        if e["type"] != "file":
+            continue
+        if e["ext"] == ".py":
+            py    += 1
+            lines += count_lines(e["abs"])
+        elif e["ext"] == ".json":
+            json_ += 1
+    return {"py": py, "json": json_, "lines": lines}
+
+
+# ── Formatadores de entrada ───────────────────────────────────────────
+
+def _build_py_info_str(e: dict) -> str:
+    py_info = get_python_info(e["abs"])
+    classes = [c["name"] for c in py_info["classes"]]
+    cls_str = f" [{', '.join(classes)}]" if classes else ""
+    return f"  ({count_lines(e['abs'])} linhas{cls_str})"
+
+
+def _build_json_info_str(e: dict) -> str:
+    j = get_json_info(e["abs"])
+    if j:
+        return f"  → {j['flow_name']} | {j['steps']} passos | {j['created_at']}"
+    return ""
+
+
+def _build_file_info(e: dict) -> str:
+    if e["ext"] == ".py":
+        return _build_py_info_str(e)
+    if e["ext"] == ".json" and "flows/" in e["path"]:
+        return _build_json_info_str(e)
+    return ""
+
+
+def _format_file_entry(e: dict) -> str:
+    indent = "  " * e["depth"]
+    icon   = "🐍" if e["ext"] == ".py" else "📋" if e["ext"] == ".json" else "📄"
+    return f"{indent}{icon} {e['name']}{_build_file_info(e)}"
+
+
+def _format_dir_entry(e: dict, current_section: str) -> tuple:
+    lines       = []
+    indent      = "  " * e["depth"]
+    cat_label   = get_category_label(e["path"])
+    new_section = current_section
+
+    if cat_label and cat_label != current_section:
+        lines.append(f"\n  {cat_label}")
+        new_section = cat_label
+
+    lines.append(f"{indent}📂 {e['path'].split('/')[-1]}/")
+    return lines, new_section
+
+
+# ── Seções do relatório ───────────────────────────────────────────────
+
+def _section_summary(stats: dict, block_count: int) -> list:
+    return [
+        "📊 SUMÁRIO",
+        "-" * 40,
+        f"  Arquivos Python : {stats['py']}",
+        f"  Fluxos JSON     : {stats['json']}",
+        f"  Linhas de código: {stats['lines']:,}",
+        f"  Blocos RPA      : {block_count}",
+        "",
+    ]
+
+
+def _section_blocks(all_blocks: list) -> list:
+    lines       = ["🧩 BLOCOS DISPONÍVEIS", "-" * 40]
     current_cat = ""
+
     for name, path, doc in sorted(all_blocks, key=lambda x: x[1]):
-        cat = "/".join(path.split("/")[:2])
+        cat       = "/".join(path.split("/")[:2])
         cat_label = get_category_label(path)
         if cat != current_cat:
             current_cat = cat
             lines.append(f"\n  {cat_label or cat}")
         desc = f" — {doc}" if doc else ""
         lines.append(f"    • {name}{desc}")
+
     lines.append("")
+    return lines
 
-    # ── Árvore de arquivos ────────────────────────────────────────────────
-    lines.append("🗂️  ESTRUTURA DE ARQUIVOS")
-    lines.append("-" * 40)
 
+def _section_file_tree(entries: list) -> list:
+    lines           = ["🗂️  ESTRUTURA DE ARQUIVOS", "-" * 40]
     current_section = ""
+
     for e in entries:
-        indent = "  " * e["depth"]
-
         if e["type"] == "dir":
-            cat_label = get_category_label(e["path"])
-            section = cat_label or ""
-            if section and section != current_section:
-                current_section = section
-                lines.append(f"\n  {section}")
-            lines.append(f"{indent}📂 {e['path'].split('/')[-1]}/")
-
-        elif e["type"] == "file":
-            ext = e["ext"]
-            icon = "🐍" if ext == ".py" else "📋" if ext == ".json" else "📄"
-            info_str = ""
-
-            if ext == ".py":
-                n_lines = count_lines(e["abs"])
-                py_info = get_python_info(e["abs"])
-                classes = [c["name"] for c in py_info["classes"]]
-                class_str = f" [{', '.join(classes)}]" if classes else ""
-                info_str = f"  ({n_lines} linhas{class_str})"
-
-            elif ext == ".json" and "flows/" in e["path"]:
-                j = get_json_info(e["abs"])
-                if j:
-                    info_str = f"  → {j.get('flow_name','?')} | {j.get('steps','?')} passos | {j.get('created_at','')}"
-
-            lines.append(f"{indent}{icon} {e['name']}{info_str}")
+            new_lines, current_section = _format_dir_entry(e, current_section)
+            lines.extend(new_lines)
+        else:
+            lines.append(_format_file_entry(e))
 
     lines.append("")
+    return lines
 
-    # ── Fluxos salvos ─────────────────────────────────────────────────────
+
+def _section_flows(root: str) -> list:
     flows_dir = os.path.join(root, "flows")
-    if os.path.exists(flows_dir):
-        lines.append("💾 FLUXOS SALVOS")
-        lines.append("-" * 40)
-        for f in sorted(os.listdir(flows_dir)):
-            if f.endswith(".json"):
-                j = get_json_info(os.path.join(flows_dir, f))
-                if j:
-                    lines.append(f"  • {j['flow_name']}")
-                    lines.append(f"    Arquivo : {f}")
-                    lines.append(f"    Passos  : {j['steps']}")
-                    lines.append(f"    Criado  : {j['created_at']}")
-                    lines.append("")
+    if not os.path.exists(flows_dir):
+        return []
 
-    lines.append("=" * 70)
-    lines.append("  Fim do mapa de arquitetura")
-    lines.append("=" * 70)
+    lines = ["💾 FLUXOS SALVOS", "-" * 40]
+    for f in sorted(os.listdir(flows_dir)):
+        if not f.endswith(".json"):
+            continue
+        j = get_json_info(os.path.join(flows_dir, f))
+        if j:
+            lines += [
+                f"  • {j['flow_name']}",
+                f"    Arquivo : {f}",
+                f"    Passos  : {j['steps']}",
+                f"    Criado  : {j['created_at']}",
+                "",
+            ]
+    return lines
 
-    return "\n".join(lines)
+
+# ── Ponto de entrada ──────────────────────────────────────────────────
+
+def map_project(root: str = ".") -> str:
+    entries = build_tree(root)
+    stats   = collect_stats(entries)
+    blocks  = collect_blocks(entries)
+    now     = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+    sections = [
+        ["=" * 70, "  PyFlow RPA — Mapa de Arquitetura do Projeto",
+         f"  Gerado em: {now}", "=" * 70, ""],
+        _section_summary(stats, len(blocks)),
+        _section_blocks(blocks),
+        _section_file_tree(entries),
+        _section_flows(root),
+        ["=" * 70, "  Fim do mapa de arquitetura", "=" * 70],
+    ]
+    return "\n".join(line for section in sections for line in section)
 
 
 if __name__ == "__main__":
@@ -259,7 +285,6 @@ if __name__ == "__main__":
         f.write(content)
     print(f"✅ Mapa exportado para: {OUTPUT_FILE}")
     print()
-    # Preview do sumário
     for line in content.split("\n")[:20]:
         print(line)
     print("...")

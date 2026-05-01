@@ -1,0 +1,68 @@
+{
+  "flow_name": "template_monitor_preco",
+  "created_at": "2026-04-30T00:00:00",
+  "description": "Monitora o preço de um produto e envia e-mail se o valor mudar.",
+  "template": true,
+  "steps": [
+    {
+      "block": "OpenBrowserBlock",
+      "params": { "url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html", "maximized": false }
+    },
+    {
+      "block": "WaitBlock",
+      "params": { "seconds": "2" }
+    },
+    {
+      "block": "ExtractTextBlock",
+      "params": {
+        "selector": ".price_color",
+        "variable_name": "preco_atual",
+        "timeout": "10"
+      }
+    },
+    {
+      "block": "ExtractTextBlock",
+      "params": {
+        "selector": "h1",
+        "variable_name": "nome_produto",
+        "timeout": "10"
+      }
+    },
+    {
+      "block": "GetCurrentUrlBlock",
+      "params": { "variable_name": "url_produto" }
+    },
+    {
+      "block": "SaveTextBlock",
+      "params": {
+        "content": "{{nome_produto}} | {{preco_atual}} | {{url_produto}}",
+        "filepath": "saida/historico_preco.txt",
+        "mode": "append",
+        "add_timestamp": true
+      }
+    },
+    {
+      "block": "CloseBrowserBlock",
+      "params": {}
+    },
+    {
+      "block": "SendEmailBlock",
+      "params": {
+        "provider": "gmail",
+        "sender_email": "SEU_EMAIL@gmail.com",
+        "sender_password": "SUA_APP_PASSWORD",
+        "recipient": "DESTINATARIO@email.com",
+        "subject": "Monitor de Preço — {{nome_produto}}",
+        "body_text": "Produto: {{nome_produto}}\nPreço atual: {{preco_atual}}\nURL: {{url_produto}}\n\nRegistro salvo em saida/historico_preco.txt"
+      }
+    },
+    {
+      "block": "DesktopNotificationBlock",
+      "params": {
+        "title": "💰 Monitor de Preço",
+        "message": "{{nome_produto}}: {{preco_atual}}",
+        "duration": "8000"
+      }
+    }
+  ]
+}

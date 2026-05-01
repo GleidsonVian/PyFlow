@@ -16,6 +16,7 @@ from blocks.browser.press_key            import PressKeyBlock
 from blocks.browser.scroll_page          import ScrollPageBlock
 from blocks.browser.get_current_url      import GetCurrentUrlBlock
 from blocks.browser.mouse_action         import MouseActionBlock
+from blocks.browser.smart_wait           import SmartWaitBlock
 from blocks.browser.nav_controls         import (
     NavigateToUrlBlock, GoBackBlock, GoForwardBlock,
     RefreshPageBlock, OpenNewTabBlock, CloseTabBlock,
@@ -46,6 +47,7 @@ BLOCK_REGISTRY = {
     "ScrollPageBlock":           ScrollPageBlock,
     "GetCurrentUrlBlock":        GetCurrentUrlBlock,
     "MouseActionBlock":          MouseActionBlock,
+    "SmartWaitBlock":            SmartWaitBlock,
     "NavigateToUrlBlock":        NavigateToUrlBlock,
     "GoBackBlock":               GoBackBlock,
     "GoForwardBlock":            GoForwardBlock,
@@ -69,15 +71,6 @@ BLOCK_REGISTRY = {
     "SendEmailBlock":            SendEmailBlock,
 }
 
-# Cores por categoria
-CATEGORY_COLORS = {
-    "Navegador":   ("#1c3a5e", "#89b4fa"),   # azul
-    "Controle":    ("#2a1e3f", "#cba6f7"),   # roxo
-    "Arquivos":    ("#1c3a2a", "#a6e3a1"),   # verde
-    "Integração":  ("#3a2a1c", "#fab387"),   # laranja
-    "Sistema":     ("#2a1c1c", "#f38ba8"),   # vermelho
-}
-
 CATEGORY_IDLE_COLORS = {
     "Navegador":   ("#1a2a40", "#89b4fa"),
     "Controle":    ("#201830", "#cba6f7"),
@@ -88,11 +81,11 @@ CATEGORY_IDLE_COLORS = {
 
 
 class CanvasBlockWidget(QFrame):
-    clicked  = Signal(object)
-    removed  = Signal(object)
+    clicked    = Signal(object)
+    removed    = Signal(object)
     duplicated = Signal(object)
-    move_up  = Signal(object)
-    move_down = Signal(object)
+    move_up    = Signal(object)
+    move_down  = Signal(object)
 
     STATE_COLORS = {
         "running": ("#1c3a5e", "#89b4fa"),
@@ -110,7 +103,7 @@ class CanvasBlockWidget(QFrame):
         self._build_ui()
         self._apply_state()
 
-    def _get_category(self) -> str:
+    def _get_category(self):
         return getattr(self.block_instance, "category", "Controle")
 
     def _build_ui(self):
@@ -122,7 +115,6 @@ class CanvasBlockWidget(QFrame):
         layout.setContentsMargins(14, 10, 14, 10)
         layout.setSpacing(10)
 
-        # Ícone de drag
         self.drag_handle = QLabel("⠿")
         self.drag_handle.setObjectName("drag_handle")
         self.drag_handle.setFixedWidth(16)
@@ -175,19 +167,9 @@ class CanvasBlockWidget(QFrame):
             bg, accent = self.STATE_COLORS.get(self.state, ("#313244", "#cba6f7"))
 
         self.setStyleSheet(f"""
-            #canvas_block {{
-                background-color: {bg};
-                border: 1.5px solid {accent};
-                border-radius: 10px;
-            }}
+            #canvas_block {{ background-color: {bg}; border: 1.5px solid {accent}; border-radius: 10px; }}
             #drag_handle {{ color: #45475a; font-size: 16px; }}
-            #block_index {{
-                background-color: {accent};
-                color: #1e1e2e;
-                border-radius: 14px;
-                font-size: 12px;
-                font-weight: 700;
-            }}
+            #block_index {{ background-color: {accent}; color: #1e1e2e; border-radius: 14px; font-size: 12px; font-weight: 700; }}
             #block_name {{ color: #cdd6f4; font-size: 13px; font-weight: 600; }}
             #block_params {{ color: #6c7086; font-size: 11px; }}
             #btn_remove {{ color: #45475a; border-radius: 11px; font-size: 11px; }}
@@ -207,58 +189,40 @@ class CanvasBlockWidget(QFrame):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if not (event.buttons() & Qt.LeftButton):
+        if not (event.buttons() & Qt.LeftButton) or self._drag_start_pos is None:
             return
-        if self._drag_start_pos is None:
+        if (event.position().toPoint() - self._drag_start_pos).manhattanLength() < QApplication.startDragDistance() * 2:
             return
-        dist = (event.position().toPoint() - self._drag_start_pos).manhattanLength()
-        if dist < QApplication.startDragDistance() * 2:
-            return
-
-        # Inicia drag interno para reordenar
         drag = QDrag(self)
         mime = QMimeData()
         mime.setText(f"__reorder__{id(self)}")
         drag.setMimeData(mime)
-
-        # Preview visual
         pix = QPixmap(self.size())
         pix.fill(QColor(0, 0, 0, 0))
         self.render(pix)
         drag.setPixmap(pix)
         drag.setHotSpot(event.position().toPoint())
-
         drag.exec(Qt.MoveAction)
 
     def contextMenuEvent(self, event):
-        """Menu de contexto com opções do bloco."""
         menu = QMenu(self)
         menu.setStyleSheet("""
-            QMenu {
-                background-color: #1e1e2e; border: 1px solid #313244;
-                border-radius: 6px; padding: 4px; color: #cdd6f4; font-size: 13px;
-            }
+            QMenu { background-color: #1e1e2e; border: 1px solid #313244; border-radius: 6px; padding: 4px; color: #cdd6f4; font-size: 13px; }
             QMenu::item { padding: 6px 20px; border-radius: 4px; }
             QMenu::item:selected { background-color: #313244; color: #cba6f7; }
             QMenu::separator { background-color: #313244; height: 1px; margin: 4px 0; }
         """)
-
         act_dup  = menu.addAction("📋  Duplicar bloco")
         menu.addSeparator()
         act_up   = menu.addAction("⬆  Mover para cima")
         act_down = menu.addAction("⬇  Mover para baixo")
         menu.addSeparator()
         act_del  = menu.addAction("✕  Remover bloco")
-
         action = menu.exec(event.globalPos())
-        if action == act_dup:
-            self.duplicated.emit(self)
-        elif action == act_up:
-            self.move_up.emit(self)
-        elif action == act_down:
-            self.move_down.emit(self)
-        elif action == act_del:
-            self.removed.emit(self)
+        if action == act_dup:  self.duplicated.emit(self)
+        elif action == act_up:   self.move_up.emit(self)
+        elif action == act_down: self.move_down.emit(self)
+        elif action == act_del:  self.removed.emit(self)
 
 
 class ConnectorArrow(QWidget):
@@ -271,8 +235,7 @@ class ConnectorArrow(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         cx = self.width() // 2
-        pen = QPen(QColor("#45475a"), 1.5)
-        painter.setPen(pen)
+        painter.setPen(QPen(QColor("#45475a"), 1.5))
         painter.drawLine(cx, 0, cx, self.height() - 8)
         painter.setBrush(QColor("#45475a"))
         painter.setPen(Qt.NoPen)
@@ -283,18 +246,6 @@ class ConnectorArrow(QWidget):
             QPoint(cx + 5, self.height() - 8),
             QPoint(cx,     self.height() - 1),
         ]))
-
-
-class DropIndicator(QWidget):
-    """Linha azul que aparece durante drag de reordenação."""
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setFixedHeight(3)
-        self.hide()
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.fillRect(self.rect(), QColor("#89b4fa"))
 
 
 class Canvas(QWidget):
@@ -314,95 +265,70 @@ class Canvas(QWidget):
     def _build_ui(self):
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
-
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setObjectName("canvas_scroll")
-
         self.inner = QWidget()
         self.inner.setObjectName("canvas_inner")
         self.flow_layout = QVBoxLayout(self.inner)
         self.flow_layout.setContentsMargins(80, 40, 80, 40)
         self.flow_layout.setSpacing(0)
         self.flow_layout.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
-
         self._empty_label = QLabel("Arraste blocos do painel esquerdo\npara começar seu fluxo")
         self._empty_label.setObjectName("empty_hint")
         self._empty_label.setAlignment(Qt.AlignCenter)
         self.flow_layout.addWidget(self._empty_label)
         self.flow_layout.addStretch(1)
-
         self.scroll.setWidget(self.inner)
         outer.addWidget(self.scroll)
 
-    # ── Drag & Drop do painel de blocos ───────────────────────────────
-
     def dragEnterEvent(self, event):
-        if event.mimeData().hasText():
-            event.acceptProposedAction()
+        if event.mimeData().hasText(): event.acceptProposedAction()
 
     def dragMoveEvent(self, event):
         event.acceptProposedAction()
 
     def dropEvent(self, event):
         text = event.mimeData().text()
-
-        # Drag de reordenação interno
         if text.startswith("__reorder__"):
             dragged_id = int(text.replace("__reorder__", ""))
             widget = next((b for b in self._blocks if id(b) == dragged_id), None)
             if widget:
                 drop_pos = self.inner.mapFromGlobal(QCursor.pos())
-                insert_idx = self._get_insert_index(drop_pos.y())
-                self._reorder(widget, insert_idx)
+                self._reorder(widget, self._get_insert_index(drop_pos.y()))
             event.acceptProposedAction()
             return
-
-        # Drag de novo bloco do painel
         block_cls = BLOCK_REGISTRY.get(text)
-        if not block_cls:
-            return
-
+        if not block_cls: return
         block_instance = block_cls()
         default_params = {s["name"]: s.get("default", "") for s in block_cls.params_schema}
-
         dialog = ParamDialog(block_instance, default_params, self)
         if dialog.exec():
             self._add_block(block_instance, dialog.get_params())
         event.acceptProposedAction()
 
     def _get_insert_index(self, y: int) -> int:
-        """Calcula o índice de inserção baseado na posição Y do drop."""
         for i, blk in enumerate(self._blocks):
-            blk_y = blk.mapTo(self.inner, QPoint(0, 0)).y()
-            if y < blk_y + blk.height() // 2:
+            if y < blk.mapTo(self.inner, QPoint(0, 0)).y() + blk.height() // 2:
                 return i
         return len(self._blocks)
-
-    # ── Rebuild ───────────────────────────────────────────────────────
 
     def _full_rebuild(self):
         while self.flow_layout.count():
             item = self.flow_layout.takeAt(0)
             w = item.widget()
-            if w is None or w is self._empty_label:
-                continue
-            if isinstance(w, CanvasBlockWidget) and w in self._blocks:
-                continue
+            if w is None or w is self._empty_label: continue
+            if isinstance(w, CanvasBlockWidget) and w in self._blocks: continue
             w.deleteLater()
-
         self._empty_label.setVisible(len(self._blocks) == 0)
         self.flow_layout.addWidget(self._empty_label)
-
         for i, blk in enumerate(self._blocks):
             blk.index = i
             blk.lbl_index.setText(str(i + 1))
             blk._apply_state()
-            if i > 0:
-                self.flow_layout.addWidget(ConnectorArrow())
+            if i > 0: self.flow_layout.addWidget(ConnectorArrow())
             self.flow_layout.addWidget(blk)
             blk.show()
-
         self.flow_layout.addStretch(1)
 
     def _append_to_layout(self, widget):
@@ -417,9 +343,7 @@ class Canvas(QWidget):
         self.flow_layout.addWidget(widget)
         self.flow_layout.addStretch(1)
 
-    # ── Operações de bloco ────────────────────────────────────────────
-
-    def _add_block(self, block_instance, params, insert_at: int = None):
+    def _add_block(self, block_instance, params, insert_at=None):
         widget = CanvasBlockWidget(block_instance, params,
                                    insert_at if insert_at is not None else len(self._blocks))
         widget.clicked.connect(self._on_block_clicked)
@@ -427,27 +351,22 @@ class Canvas(QWidget):
         widget.duplicated.connect(self._duplicate_block)
         widget.move_up.connect(self._move_up)
         widget.move_down.connect(self._move_down)
-
         if insert_at is not None and 0 <= insert_at < len(self._blocks):
             self._blocks.insert(insert_at, widget)
             self._full_rebuild()
         else:
             self._blocks.append(widget)
             self._append_to_layout(widget)
-
         self._select_block(widget)
         self.scroll.verticalScrollBar().setValue(self.scroll.verticalScrollBar().maximum())
 
-    def _duplicate_block(self, widget: CanvasBlockWidget):
-        """Duplica um bloco inserindo logo abaixo do original."""
+    def _duplicate_block(self, widget):
         import copy
         idx = self._blocks.index(widget) + 1 if widget in self._blocks else len(self._blocks)
-        new_instance = type(widget.block_instance)()
-        new_params   = copy.deepcopy(widget.params)
-        self._add_block(new_instance, new_params, insert_at=idx)
+        self._add_block(type(widget.block_instance)(), copy.deepcopy(widget.params), insert_at=idx)
         self.block_updated.emit()
 
-    def _move_up(self, widget: CanvasBlockWidget):
+    def _move_up(self, widget):
         idx = self._blocks.index(widget) if widget in self._blocks else -1
         if idx > 0:
             self._blocks[idx], self._blocks[idx - 1] = self._blocks[idx - 1], self._blocks[idx]
@@ -455,7 +374,7 @@ class Canvas(QWidget):
             self._select_block(widget)
             self.block_updated.emit()
 
-    def _move_down(self, widget: CanvasBlockWidget):
+    def _move_down(self, widget):
         idx = self._blocks.index(widget) if widget in self._blocks else -1
         if 0 <= idx < len(self._blocks) - 1:
             self._blocks[idx], self._blocks[idx + 1] = self._blocks[idx + 1], self._blocks[idx]
@@ -463,28 +382,22 @@ class Canvas(QWidget):
             self._select_block(widget)
             self.block_updated.emit()
 
-    def _reorder(self, widget: CanvasBlockWidget, new_index: int):
-        """Move o bloco para a posição new_index."""
-        if widget not in self._blocks:
-            return
-        old_index = self._blocks.index(widget)
-        self._blocks.pop(old_index)
-        insert = min(new_index, len(self._blocks))
-        self._blocks.insert(insert, widget)
+    def _reorder(self, widget, new_index):
+        if widget not in self._blocks: return
+        self._blocks.pop(self._blocks.index(widget))
+        self._blocks.insert(min(new_index, len(self._blocks)), widget)
         self._full_rebuild()
         self._select_block(widget)
         self.block_updated.emit()
 
-    def _on_block_clicked(self, widget):
-        self._select_block(widget)
+    def _on_block_clicked(self, widget): self._select_block(widget)
 
     def _select_block(self, widget):
         self._selected = widget
         self.block_selected.emit(widget)
 
     def _remove_block(self, widget):
-        if widget in self._blocks:
-            self._blocks.remove(widget)
+        if widget in self._blocks: self._blocks.remove(widget)
         self._full_rebuild()
         if self._selected == widget:
             self._selected = None
@@ -498,40 +411,27 @@ class Canvas(QWidget):
             self.canvas_clicked.emit()
         super().mousePressEvent(event)
 
-    # ── State ─────────────────────────────────────────────────────────
-
     def set_block_state(self, index, state):
         if 0 <= index < len(self._blocks):
-            try:
-                self._blocks[index].set_state(state)
-            except RuntimeError:
-                pass
+            try: self._blocks[index].set_state(state)
+            except RuntimeError: pass
 
     def reset_block_states(self):
         valid = []
         for b in self._blocks:
-            try:
-                b.set_state("idle")
-                valid.append(b)
-            except RuntimeError:
-                pass
+            try: b.set_state("idle"); valid.append(b)
+            except RuntimeError: pass
         self._blocks = valid
 
-    def get_selected_block(self):
-        return self._selected
-
-    def get_steps(self):
-        return [{"block_instance": b.block_instance, "params": b.params} for b in self._blocks]
-
-    def get_serialized_steps(self):
-        return [{"block": type(b.block_instance).__name__, "params": b.params} for b in self._blocks]
+    def get_selected_block(self): return self._selected
+    def get_steps(self): return [{"block_instance": b.block_instance, "params": b.params} for b in self._blocks]
+    def get_serialized_steps(self): return [{"block": type(b.block_instance).__name__, "params": b.params} for b in self._blocks]
 
     def load_from_data(self, steps):
         self.clear_canvas()
         for step in steps:
             cls = BLOCK_REGISTRY.get(step.get("block"))
-            if cls:
-                self._add_block(cls(), step.get("params", {}))
+            if cls: self._add_block(cls(), step.get("params", {}))
 
     def clear_canvas(self):
         self._blocks.clear()

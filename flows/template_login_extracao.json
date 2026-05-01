@@ -1,0 +1,82 @@
+{
+  "flow_name": "template_login_extracao",
+  "created_at": "2026-04-30T00:00:00",
+  "description": "Faz login em um site e extrai dados autenticados.",
+  "template": true,
+  "steps": [
+    {
+      "block": "OpenBrowserBlock",
+      "params": { "url": "https://the-internet.herokuapp.com/login", "maximized": false }
+    },
+    {
+      "block": "WaitBlock",
+      "params": { "seconds": "2" }
+    },
+    {
+      "block": "FillFieldBlock",
+      "params": {
+        "selector": "#username",
+        "value": "tomsmith",
+        "clear_before": true,
+        "timeout": "10"
+      }
+    },
+    {
+      "block": "FillFieldBlock",
+      "params": {
+        "selector": "#password",
+        "value": "SuperSecretPassword!",
+        "clear_before": true,
+        "timeout": "10"
+      }
+    },
+    {
+      "block": "ClickElementBlock",
+      "params": { "selector": "button[type='submit']", "timeout": "10" }
+    },
+    {
+      "block": "WaitBlock",
+      "params": { "seconds": "2" }
+    },
+    {
+      "block": "ExtractTextBlock",
+      "params": {
+        "selector": ".flash.success",
+        "variable_name": "msg_login",
+        "timeout": "10"
+      }
+    },
+    {
+      "block": "GetCurrentUrlBlock",
+      "params": { "variable_name": "url_apos_login" }
+    },
+    {
+      "block": "ScreenshotBlock",
+      "params": {
+        "filename": "login_sucesso",
+        "folder": "screenshots"
+      }
+    },
+    {
+      "block": "SaveTextBlock",
+      "params": {
+        "content": "Login: {{msg_login}}\nURL: {{url_apos_login}}",
+        "filepath": "saida/resultado_login.txt",
+        "mode": "overwrite",
+        "add_timestamp": true
+      }
+    },
+    {
+      "block": "CloseBrowserBlock",
+      "params": {}
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Login concluído",
+        "message": "{{msg_login}}\nURL: {{url_apos_login}}",
+        "kind": "info"
+      }
+    }
+  ]
+}

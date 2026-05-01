@@ -1,0 +1,75 @@
+{
+  "flow_name": "template_disparo_api",
+  "created_at": "2026-04-30T00:00:00",
+  "description": "Lê um CSV e faz uma requisição POST para cada linha, salvando as respostas.",
+  "template": true,
+  "steps": [
+    {
+      "block": "ReadCsvBlock",
+      "params": {
+        "filepath": "dados/usuarios.csv",
+        "column": "0",
+        "variable_name": "lista_ids",
+        "skip_header": true,
+        "delimiter": ","
+      }
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Disparo de API",
+        "message": "{{lista_ids_total}} registros carregados.\nIniciando disparos...",
+        "kind": "info"
+      }
+    },
+    {
+      "block": "ForEachBlock",
+      "params": {
+        "items": "lista_ids",
+        "variable_name": "id_atual",
+        "blocks_count": "3",
+        "delay_between": "0.5"
+      }
+    },
+    {
+      "block": "HttpRequestBlock",
+      "params": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/users/{{id_atual}}",
+        "headers": "",
+        "body": "",
+        "json_field": "name",
+        "variable_name": "nome_retorno",
+        "timeout": "15"
+      }
+    },
+    {
+      "block": "TextManipulationBlock",
+      "params": {
+        "input_variable": "nome_retorno",
+        "operation": "upper",
+        "param1": "",
+        "param2": "",
+        "output_variable": "nome_upper"
+      }
+    },
+    {
+      "block": "SaveCsvBlock",
+      "params": {
+        "filepath": "saida/respostas_api.csv",
+        "values": "{{id_atual}}|{{nome_retorno}}|{{nome_upper}}",
+        "headers": "ID|Nome|Nome_Upper",
+        "delimiter": ",",
+        "add_timestamp": true
+      }
+    },
+    {
+      "block": "DesktopNotificationBlock",
+      "params": {
+        "title": "✅ Disparos concluídos",
+        "message": "{{lista_ids_total}} requisições processadas.\nResultados em saida/respostas_api.csv",
+        "duration": "8000"
+      }
+    }
+  ]
+}
