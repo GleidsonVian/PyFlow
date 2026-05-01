@@ -1,0 +1,52 @@
+{
+  "flow_name": "scraping_para_csv",
+  "created_at": "2026-04-29T23:00:00.000000",
+  "steps": [
+    {
+      "block": "OpenBrowserBlock",
+      "params": {
+        "url": "https://books.toscrape.com",
+        "maximized": false
+      }
+    },
+    {
+      "block": "WaitBlock",
+      "params": {
+        "seconds": "2"
+      }
+    },
+    {
+      "block": "ForEachBlock",
+      "params": {
+        "items": "Pagina 1, Pagina 2, Pagina 3",
+        "variable_name": "pagina",
+        "blocks_count": "3",
+        "delay_between": "1"
+      }
+    },
+    {
+      "block": "ExtractTextBlock",
+      "params": {
+        "selector": "h1",
+        "variable_name": "titulo",
+        "timeout": "10"
+      }
+    },
+    {
+      "block": "GetCurrentUrlBlock",
+      "params": {
+        "variable_name": "url_atual"
+      }
+    },
+    {
+      "block": "SaveCsvBlock",
+      "params": {
+        "filepath": "saida/books_scraping.csv",
+        "values": "{{pagina}}|{{titulo}}|{{url_atual}}",
+        "headers": "Pagina|Titulo|URL",
+        "delimiter": ",",
+        "add_timestamp": true
+      }
+    }
+  ]
+}

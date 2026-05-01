@@ -1,0 +1,64 @@
+# ── Python ────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# ── Ambientes virtuais ────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# ── PyInstaller (build) ───────────────────────────────────────────────
+build/
+dist/
+*.spec
+
+# ── Outputs do PyFlow RPA ─────────────────────────────────────────────
+saida/
+screenshots/
+exports/
+dados/
+project_map.txt
+
+# ── Logs ─────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── IDEs e editores ───────────────────────────────────────────────────
+.vscode/
+.idea/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+
+# ── Sistema operacional ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── WebDriver cache ───────────────────────────────────────────────────
+.wdm/
+drivers/
+
+# ── Arquivos sensíveis ────────────────────────────────────────────────
+.env
+*.pem
+*.key
+secrets.py
+config_local.py
+
+# ── Pytest ────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Arquivos temporários ──────────────────────────────────────────────
+*.tmp
+*.bak
+*.swp
+teste_notif.py

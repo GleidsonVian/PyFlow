@@ -1,0 +1,57 @@
+{
+  "flow_name": "csv_para_txt",
+  "created_at": "2026-04-29T23:00:00.000000",
+  "steps": [
+    {
+      "block": "ReadCsvBlock",
+      "params": {
+        "filepath": "dados/urls.csv",
+        "column": "0",
+        "variable_name": "csv_linhas",
+        "skip_header": true,
+        "delimiter": ","
+      }
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "CSV Carregado",
+        "message": "Total de URLs carregadas: {{csv_linhas_total}}",
+        "kind": "info"
+      }
+    },
+    {
+      "block": "ForEachBlock",
+      "params": {
+        "items": "csv_linhas",
+        "variable_name": "url",
+        "blocks_count": "3",
+        "delay_between": "2"
+      }
+    },
+    {
+      "block": "OpenBrowserBlock",
+      "params": {
+        "url": "{{url}}",
+        "maximized": false
+      }
+    },
+    {
+      "block": "ExtractTextBlock",
+      "params": {
+        "selector": "h1",
+        "variable_name": "titulo",
+        "timeout": "10"
+      }
+    },
+    {
+      "block": "SaveTextBlock",
+      "params": {
+        "content": "{{url}} — {{titulo}}",
+        "filepath": "saida/resultado.txt",
+        "mode": "append",
+        "add_timestamp": true
+      }
+    }
+  ]
+}

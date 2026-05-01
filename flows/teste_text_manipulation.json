@@ -1,0 +1,66 @@
+{
+  "flow_name": "teste_text_manipulation",
+  "created_at": "2026-04-30T00:20:00.000000",
+  "steps": [
+    {
+      "block": "HttpRequestBlock",
+      "params": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/users/1",
+        "headers": "",
+        "body": "",
+        "json_field": "email",
+        "variable_name": "email_bruto",
+        "timeout": "15"
+      }
+    },
+    {
+      "block": "TextManipulationBlock",
+      "params": {
+        "input_variable": "email_bruto",
+        "operation": "upper",
+        "param1": "",
+        "param2": "",
+        "output_variable": "email_maiusculo"
+      }
+    },
+    {
+      "block": "TextManipulationBlock",
+      "params": {
+        "input_variable": "email_bruto",
+        "operation": "regex_extract",
+        "param1": "@(.+)",
+        "param2": "",
+        "output_variable": "dominio_email"
+      }
+    },
+    {
+      "block": "TextManipulationBlock",
+      "params": {
+        "input_variable": "email_bruto",
+        "operation": "replace",
+        "param1": "@",
+        "param2": " [arroba] ",
+        "output_variable": "email_formatado"
+      }
+    },
+    {
+      "block": "TextManipulationBlock",
+      "params": {
+        "input_variable": "email_bruto",
+        "operation": "length",
+        "param1": "",
+        "param2": "",
+        "output_variable": "tamanho_email"
+      }
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Resultado das manipulações",
+        "message": "Original: {{email_bruto}}\nMaiúsculo: {{email_maiusculo}}\nDomínio: {{dominio_email}}\nFormatado: {{email_formatado}}\nTamanho: {{tamanho_email}} chars",
+        "kind": "info"
+      }
+    }
+  ]
+}

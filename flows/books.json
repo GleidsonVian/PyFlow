@@ -1,0 +1,35 @@
+{
+  "flow_name": "books",
+  "created_at": "2026-04-29T22:19:25.688663",
+  "steps": [
+    {
+      "block": "OpenBrowserBlock",
+      "params": {
+        "url": "https://books.toscrape.com",
+        "maximized": false
+      }
+    },
+    {
+      "block": "ExtractTextBlock",
+      "params": {
+        "selector": "h1",
+        "variable_name": "texto_extraido",
+        "timeout": "10"
+      }
+    },
+    {
+      "block": "WaitBlock",
+      "params": {
+        "seconds": "2"
+      }
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "PyFlow RPA",
+        "message": "{{texto_extraido}}",
+        "kind": "info"
+      }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "flow_name": "pichau",
+  "created_at": "2026-04-29T21:34:16.906005",
+  "steps": [
+    {
+      "block": "OpenBrowserBlock",
+      "params": {
+        "url": "https://www.pichau.com.br/",
+        "maximized": true
+      }
+    },
+    {
+      "block": "WaitBlock",
+      "params": {
+        "seconds": "3"
+      }
+    },
+    {
+      "block": "ScrollPageBlock",
+      "params": {
+        "direction": "bottom",
+        "selector": "",
+        "pixels": "500"
+      }
+    },
+    {
+      "block": "ExtractTextBlock",
+      "params": {
+        "selector": "h3",
+        "variable_name": "texto_extraido",
+        "timeout": "10"
+      }
+    }
+  ]
+}

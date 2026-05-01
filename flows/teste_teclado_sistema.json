@@ -1,0 +1,88 @@
+{
+  "flow_name": "teste_teclado_sistema",
+  "created_at": "2026-04-30T01:00:00.000000",
+  "steps": [
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Teste Teclado do Sistema",
+        "message": "O próximo passo vai abrir o Bloco de Notas.\nClique OK e NÃO mexa no mouse por 5 segundos.",
+        "kind": "info"
+      }
+    },
+    {
+      "block": "KeyboardActionBlock",
+      "params": {
+        "action": "hotkey",
+        "value": "win+r",
+        "interval": "0.05",
+        "delay_before": "0.5"
+      }
+    },
+    {
+      "block": "WaitBlock",
+      "params": { "seconds": "1" }
+    },
+    {
+      "block": "KeyboardActionBlock",
+      "params": {
+        "action": "type",
+        "value": "notepad",
+        "interval": "0.05",
+        "delay_before": "0"
+      }
+    },
+    {
+      "block": "KeyboardActionBlock",
+      "params": {
+        "action": "press",
+        "value": "enter",
+        "interval": "0.05",
+        "delay_before": "0"
+      }
+    },
+    {
+      "block": "WaitBlock",
+      "params": { "seconds": "2" }
+    },
+    {
+      "block": "KeyboardActionBlock",
+      "params": {
+        "action": "type",
+        "value": "PyFlow RPA - Teste de teclado do sistema!\nEssa linha foi digitada automaticamente.",
+        "interval": "0.03",
+        "delay_before": "0.3"
+      }
+    },
+    {
+      "block": "WaitBlock",
+      "params": { "seconds": "1" }
+    },
+    {
+      "block": "KeyboardActionBlock",
+      "params": {
+        "action": "hotkey",
+        "value": "ctrl+a",
+        "interval": "0.05",
+        "delay_before": "0"
+      }
+    },
+    {
+      "block": "KeyboardActionBlock",
+      "params": {
+        "action": "hotkey",
+        "value": "ctrl+c",
+        "interval": "0.05",
+        "delay_before": "0.2"
+      }
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "✅ Teste concluído!",
+        "message": "Teclado do sistema funcionando!\n\n• Win+R abriu o executar\n• Digitou 'notepad' e abriu\n• Digitou texto automaticamente\n• Ctrl+A selecionou tudo\n• Ctrl+C copiou o conteúdo",
+        "kind": "info"
+      }
+    }
+  ]
+}
