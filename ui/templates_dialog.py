@@ -3,7 +3,6 @@ Tela de seleção de templates do PyFlow RPA.
 Coloque em: ui/templates_dialog.py
 """
 import os
-import json
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QFrame, QWidget, QScrollArea,
