@@ -1,0 +1,15 @@
+{
+  "flow_name": "teste_smart_click",
+  "steps": [
+    { "block": "OpenBrowserBlock", "params": { "url": "https://www.google.com", "browser": "chrome" } },
+    { 
+      "block": "SmartClickBlock", 
+      "params": { 
+        "selector_1": "//input[@name='erro_proposital']", 
+        "selector_2": "input[name='q']", 
+        "timeout_per_try": "2" 
+      } 
+    },
+    { "block": "ShowMessageBlock", "params": { "message": "O Smart Click funcionou e usou o segundo seletor!", "kind": "info" } }
+  ]
+}

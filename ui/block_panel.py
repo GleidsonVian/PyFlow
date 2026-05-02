@@ -28,12 +28,17 @@ from blocks.control.for_each_block       import ForEachBlock
 from blocks.control.show_message         import ShowMessageBlock
 from blocks.control.desktop_notification import DesktopNotificationBlock
 from blocks.control.text_manipulation    import TextManipulationBlock
+from blocks.control.set_variable         import SetVariableBlock
+from blocks.control.sequence_start_block import SequenceStartBlock
+from blocks.control.sequence_end_block   import SequenceEndBlock
 from blocks.files.read_csv               import ReadCsvBlock
 from blocks.files.save_text              import SaveTextBlock
 from blocks.files.save_csv               import SaveCsvBlock
+from blocks.files.sqlite_block           import SQLiteBlock
 from blocks.integration.http_request     import HttpRequestBlock
 from blocks.integration.send_email       import SendEmailBlock
 from blocks.system.keyboard_action       import KeyboardActionBlock
+from blocks.system.clipboard_block       import ClipboardBlock
 
 AVAILABLE_BLOCKS = [
     OpenBrowserBlock,
@@ -59,13 +64,18 @@ AVAILABLE_BLOCKS = [
     IfBlock,
     LoopBlock,
     ForEachBlock,
+    SetVariableBlock,
+    SequenceStartBlock,
+    SequenceEndBlock,
     ShowMessageBlock,
     DesktopNotificationBlock,
     TextManipulationBlock,
     KeyboardActionBlock,
+    ClipboardBlock,
     ReadCsvBlock,
     SaveTextBlock,
     SaveCsvBlock,
+    SQLiteBlock,
     HttpRequestBlock,
     SendEmailBlock,
 ]
@@ -143,8 +153,7 @@ class BlockPanel(QWidget):
     def _populate(self):
         categories = {}
         for block_cls in AVAILABLE_BLOCKS:
-            cat = block_cls.category
-            categories.setdefault(cat, []).append(block_cls)
+            categories.setdefault(block_cls.category, []).append(block_cls)
 
         for cat, blocks in categories.items():
             cat_item = QListWidgetItem(f"  {cat.upper()}")

@@ -1,0 +1,37 @@
+{
+  "flow_name": "teste_assets_sqlite",
+  "steps": [
+    {
+      "block": "SQLiteBlock",
+      "params": {
+        "database": "{{ASSET:PATH_BANCO}}",
+        "query": "CREATE TABLE IF NOT EXISTS acessos (id INTEGER PRIMARY KEY, user TEXT);",
+        "params": ""
+      }
+    },
+    {
+      "block": "SQLiteBlock",
+      "params": {
+        "database": "{{ASSET:PATH_BANCO}}",
+        "query": "INSERT INTO acessos (user) VALUES (?);",
+        "params": "{{ASSET:USUARIO_SISTEMA}}"
+      }
+    },
+    {
+      "block": "SQLiteBlock",
+      "params": {
+        "database": "{{ASSET:PATH_BANCO}}",
+        "query": "SELECT * FROM acessos ORDER BY id DESC LIMIT 1;",
+        "variable_name": "ultimo_acesso",
+        "row_variable": "registro"
+      }
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "message": "Sucesso! O banco em '{{ASSET:PATH_BANCO}}' registrou o usuário '{{registro_user}}'.",
+        "kind": "info"
+      }
+    }
+  ]
+}

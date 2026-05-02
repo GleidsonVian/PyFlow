@@ -29,12 +29,17 @@ from blocks.control.for_each_block       import ForEachBlock
 from blocks.control.show_message         import ShowMessageBlock
 from blocks.control.desktop_notification import DesktopNotificationBlock
 from blocks.control.text_manipulation    import TextManipulationBlock
+from blocks.control.set_variable         import SetVariableBlock
+from blocks.control.sequence_start_block import SequenceStartBlock
+from blocks.control.sequence_end_block   import SequenceEndBlock
 from blocks.files.read_csv               import ReadCsvBlock
 from blocks.files.save_text              import SaveTextBlock
 from blocks.files.save_csv               import SaveCsvBlock
+from blocks.files.sqlite_block           import SQLiteBlock
 from blocks.integration.http_request     import HttpRequestBlock
 from blocks.integration.send_email       import SendEmailBlock
 from blocks.system.keyboard_action       import KeyboardActionBlock
+from blocks.system.clipboard_block       import ClipboardBlock
 
 BLOCK_REGISTRY = {
     "OpenBrowserBlock":          OpenBrowserBlock,
@@ -60,13 +65,18 @@ BLOCK_REGISTRY = {
     "IfBlock":                   IfBlock,
     "LoopBlock":                 LoopBlock,
     "ForEachBlock":              ForEachBlock,
+    "SetVariableBlock":          SetVariableBlock,
+    "SequenceStartBlock":        SequenceStartBlock,
+    "SequenceEndBlock":          SequenceEndBlock,
     "ShowMessageBlock":          ShowMessageBlock,
     "DesktopNotificationBlock":  DesktopNotificationBlock,
     "TextManipulationBlock":     TextManipulationBlock,
     "KeyboardActionBlock":       KeyboardActionBlock,
+    "ClipboardBlock":            ClipboardBlock,
     "ReadCsvBlock":              ReadCsvBlock,
     "SaveTextBlock":             SaveTextBlock,
     "SaveCsvBlock":              SaveCsvBlock,
+    "SQLiteBlock":               SQLiteBlock,
     "HttpRequestBlock":          HttpRequestBlock,
     "SendEmailBlock":            SendEmailBlock,
 }
@@ -86,6 +96,7 @@ class CanvasBlockWidget(QFrame):
     duplicated = Signal(object)
     move_up    = Signal(object)
     move_down  = Signal(object)
+    toggled_collapse = Signal(object)
 
     STATE_COLORS = {
         "running": ("#1c3a5e", "#89b4fa"),
@@ -99,6 +110,8 @@ class CanvasBlockWidget(QFrame):
         self.params = params
         self.index = index
         self.state = "idle"
+        self.is_sequence_start = isinstance(self.block_instance, SequenceStartBlock)
+        self.is_collapsed = False
         self._drag_start_pos = None
         self._build_ui()
         self._apply_state()
@@ -110,17 +123,24 @@ class CanvasBlockWidget(QFrame):
         self.setObjectName("canvas_block")
         self.setFixedHeight(72)
         self.setCursor(Qt.PointingHandCursor)
-
         layout = QHBoxLayout(self)
         layout.setContentsMargins(14, 10, 14, 10)
         layout.setSpacing(10)
+
+        if self.is_sequence_start:
+            self.collapse_button = QLabel("▼")
+            self.collapse_button.setObjectName("collapse_button")
+            self.collapse_button.setFixedSize(22, 22)
+            self.collapse_button.setAlignment(Qt.AlignCenter)
+            self.collapse_button.setCursor(Qt.PointingHandCursor)
+            self.collapse_button.mousePressEvent = self._toggle_collapse
+            layout.addWidget(self.collapse_button)
 
         self.drag_handle = QLabel("⠿")
         self.drag_handle.setObjectName("drag_handle")
         self.drag_handle.setFixedWidth(16)
         self.drag_handle.setAlignment(Qt.AlignCenter)
         self.drag_handle.setCursor(Qt.SizeVerCursor)
-        self.drag_handle.setToolTip("Arraste para reordenar")
 
         self.lbl_index = QLabel(str(self.index + 1))
         self.lbl_index.setObjectName("block_index")
@@ -131,7 +151,6 @@ class CanvasBlockWidget(QFrame):
         info.setSpacing(2)
         self.lbl_name = QLabel(self.block_instance.name)
         self.lbl_name.setObjectName("block_name")
-
         params_text = "  ·  ".join(
             f"{k}: {v}" for k, v in self.params.items()
             if v not in (None, "", False)
@@ -139,7 +158,6 @@ class CanvasBlockWidget(QFrame):
         self.lbl_params = QLabel(params_text)
         self.lbl_params.setObjectName("block_params")
         self.lbl_params.setWordWrap(False)
-
         info.addWidget(self.lbl_name)
         info.addWidget(self.lbl_params)
 
@@ -155,19 +173,22 @@ class CanvasBlockWidget(QFrame):
         layout.addLayout(info, 1)
         layout.addWidget(self.btn_remove)
 
-    def set_state(self, state: str):
+    def set_state(self, state):
         self.state = state
         self._apply_state()
 
+    def _toggle_collapse(self, event):
+        self.is_collapsed = not self.is_collapsed
+        self.collapse_button.setText("▶" if self.is_collapsed else "▼")
+        self.toggled_collapse.emit(self)
+
     def _apply_state(self):
         cat = self._get_category()
-        if self.state == "idle":
-            bg, accent = CATEGORY_IDLE_COLORS.get(cat, ("#313244", "#cba6f7"))
-        else:
-            bg, accent = self.STATE_COLORS.get(self.state, ("#313244", "#cba6f7"))
-
+        bg, accent = (self.STATE_COLORS.get(self.state)
+                      or CATEGORY_IDLE_COLORS.get(cat, ("#313244", "#cba6f7")))
         self.setStyleSheet(f"""
             #canvas_block {{ background-color: {bg}; border: 1.5px solid {accent}; border-radius: 10px; }}
+            #collapse_button {{ color: #6c7086; font-size: 12px; border-radius: 11px; }}
             #drag_handle {{ color: #45475a; font-size: 16px; }}
             #block_index {{ background-color: {accent}; color: #1e1e2e; border-radius: 14px; font-size: 12px; font-weight: 700; }}
             #block_name {{ color: #cdd6f4; font-size: 13px; font-weight: 600; }}
@@ -219,7 +240,7 @@ class CanvasBlockWidget(QFrame):
         menu.addSeparator()
         act_del  = menu.addAction("✕  Remover bloco")
         action = menu.exec(event.globalPos())
-        if action == act_dup:  self.duplicated.emit(self)
+        if action == act_dup:    self.duplicated.emit(self)
         elif action == act_up:   self.move_up.emit(self)
         elif action == act_down: self.move_down.emit(self)
         elif action == act_del:  self.removed.emit(self)
@@ -291,8 +312,7 @@ class Canvas(QWidget):
     def dropEvent(self, event):
         text = event.mimeData().text()
         if text.startswith("__reorder__"):
-            dragged_id = int(text.replace("__reorder__", ""))
-            widget = next((b for b in self._blocks if id(b) == dragged_id), None)
+            widget = next((b for b in self._blocks if id(b) == int(text[11:])), None)
             if widget:
                 drop_pos = self.inner.mapFromGlobal(QCursor.pos())
                 self._reorder(widget, self._get_insert_index(drop_pos.y()))
@@ -307,28 +327,36 @@ class Canvas(QWidget):
             self._add_block(block_instance, dialog.get_params())
         event.acceptProposedAction()
 
-    def _get_insert_index(self, y: int) -> int:
+    def _get_insert_index(self, y):
         for i, blk in enumerate(self._blocks):
             if y < blk.mapTo(self.inner, QPoint(0, 0)).y() + blk.height() // 2:
                 return i
         return len(self._blocks)
 
     def _full_rebuild(self):
+        # Limpa o layout, mas mantém os widgets dos blocos vivos
         while self.flow_layout.count():
             item = self.flow_layout.takeAt(0)
             w = item.widget()
-            if w is None or w is self._empty_label: continue
-            if isinstance(w, CanvasBlockWidget) and w in self._blocks: continue
-            w.deleteLater()
-        self._empty_label.setVisible(len(self._blocks) == 0)
-        self.flow_layout.addWidget(self._empty_label)
+            if w and w not in self._blocks and w is not self._empty_label:
+                w.deleteLater()
+
+        # Reatribui o índice real para todos os blocos
         for i, blk in enumerate(self._blocks):
             blk.index = i
+
+        visible_blocks = [b for b in self._blocks if not b.isHidden()]
+        self._empty_label.setVisible(not self._blocks)  # Mostra se não houver blocos
+        self.flow_layout.addWidget(self._empty_label)
+
+        # Adiciona apenas os blocos visíveis e conectores ao layout
+        for i, blk in enumerate(visible_blocks):
             blk.lbl_index.setText(str(i + 1))
             blk._apply_state()
-            if i > 0: self.flow_layout.addWidget(ConnectorArrow())
+            if i > 0:
+                self.flow_layout.addWidget(ConnectorArrow())
             self.flow_layout.addWidget(blk)
-            blk.show()
+
         self.flow_layout.addStretch(1)
 
     def _append_to_layout(self, widget):
@@ -348,6 +376,7 @@ class Canvas(QWidget):
                                    insert_at if insert_at is not None else len(self._blocks))
         widget.clicked.connect(self._on_block_clicked)
         widget.removed.connect(self._remove_block)
+        widget.toggled_collapse.connect(self._on_sequence_toggled)
         widget.duplicated.connect(self._duplicate_block)
         widget.move_up.connect(self._move_up)
         widget.move_down.connect(self._move_down)
@@ -370,24 +399,43 @@ class Canvas(QWidget):
         idx = self._blocks.index(widget) if widget in self._blocks else -1
         if idx > 0:
             self._blocks[idx], self._blocks[idx - 1] = self._blocks[idx - 1], self._blocks[idx]
-            self._full_rebuild()
-            self._select_block(widget)
-            self.block_updated.emit()
+            self._full_rebuild(); self._select_block(widget); self.block_updated.emit()
 
     def _move_down(self, widget):
         idx = self._blocks.index(widget) if widget in self._blocks else -1
         if 0 <= idx < len(self._blocks) - 1:
             self._blocks[idx], self._blocks[idx + 1] = self._blocks[idx + 1], self._blocks[idx]
-            self._full_rebuild()
-            self._select_block(widget)
-            self.block_updated.emit()
+            self._full_rebuild(); self._select_block(widget); self.block_updated.emit()
 
     def _reorder(self, widget, new_index):
         if widget not in self._blocks: return
         self._blocks.pop(self._blocks.index(widget))
         self._blocks.insert(min(new_index, len(self._blocks)), widget)
+        self._full_rebuild(); self._select_block(widget); self.block_updated.emit()
+
+    def _on_sequence_toggled(self, start_widget):
+        start_index = self._blocks.index(start_widget)
+        is_collapsed = start_widget.is_collapsed
+
+        # Encontra o bloco final correspondente, lidando com aninhamento
+        nesting_level = 0
+        end_index = -1
+        for i in range(start_index + 1, len(self._blocks)):
+            block = self._blocks[i]
+            if isinstance(block.block_instance, SequenceStartBlock):
+                nesting_level += 1
+            elif isinstance(block.block_instance, SequenceEndBlock):
+                if nesting_level == 0:
+                    end_index = i
+                    break
+                else:
+                    nesting_level -= 1
+
+        if end_index != -1:
+            # Alterna a visibilidade dos blocos entre o início e o fim
+            for i in range(start_index + 1, end_index + 1):
+                self._blocks[i].setVisible(not is_collapsed)
         self._full_rebuild()
-        self._select_block(widget)
         self.block_updated.emit()
 
     def _on_block_clicked(self, widget): self._select_block(widget)
@@ -434,9 +482,7 @@ class Canvas(QWidget):
             if cls: self._add_block(cls(), step.get("params", {}))
 
     def clear_canvas(self):
-        self._blocks.clear()
-        self._selected = None
-        self._full_rebuild()
+        self._blocks.clear(); self._selected = None; self._full_rebuild()
 
     def _apply_styles(self):
         self.setStyleSheet("""

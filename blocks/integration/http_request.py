@@ -1,73 +1,85 @@
+"""
+Bloco de requisição HTTP do PyFlow RPA.
+Usa a biblioteca requests para GET/POST/PUT/PATCH/DELETE.
+Coloque em: blocks/integration/http_request.py
+"""
 import json
-import urllib.request
-import urllib.error
+import requests
 from blocks.base_block import BaseBlock
-from blocks.browser.extract_text import ExtractTextBlock
 
 
 class HttpRequestBlock(BaseBlock):
-    name = "HTTP Request"
-    description = "Faz requisições HTTP (GET, POST, PUT, PATCH, DELETE) para APIs e salva a resposta como variável."
-    category = "Integração"
+    name        = "HTTP Request"
+    description = "Realiza requisições HTTP para APIs REST usando a biblioteca requests. Suporta GET, POST, PUT, PATCH e DELETE com headers, body e extração de campos JSON via dot notation."
+    category    = "Integração"
 
     params_schema = [
         {
-            "name": "method",
-            "label": "Método",
-            "type": "str",
-            "required": True,
-            "default": "GET",
-            "placeholder": "GET, POST, PUT, PATCH ou DELETE"
+            "name":        "method",
+            "label":       "Método HTTP",
+            "type":        "str",
+            "required":    True,
+            "default":     "GET",
+            "placeholder": "GET | POST | PUT | PATCH | DELETE"
         },
         {
-            "name": "url",
-            "label": "URL da API",
-            "type": "str",
-            "required": True,
-            "default": "",
+            "name":        "url",
+            "label":       "URL",
+            "type":        "str",
+            "required":    True,
+            "default":     "",
             "placeholder": "https://api.exemplo.com/endpoint"
         },
         {
-            "name": "headers",
-            "label": "Headers (JSON — opcional)",
-            "type": "str",
-            "required": False,
-            "default": "",
+            "name":        "headers",
+            "label":       "Headers (JSON)",
+            "type":        "str",
+            "required":    False,
+            "default":     "",
             "placeholder": '{"Authorization": "Bearer {{token}}", "Content-Type": "application/json"}'
         },
         {
-            "name": "body",
-            "label": "Body (JSON — para POST/PUT/PATCH)",
-            "type": "str",
-            "required": False,
-            "default": "",
-            "placeholder": '{"nome": "{{nome}}", "email": "{{email}}"}'
+            "name":        "body",
+            "label":       "Body (JSON — para POST/PUT/PATCH)",
+            "type":        "str",
+            "required":    False,
+            "default":     "",
+            "placeholder": '{"nome": "{{nome}}", "valor": "{{valor}}"}'
         },
         {
-            "name": "json_field",
-            "label": "Campo do JSON a extrair (dot notation — opcional)",
-            "type": "str",
-            "required": False,
-            "default": "",
-            "placeholder": "Ex: data.user.email  ou  results.0.name"
+            "name":        "json_field",
+            "label":       "Campo do JSON a extrair (dot notation)",
+            "type":        "str",
+            "required":    False,
+            "default":     "",
+            "placeholder": "Ex: data.user.email | results.0.name | total"
         },
         {
-            "name": "variable_name",
-            "label": "Salvar resposta como variável",
-            "type": "str",
-            "required": False,
-            "default": "http_resposta",
-            "placeholder": "Nome da variável para guardar a resposta"
+            "name":        "variable_name",
+            "label":       "Salvar resposta como variável",
+            "type":        "str",
+            "required":    False,
+            "default":     "http_resposta",
+            "placeholder": "Nome da variável onde salvar a resposta ou campo extraído"
         },
         {
-            "name": "timeout",
-            "label": "Timeout (segundos)",
-            "type": "str",
-            "required": False,
-            "default": "15",
+            "name":        "timeout",
+            "label":       "Timeout (segundos)",
+            "type":        "str",
+            "required":    False,
+            "default":     "15",
             "placeholder": "15"
-        }
+        },
+        {
+            "name":        "verify_ssl",
+            "label":       "Verificar SSL",
+            "type":        "bool",
+            "required":    False,
+            "default":     True
+        },
     ]
+
+    METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
 
     def execute(self, params: dict) -> dict:
         errors = self.validate_params(params)
@@ -76,109 +88,92 @@ class HttpRequestBlock(BaseBlock):
 
         method     = params.get("method", "GET").strip().upper()
         url        = params.get("url", "").strip()
-        headers_raw = params.get("headers", "").strip()
-        body_raw   = params.get("body", "").strip()
         json_field = params.get("json_field", "").strip()
         var_name   = params.get("variable_name", "http_resposta").strip() or "http_resposta"
+        verify_ssl = params.get("verify_ssl", True)
+
         try:
-            timeout = int(params.get("timeout", 15))
+            timeout = float(params.get("timeout", 15))
         except ValueError:
-            timeout = 15
+            timeout = 15.0
 
-        if method not in ("GET", "POST", "PUT", "PATCH", "DELETE"):
-            return {"success": False, "message": f"Método '{method}' não suportado. Use GET, POST, PUT, PATCH ou DELETE."}
+        if method not in self.METHODS:
+            return {"success": False, "message": f"Método '{method}' inválido. Use: {', '.join(sorted(self.METHODS))}"}
 
-        # Monta headers
-        headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        if headers_raw:
-            try:
-                headers.update(json.loads(headers_raw))
-            except json.JSONDecodeError:
-                return {"success": False, "message": "Headers inválidos — deve ser um JSON válido. Ex: {\"Authorization\": \"Bearer token\"}"}
+        headers = self._parse_json(params.get("headers", ""), "headers")
+        if isinstance(headers, str):
+            return {"success": False, "message": headers}
 
-        # Monta body
-        body_bytes = None
-        if body_raw and method in ("POST", "PUT", "PATCH"):
-            try:
-                json.loads(body_raw)  # valida JSON
-                body_bytes = body_raw.encode("utf-8")
-            except json.JSONDecodeError:
-                return {"success": False, "message": "Body inválido — deve ser um JSON válido."}
+        body = self._parse_json(params.get("body", ""), "body")
+        if isinstance(body, str):
+            return {"success": False, "message": body}
 
         try:
-            req = urllib.request.Request(
-                url,
-                data=body_bytes,
-                headers=headers,
-                method=method
+            response = requests.request(
+                method  = method,
+                url     = url,
+                headers = headers or None,
+                json    = body or None,
+                timeout = timeout,
+                verify  = verify_ssl,
             )
 
-            with urllib.request.urlopen(req, timeout=timeout) as response:
-                status_code = response.status
-                raw = response.read().decode("utf-8")
+            status = response.status_code
 
-            # Tenta parsear como JSON
             try:
-                parsed = json.loads(raw)
-                is_json = True
-            except json.JSONDecodeError:
-                parsed = raw
-                is_json = False
+                data = response.json()
+            except Exception:
+                data = response.text
 
-            # Extrai campo específico via dot notation
-            extracted = None
-            if json_field and is_json:
-                extracted = self._extract_field(parsed, json_field)
-                if extracted is not None:
-                    str_val = str(extracted)
-                    ExtractTextBlock._context[var_name] = str_val
-                    return {
-                        "success": True,
-                        "message": f"HTTP {method} {status_code} → {var_name}: \"{str_val[:60]}{'...' if len(str_val) > 60 else ''}\"",
-                        "data": {"status": status_code, "variable": var_name, "value": extracted}
-                    }
-                else:
-                    return {
-                        "success": False,
-                        "message": f"HTTP {method} {status_code} OK, mas campo '{json_field}' não encontrado na resposta."
-                    }
+            extracted = self._extract_field(data, json_field) if json_field else data
 
-            # Sem extração: salva resposta completa como string
-            value = json.dumps(parsed, ensure_ascii=False) if is_json else raw
-            ExtractTextBlock._context[var_name] = value
-            preview = value[:80] + ("..." if len(value) > 80 else "")
+            from blocks.browser.extract_text import ExtractTextBlock
+            context = ExtractTextBlock._context
+            context[var_name]             = extracted
+            context[f"{var_name}_status"] = str(status)
+            context[f"{var_name}_ok"]     = str(response.ok)
+
+            preview = str(extracted)[:80] + ("..." if len(str(extracted)) > 80 else "")
+
+            if not response.ok:
+                return {"success": False, "message": f"HTTP {status} {response.reason}: {str(data)[:200]}"}
 
             return {
                 "success": True,
-                "message": f"HTTP {method} {status_code} → {var_name}: \"{preview}\"",
-                "data": {"status": status_code, "variable": var_name, "value": value}
+                "message": f"HTTP {method} {status} → '{var_name}': {preview}",
+                "data":    {"response": extracted, "status": status}
             }
 
-        except urllib.error.HTTPError as e:
-            body = e.read().decode("utf-8") if e.fp else ""
-            return {"success": False, "message": f"HTTP {method} erro {e.code}: {e.reason} — {body[:100]}"}
-        except urllib.error.URLError as e:
-            return {"success": False, "message": f"Erro de conexão: {str(e.reason)}"}
-        except Exception as e:
-            return {"success": False, "message": f"Erro na requisição: {str(e)}"}
+        except requests.exceptions.Timeout:
+            return {"success": False, "message": f"Timeout após {timeout}s — {url}"}
+        except requests.exceptions.SSLError as e:
+            return {"success": False, "message": f"Erro SSL: {str(e)[:200]}. Desative 'Verificar SSL' se necessário."}
+        except requests.exceptions.ConnectionError as e:
+            return {"success": False, "message": f"Erro de conexão: {str(e)[:200]}"}
+        except requests.exceptions.RequestException as e:
+            return {"success": False, "message": f"Erro na requisição: {str(e)[:200]}"}
 
-    def _extract_field(self, data, path: str):
-        """
-        Extrai campo de um dict/list usando dot notation.
-        Ex: 'data.user.email' ou 'results.0.name'
-        """
-        keys = path.split(".")
+    def _parse_json(self, raw: str, field_name: str):
+        raw = raw.strip()
+        if not raw:
+            return None
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError as e:
+            return f"JSON inválido no campo '{field_name}': {str(e)}"
+
+    def _extract_field(self, data, dot_path: str):
         current = data
-        for key in keys:
-            if isinstance(current, dict):
-                current = current.get(key)
-            elif isinstance(current, list):
+        for key in dot_path.split("."):
+            if current is None:
+                return ""
+            if isinstance(current, list):
                 try:
                     current = current[int(key)]
                 except (ValueError, IndexError):
-                    return None
+                    return ""
+            elif isinstance(current, dict):
+                current = current.get(key)
             else:
-                return None
-            if current is None:
-                return None
-        return current
+                return str(current)
+        return current if current is not None else ""

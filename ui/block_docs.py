@@ -6,10 +6,10 @@ BLOCK_DOCS = {
 
     "OpenBrowserBlock": {
         "title": "Abrir Navegador",
-        "description": "Abre o Google Chrome em uma URL especificada. Deve ser o primeiro bloco em fluxos de automação web.",
+        "description": "Abre o Google Chrome em uma URL. Deve ser o primeiro bloco em fluxos de automação web.",
         "params": [
             ("url", "Texto", "Sim", "URL completa. Ex: https://google.com"),
-            ("maximized", "Booleano", "Não", "Abre o navegador maximizado na tela"),
+            ("maximized", "Booleano", "Não", "Abre o navegador maximizado"),
         ],
         "example": "url: https://www.google.com\nmaximized: True",
         "tip": "Se a URL não começar com http, o prefixo https:// é adicionado automaticamente."
@@ -17,43 +17,43 @@ BLOCK_DOCS = {
 
     "ClickElementBlock": {
         "title": "Clicar em Elemento",
-        "description": "Localiza um elemento na página pelo seletor CSS e clica nele. Aguarda o elemento estar clicável antes de agir.",
+        "description": "Localiza um elemento pelo seletor CSS e clica nele.",
         "params": [
             ("selector", "Texto", "Sim", "Seletor CSS. Ex: #btn-login, .btn-submit"),
-            ("timeout", "Número", "Não", "Segundos para aguardar o elemento (padrão: 10)"),
+            ("timeout", "Número", "Não", "Segundos para aguardar (padrão: 10)"),
         ],
         "example": "selector: #btn-entrar\ntimeout: 10",
-        "tip": "No DevTools (F12): botão direito no elemento → Copiar → Copiar selector."
+        "tip": "DevTools (F12): botão direito → Copiar → Copiar selector."
     },
 
     "FillFieldBlock": {
         "title": "Preencher Campo",
-        "description": "Localiza um campo de texto e digita o valor informado. Suporta variáveis dinâmicas.",
+        "description": "Localiza um campo de texto e digita o valor informado.",
         "params": [
-            ("selector", "Texto", "Sim", "Seletor CSS do campo. Ex: input[name='email']"),
+            ("selector", "Texto", "Sim", "Seletor CSS do campo"),
             ("value", "Texto", "Sim", "Texto a digitar. Aceita {{variavel}}"),
             ("clear_before", "Booleano", "Não", "Limpa o campo antes de digitar (padrão: True)"),
-            ("timeout", "Número", "Não", "Segundos para aguardar o campo (padrão: 10)"),
+            ("timeout", "Número", "Não", "Segundos para aguardar (padrão: 10)"),
         ],
         "example": "selector: #campo-busca\nvalue: {{termo_busca}}",
-        "tip": "Use {{nome_variavel}} para inserir valores dinâmicos extraídos por outros blocos."
+        "tip": "Use {{nome_variavel}} para inserir valores dinâmicos."
     },
 
     "ExtractTextBlock": {
         "title": "Extrair Texto",
         "description": "Extrai o texto visível de um elemento e salva como variável.",
         "params": [
-            ("selector", "Texto", "Sim", "Seletor CSS. Ex: h1, .titulo-produto, #preco"),
-            ("variable_name", "Texto", "Não", "Nome da variável onde salvar (padrão: texto_extraido)"),
-            ("timeout", "Número", "Não", "Segundos para aguardar o elemento (padrão: 10)"),
+            ("selector", "Texto", "Sim", "Seletor CSS. Ex: h1, .titulo, #preco"),
+            ("variable_name", "Texto", "Não", "Nome da variável (padrão: texto_extraido)"),
+            ("timeout", "Número", "Não", "Segundos para aguardar (padrão: 10)"),
         ],
         "example": "selector: h1\nvariable_name: titulo_pagina",
-        "tip": "O valor fica disponível como {{titulo_pagina}} em todos os blocos seguintes."
+        "tip": "O valor fica disponível como {{titulo_pagina}} nos blocos seguintes."
     },
 
     "ExtractListBlock": {
         "title": "Extrair Lista",
-        "description": "Extrai o texto (ou atributo) de todos os elementos que correspondem ao seletor e salva como lista.",
+        "description": "Extrai o texto de todos os elementos que correspondem ao seletor e salva como lista.",
         "params": [
             ("selector", "Texto", "Sim", "Seletor CSS. Ex: .product-title, ul li"),
             ("attribute", "Texto", "Não", "Atributo a extrair. Ex: href, src. Vazio = texto"),
@@ -68,149 +68,142 @@ BLOCK_DOCS = {
 
     "SmartWaitBlock": {
         "title": "Espera Inteligente",
-        "description": "Aguarda uma condição específica antes de prosseguir. Muito mais robusto que o Aguardar simples — espera por elementos, URLs, textos ou carregamento de página.",
+        "description": "Aguarda uma condição específica antes de prosseguir.",
         "params": [
             ("condition", "Texto", "Sim", "element_visible | element_clickable | element_hidden | element_exists | url_contains | url_equals | text_in_element | text_in_page | page_loaded | element_count"),
-            ("selector", "Texto", "Cond.", "Seletor CSS (obrigatório para condições de elemento)"),
+            ("selector", "Texto", "Cond.", "Seletor CSS (para condições de elemento)"),
             ("value", "Texto", "Cond.", "Valor esperado (para url_contains, text_in_*, element_count)"),
-            ("timeout", "Número", "Não", "Tempo máximo de espera em segundos (padrão: 15)"),
+            ("timeout", "Número", "Não", "Tempo máximo em segundos (padrão: 15)"),
             ("poll_interval", "Número", "Não", "Intervalo de verificação em segundos (padrão: 0.5)"),
             ("variable_name", "Texto", "Não", "Salva True/False do resultado como variável"),
         ],
-        "example": "# Aguardar botão aparecer:\ncondition: element_visible\nselector: .btn-submit\ntimeout: 15\n\n# Aguardar URL mudar:\ncondition: url_contains\nvalue: /dashboard\n\n# Aguardar texto na página:\ncondition: text_in_page\nvalue: Carregado com sucesso\n\n# Aguardar 5 produtos aparecerem:\ncondition: element_count\nselector: .product-card\nvalue: 5",
-        "tip": "Use após cliques e navegações para garantir que a página carregou antes de continuar. Muito mais confiável que um Aguardar fixo."
+        "example": "condition: element_visible\nselector: .btn-submit\n\ncondition: url_contains\nvalue: /dashboard",
+        "tip": "Use após cliques e navegações. Muito mais confiável que um Aguardar fixo."
     },
 
     "PressKeyBlock": {
         "title": "Pressionar Tecla",
-        "description": "Pressiona uma tecla especial em um elemento ou na página inteira do navegador.",
+        "description": "Pressiona uma tecla especial em um elemento ou na página.",
         "params": [
-            ("key", "Texto", "Sim", "Tecla: Enter, Tab, Escape, Backspace, Delete, Space, ArrowUp/Down/Left/Right, Home, End, F5"),
-            ("selector", "Texto", "Não", "Seletor CSS do elemento. Vazio = pressiona no body"),
-            ("timeout", "Número", "Não", "Segundos para aguardar o elemento (padrão: 10)"),
+            ("key", "Texto", "Sim", "Enter, Tab, Escape, Backspace, Delete, Space, ArrowUp/Down, F5..."),
+            ("selector", "Texto", "Não", "Seletor CSS. Vazio = pressiona no body"),
+            ("timeout", "Número", "Não", "Segundos para aguardar (padrão: 10)"),
         ],
         "example": "key: Enter\nselector: #campo-busca",
-        "tip": "Para submeter um formulário, use o seletor do campo + tecla Enter."
+        "tip": "Para submeter formulário: use seletor do campo + tecla Enter."
     },
 
     "ScrollPageBlock": {
         "title": "Scroll na Página",
-        "description": "Rola a página para uma direção ou até um elemento específico.",
+        "description": "Rola a página para uma direção ou até um elemento.",
         "params": [
-            ("direction", "Texto", "Sim", "top = topo | bottom = final | element = até elemento | outro = usa pixels"),
-            ("selector", "Texto", "Cond.", "Seletor CSS (somente para direction=element)"),
-            ("pixels", "Número", "Cond.", "Pixels para rolar (quando direction não é top/bottom/element)"),
+            ("direction", "Texto", "Sim", "top | bottom | element | (pixels)"),
+            ("selector", "Texto", "Cond.", "Seletor CSS (somente direction=element)"),
+            ("pixels", "Número", "Cond.", "Pixels para rolar"),
         ],
-        "example": "direction: bottom\n\n# Até elemento:\ndirection: element\nselector: #rodape",
-        "tip": "Use direction=bottom para carregar conteúdo lazy-loaded antes de extrair."
+        "example": "direction: bottom",
+        "tip": "Use direction=bottom para carregar conteúdo lazy-loaded."
     },
 
     "ScreenshotBlock": {
         "title": "Tirar Screenshot",
-        "description": "Salva uma captura de tela completa da página atual em arquivo PNG.",
+        "description": "Salva captura de tela completa da página em PNG.",
         "params": [
-            ("filename", "Texto", "Não", "Nome do arquivo sem extensão. Vazio = usa data/hora"),
-            ("folder", "Texto", "Não", "Pasta de destino (padrão: screenshots). Criada automaticamente"),
+            ("filename", "Texto", "Não", "Nome sem extensão. Vazio = usa data/hora"),
+            ("folder", "Texto", "Não", "Pasta de destino (padrão: screenshots)"),
         ],
         "example": "filename: resultado_login\nfolder: screenshots",
-        "tip": "Ideal para usar após ações importantes para registrar o estado da página."
+        "tip": "Ideal para registrar o estado da página após ações importantes."
     },
 
     "GetCurrentUrlBlock": {
         "title": "Obter URL Atual",
         "description": "Captura a URL atual do navegador e salva como variável.",
-        "params": [
-            ("variable_name", "Texto", "Não", "Nome da variável (padrão: url_atual)"),
-        ],
-        "example": "variable_name: url_pagina_produto",
-        "tip": "Útil para salvar URLs de produtos encontrados durante scraping."
+        "params": [("variable_name", "Texto", "Não", "Nome da variável (padrão: url_atual)")],
+        "example": "variable_name: url_produto",
+        "tip": "Útil para salvar URLs de produtos durante scraping."
     },
 
     "MouseActionBlock": {
         "title": "Ação de Mouse",
-        "description": "Executa ações avançadas de mouse usando ActionChains do Selenium.",
+        "description": "Executa ações avançadas: hover, duplo clique, drag & drop.",
         "params": [
             ("action", "Texto", "Sim", "double_click | right_click | hover | drag_and_drop | click_offset | move_to"),
-            ("selector", "Texto", "Cond.", "Seletor CSS do elemento alvo"),
-            ("target_selector", "Texto", "Cond.", "Seletor do destino (somente drag_and_drop)"),
+            ("selector", "Texto", "Cond.", "Seletor CSS do elemento"),
+            ("target_selector", "Texto", "Cond.", "Destino (somente drag_and_drop)"),
             ("offset_x", "Número", "Não", "Offset X em pixels"),
             ("offset_y", "Número", "Não", "Offset Y em pixels"),
             ("timeout", "Número", "Não", "Segundos para aguardar (padrão: 10)"),
         ],
         "example": "action: hover\nselector: .menu-dropdown",
-        "tip": "Use hover para ativar menus dropdown antes de clicar em submenus."
+        "tip": "Use hover para ativar menus dropdown antes de clicar."
     },
 
     "NavigateToUrlBlock": {
         "title": "Navegar para URL",
-        "description": "Navega para uma URL no navegador já aberto, sem abrir nova janela.",
+        "description": "Navega para uma URL no navegador já aberto.",
         "params": [("url", "Texto", "Sim", "URL de destino. Aceita {{variavel}}")],
-        "example": "url: https://exemplo.com/produto/{{id_produto}}",
-        "tip": "Diferente do Abrir Navegador, reutiliza a janela já aberta."
+        "example": "url: https://exemplo.com/{{id}}",
+        "tip": "Reutiliza a janela já aberta, diferente do Abrir Navegador."
     },
 
     "GoBackBlock": {
         "title": "Voltar Página",
         "description": "Equivalente ao botão Voltar do navegador.",
-        "params": [],
-        "example": "Sem parâmetros.",
+        "params": [], "example": "Sem parâmetros.",
         "tip": "Útil após acessar um produto para voltar à listagem."
     },
 
     "GoForwardBlock": {
         "title": "Avançar Página",
         "description": "Equivalente ao botão Avançar do navegador.",
-        "params": [],
-        "example": "Sem parâmetros.",
+        "params": [], "example": "Sem parâmetros.",
         "tip": "Só funciona se você voltou antes."
     },
 
     "RefreshPageBlock": {
         "title": "Atualizar Página",
-        "description": "Recarrega a página atual. Equivalente ao F5.",
-        "params": [],
-        "example": "Sem parâmetros.",
-        "tip": "Use após ações que podem levar tempo para refletir na página."
+        "description": "Recarrega a página atual (F5).",
+        "params": [], "example": "Sem parâmetros.",
+        "tip": "Use após ações que demoram para refletir na página."
     },
 
     "OpenNewTabBlock": {
         "title": "Abrir Nova Aba",
-        "description": "Abre uma nova aba no navegador e opcionalmente navega para uma URL.",
+        "description": "Abre uma nova aba e opcionalmente navega para uma URL.",
         "params": [("url", "Texto", "Não", "URL a abrir. Vazio = aba em branco")],
         "example": "url: https://github.com",
-        "tip": "Após abrir a nova aba, o foco muda automaticamente para ela."
+        "tip": "O foco muda automaticamente para a nova aba."
     },
 
     "CloseTabBlock": {
         "title": "Fechar Aba",
-        "description": "Fecha a aba atual e retorna para a aba anterior automaticamente.",
-        "params": [],
-        "example": "Sem parâmetros.",
-        "tip": "Não funciona se houver apenas uma aba — use Fechar Navegador."
+        "description": "Fecha a aba atual e volta para a anterior.",
+        "params": [], "example": "Sem parâmetros.",
+        "tip": "Não funciona com apenas uma aba — use Fechar Navegador."
     },
 
     "SwitchTabBlock": {
         "title": "Trocar de Aba",
-        "description": "Muda o foco para uma aba específica pelo índice numérico.",
+        "description": "Muda o foco para uma aba pelo índice.",
         "params": [("tab_index", "Número", "Sim", "0 = primeira, 1 = segunda...")],
         "example": "tab_index: 0",
-        "tip": "Use após Abrir Nova Aba para voltar para a aba original."
+        "tip": "Use para voltar para a aba original após Abrir Nova Aba."
     },
 
     "CloseBrowserBlock": {
         "title": "Fechar Navegador",
-        "description": "Fecha todas as abas e encerra completamente o Chrome.",
-        "params": [],
-        "example": "Sem parâmetros.",
+        "description": "Fecha todas as abas e encerra o Chrome.",
+        "params": [], "example": "Sem parâmetros.",
         "tip": "Recomendado como último bloco em fluxos web."
     },
 
     "WaitBlock": {
         "title": "Aguardar",
-        "description": "Pausa a execução por um número determinado de segundos.",
-        "params": [("seconds", "Número", "Sim", "Tempo de pausa. Aceita decimais: 1.5 = 1,5s")],
+        "description": "Pausa a execução por N segundos.",
+        "params": [("seconds", "Número", "Sim", "Tempo de pausa. Aceita decimais: 1.5s")],
         "example": "seconds: 3",
-        "tip": "Para esperar por condições dinâmicas, prefira o bloco Espera Inteligente."
+        "tip": "Para condições dinâmicas, prefira o bloco Espera Inteligente."
     },
 
     "IfBlock": {
@@ -218,8 +211,8 @@ BLOCK_DOCS = {
         "description": "Verifica uma condição e pula os próximos N blocos se for falsa.",
         "params": [
             ("condition_type", "Texto", "Sim", "element_exists | element_not_exists | variable_contains | variable_equals"),
-            ("selector", "Texto", "Cond.", "Seletor CSS (para condições de elemento)"),
-            ("variable_name", "Texto", "Cond.", "Nome da variável (para condições de variável)"),
+            ("selector", "Texto", "Cond.", "Seletor CSS"),
+            ("variable_name", "Texto", "Cond.", "Nome da variável"),
             ("expected_value", "Texto", "Cond.", "Valor esperado"),
             ("skip_on_false", "Número", "Não", "Blocos a pular se falso (padrão: 1)"),
         ],
@@ -246,31 +239,62 @@ BLOCK_DOCS = {
             ("items", "Texto", "Sim", "Lista separada por vírgula OU nome de variável de lista"),
             ("variable_name", "Texto", "Não", "Variável de iteração (padrão: item_atual)"),
             ("blocks_count", "Número", "Sim", "Quantos blocos seguintes fazem parte do loop"),
-            ("delay_between", "Número", "Não", "Pausa entre iterações em segundos"),
+            ("delay_between", "Número", "Não", "Pausa entre iterações"),
         ],
         "example": "items: titulos\nvariable_name: titulo\nblocks_count: 2",
-        "tip": "Em cada iteração, {{item_atual}} recebe o valor do item corrente."
+        "tip": "Em cada iteração {{item_atual}} recebe o valor corrente."
+    },
+
+    "SetVariableBlock": {
+        "title": "Definir Variável",
+        "description": "Cria ou modifica variáveis sem precisar de scraping.",
+        "params": [
+            ("variable_name", "Texto", "Sim", "Nome da variável a criar/modificar"),
+            ("operation", "Texto", "Sim", "set | increment | decrement | append | prepend | multiply | divide | now | clear"),
+            ("value", "Texto", "Cond.", "Valor a usar. Aceita {{variavel}}"),
+            ("format", "Texto", "Não", "Formato para operation=now (padrão: %d/%m/%Y %H:%M:%S)"),
+        ],
+        "example": "variable_name: contador\noperation: set\nvalue: 0\n\noperation: increment\nvalue: 1\n\noperation: now\nformat: %d/%m/%Y",
+        "tip": "Use increment em loops para contar. Use now para timestamps."
+    },
+
+    "SequenceStartBlock": {
+        "title": "Início da Sequência",
+        "description": "Marca o início de um grupo de blocos que pode ser recolhido (escondido) para organizar visualmente o fluxo. Funciona em par com o bloco 'Fim da Sequência'.",
+        "params": [
+            ("sequence_name", "Texto", "Sim", "Nome descritivo para o grupo de blocos. Ex: Login, Processar Itens."),
+        ],
+        "example": "sequence_name: Login no Sistema",
+        "tip": "Clique no ícone ▼ ao lado do número do bloco para recolher ou expandir a sequência."
+    },
+
+    "SequenceEndBlock": {
+        "title": "Fim da Sequência",
+        "description": "Marca o final de um grupo de blocos iniciado com 'Início da Sequência'. Não possui parâmetros.",
+        "params": [],
+        "example": "Sem parâmetros.",
+        "tip": "Este bloco serve apenas como um delimitador para o grupo. Ele será escondido junto com os outros blocos quando a sequência for recolhida."
     },
 
     "ShowMessageBlock": {
         "title": "Exibir Mensagem",
-        "description": "Abre uma caixa de diálogo modal. O fluxo pausa até o usuário clicar OK.",
+        "description": "Abre uma caixa de diálogo modal. O fluxo pausa até clicar OK.",
         "params": [
             ("title", "Texto", "Não", "Título da janela"),
             ("message", "Texto", "Sim", "Mensagem. Aceita {{variavel}} e \\n para quebra de linha"),
             ("kind", "Texto", "Não", "info | warning | error"),
         ],
-        "example": "title: Resultado\nmessage: Título: {{titulo}}\nkind: info",
+        "example": "title: Resultado\nmessage: Contador: {{contador}}\nkind: info",
         "tip": "Ideal para debug: exibe valores de variáveis durante a execução."
     },
 
     "DesktopNotificationBlock": {
         "title": "Notificação Desktop",
-        "description": "Exibe uma notificação sem interromper a execução do fluxo.",
+        "description": "Exibe uma notificação sem interromper a execução.",
         "params": [
             ("title", "Texto", "Sim", "Título da notificação"),
             ("message", "Texto", "Sim", "Mensagem. Aceita {{variavel}}"),
-            ("duration", "Número", "Não", "Duração em milissegundos (padrão: 5000)"),
+            ("duration", "Número", "Não", "Duração em ms (padrão: 5000)"),
         ],
         "example": "title: ✅ Concluído\nmessage: {{total}} itens processados.",
         "tip": "Diferente do Exibir Mensagem, não pausa o fluxo."
@@ -278,7 +302,7 @@ BLOCK_DOCS = {
 
     "TextManipulationBlock": {
         "title": "Manipular Texto",
-        "description": "Aplica transformações em uma variável de texto. 14 operações disponíveis.",
+        "description": "Aplica transformações em uma variável. 14 operações disponíveis.",
         "params": [
             ("input_variable", "Texto", "Sim", "Nome da variável de entrada"),
             ("operation", "Texto", "Sim", "upper | lower | trim | replace | regex_extract | regex_replace | split | join | count | contains | starts_with | ends_with | substring | length"),
@@ -292,29 +316,41 @@ BLOCK_DOCS = {
 
     "KeyboardActionBlock": {
         "title": "Teclado do Sistema",
-        "description": "Interage com o teclado do sistema operacional via PyAutoGUI. Funciona fora do navegador.",
+        "description": "Interage com o teclado via PyAutoGUI. Funciona fora do navegador.",
         "params": [
-            ("action", "Texto", "Sim", "type = digitar texto | press = pressionar tecla | hotkey = atalho"),
-            ("value", "Texto", "Sim", "Texto, tecla ou atalho. Ex: ctrl+c, alt+tab, enter"),
-            ("interval", "Número", "Não", "Intervalo entre teclas ao digitar (padrão: 0.05)"),
-            ("delay_before", "Número", "Não", "Aguarda N segundos antes de executar (padrão: 0)"),
+            ("action", "Texto", "Sim", "type | press | hotkey"),
+            ("value", "Texto", "Sim", "Texto, tecla ou atalho. Ex: ctrl+c, enter"),
+            ("interval", "Número", "Não", "Intervalo entre teclas (padrão: 0.05)"),
+            ("delay_before", "Número", "Não", "Aguarda N segundos antes (padrão: 0)"),
         ],
-        "example": "action: hotkey\nvalue: ctrl+c\n\n# Digitar texto:\naction: type\nvalue: Olá mundo!\ndelay_before: 0.5",
-        "tip": "Use delay_before para dar tempo de focar a janela alvo antes de digitar."
+        "example": "action: hotkey\nvalue: ctrl+c\n\naction: type\nvalue: Olá!\ndelay_before: 0.5",
+        "tip": "Use delay_before para focar a janela alvo antes de digitar."
+    },
+
+    "ClipboardBlock": {
+        "title": "Clipboard",
+        "description": "Lê ou escreve no clipboard do sistema operacional. Funciona com qualquer aplicativo — não só o navegador.",
+        "params": [
+            ("action", "Texto", "Sim", "copy = copiar para clipboard | paste = ler do clipboard | clear = limpar"),
+            ("value", "Texto", "Cond.", "Texto a copiar (somente action=copy). Aceita {{variavel}}"),
+            ("variable_name", "Texto", "Não", "Variável onde salvar o texto lido (somente action=paste, padrão: clipboard_texto)"),
+        ],
+        "example": "# Copiar texto:\naction: copy\nvalue: {{titulo_extraido}}\n\n# Ler clipboard:\naction: paste\nvariable_name: texto_copiado\n\n# Limpar:\naction: clear",
+        "tip": "Combine com Teclado do Sistema (Ctrl+C / Ctrl+V) para copiar conteúdo de janelas externas."
     },
 
     "ReadCsvBlock": {
         "title": "Ler CSV",
-        "description": "Lê uma coluna de um arquivo CSV e salva como lista.",
+        "description": "Lê uma coluna de um CSV e salva como lista.",
         "params": [
             ("filepath", "Texto", "Sim", "Caminho do arquivo. Ex: dados/lista.csv"),
-            ("column", "Texto", "Não", "Nome da coluna ou índice numérico (padrão: 0)"),
+            ("column", "Texto", "Não", "Nome da coluna ou índice (padrão: 0)"),
             ("variable_name", "Texto", "Não", "Nome da variável lista (padrão: csv_linhas)"),
-            ("skip_header", "Booleano", "Não", "Pula a primeira linha cabeçalho (padrão: True)"),
+            ("skip_header", "Booleano", "Não", "Pula a primeira linha (padrão: True)"),
             ("delimiter", "Texto", "Não", "Separador: , ou ; ou | (padrão: ,)"),
         ],
         "example": "filepath: dados/emails.csv\ncolumn: email\nvariable_name: lista_emails",
-        "tip": "Gera {{csv_linhas_total}} com a contagem e {{csv_linhas_primeiro}} com o primeiro item."
+        "tip": "Gera {{csv_linhas_total}} e {{csv_linhas_primeiro}} automaticamente."
     },
 
     "SaveTextBlock": {
@@ -323,7 +359,7 @@ BLOCK_DOCS = {
         "params": [
             ("content", "Texto", "Sim", "Conteúdo a salvar. Aceita {{variavel}}"),
             ("filepath", "Texto", "Não", "Caminho do arquivo (padrão: saida/resultado.txt)"),
-            ("mode", "Texto", "Não", "append = adiciona | overwrite = substitui (padrão: append)"),
+            ("mode", "Texto", "Não", "append = adiciona | overwrite = substitui"),
             ("add_timestamp", "Booleano", "Não", "Adiciona [data hora] em cada linha"),
         ],
         "example": "content: {{url}} — {{titulo}}\nfilepath: saida/resultado.txt\nmode: append",
@@ -332,7 +368,7 @@ BLOCK_DOCS = {
 
     "SaveCsvBlock": {
         "title": "Salvar em CSV",
-        "description": "Adiciona uma linha de dados em CSV. Cria o arquivo e cabeçalho automaticamente.",
+        "description": "Adiciona uma linha de dados em CSV.",
         "params": [
             ("filepath", "Texto", "Não", "Caminho do arquivo CSV (padrão: saida/dados.csv)"),
             ("values", "Texto", "Sim", "Valores separados por pipe |. Ex: {{titulo}}|{{preco}}"),
@@ -344,37 +380,64 @@ BLOCK_DOCS = {
         "tip": "Use | para separar colunas no campo values."
     },
 
+    "SQLiteBlock": {
+        "title": "Banco de Dados (SQLite)",
+        "description": "Executa queries SQL em um banco SQLite local. Suporta SELECT, INSERT, UPDATE, DELETE e CREATE TABLE.",
+        "params": [
+            ("database", "Texto", "Sim", "Caminho do arquivo .db. Ex: dados/banco.db (criado automaticamente)"),
+            ("query", "Texto", "Sim", "Query SQL. Use ? para parâmetros posicionais"),
+            ("params", "Texto", "Não", "Parâmetros separados por | para os ? na query. Aceita {{variavel}}"),
+            ("variable_name", "Texto", "Não", "Variável onde salvar resultado do SELECT (lista de dicts)"),
+            ("row_variable", "Texto", "Não", "Variável para a primeira linha. Expande cada coluna como {{row_var_coluna}}"),
+        ],
+        "example": "# Criar tabela:\nquery: CREATE TABLE IF NOT EXISTS itens (id INTEGER PRIMARY KEY, nome TEXT)\n\n# Inserir:\nquery: INSERT INTO itens (nome) VALUES (?)\nparams: {{nome}}\n\n# Consultar:\nquery: SELECT * FROM itens\nvariable_name: lista\nrow_variable: item",
+        "tip": "Use row_variable para acessar colunas: {{item_nome}}, {{item_id}}, etc."
+    },
+
     "HttpRequestBlock": {
         "title": "HTTP Request",
-        "description": "Realiza requisições HTTP para APIs REST.",
+        "description": "Realiza requisições HTTP para APIs REST usando a biblioteca 'requests', que é mais robusta e moderna.",
         "params": [
             ("method", "Texto", "Sim", "GET | POST | PUT | PATCH | DELETE"),
             ("url", "Texto", "Sim", "URL da API. Aceita {{variavel}}"),
-            ("headers", "JSON", "Não", 'Headers como JSON. Ex: {"Authorization": "Bearer {{token}}"}'),
-            ("body", "JSON", "Não", 'Body para POST/PUT. Ex: {"nome": "{{nome}}"}'),
-            ("json_field", "Texto", "Não", "Campo do JSON via dot notation. Ex: data.user.email"),
+            ("headers", "JSON", "Não", 'Ex: {"Authorization": "Bearer {{token}}"}'),
+            ("body", "JSON", "Não", 'Ex: {"nome": "{{nome}}"}'),
+            ("json_field", "Texto", "Não", "Campo via dot notation. Ex: data.user.email"),
             ("variable_name", "Texto", "Não", "Variável para salvar a resposta"),
             ("timeout", "Número", "Não", "Timeout em segundos (padrão: 15)"),
         ],
-        "example": "method: GET\nurl: https://api.exemplo.com/users/{{id}}\njson_field: name\nvariable_name: nome_usuario",
+        "example": "method: GET\nurl: https://api.exemplo.com/users/{{id}}\njson_field: name\nvariable_name: nome",
         "tip": "Dot notation: data.user.email acessa response['data']['user']['email']."
     },
 
     "SendEmailBlock": {
         "title": "Enviar E-mail",
-        "description": "Envia e-mail via SMTP. Suporta Gmail, Outlook, Yahoo e SMTP customizado.",
+        "description": "Envia e-mail via SMTP. Suporta Gmail, Outlook, Yahoo e custom.",
         "params": [
-            ("provider", "Texto", "Não", "gmail | outlook | yahoo | custom (padrão: gmail)"),
-            ("smtp_host", "Texto", "Cond.", "Servidor SMTP (somente para custom)"),
-            ("smtp_port", "Número", "Cond.", "Porta SMTP (somente para custom)"),
+            ("provider", "Texto", "Não", "gmail | outlook | yahoo | custom"),
+            ("smtp_host", "Texto", "Cond.", "Servidor SMTP (somente custom)"),
+            ("smtp_port", "Número", "Cond.", "Porta SMTP (somente custom)"),
             ("sender_email", "Texto", "Sim", "E-mail do remetente"),
             ("sender_password", "Texto", "Sim", "Senha ou App Password"),
-            ("recipient", "Texto", "Sim", "Destinatário(s). Múltiplos separados por vírgula"),
+            ("recipient", "Texto", "Sim", "Destinatário(s). Múltiplos por vírgula"),
             ("subject", "Texto", "Sim", "Assunto. Aceita {{variavel}}"),
             ("body_text", "Texto", "Não", "Corpo em texto simples"),
             ("body_html", "Texto", "Não", "Corpo em HTML"),
         ],
-        "example": "provider: gmail\nsender_email: meu@gmail.com\nsender_password: abcd efgh\nrecipient: dest@email.com\nsubject: Relatório {{data}}",
-        "tip": "Para Gmail: gere uma App Password em myaccount.google.com/apppasswords."
+        "example": "provider: gmail\nsender_email: meu@gmail.com\nsender_password: abcd efgh\nrecipient: dest@email.com\nsubject: Relatório {{data_atual}}",
+        "tip": "Para Gmail: gere App Password em myaccount.google.com/apppasswords."
     },
+
+    "SmartClickBlock": {
+    "title": "Smart Click",
+    "description": "Clica em um elemento web com redundância. Se o primeiro seletor falhar (ex: site atualizou), o robô tenta os próximos automaticamente.",
+    "params": [
+        ("selector_1", "str", "Sim", "XPath ou CSS principal."),
+        ("selector_2", "str", "Não", "Segundo seletor caso o primeiro falhe."),
+        ("selector_3", "str", "Não", "Terceiro seletor de emergência."),
+        ("timeout_per_try", "str", "Sim", "Segundos de espera para cada tentativa.")
+    ],
+    "example": "selector_1: //button[@id='login']\nselector_2: .btn-submit\nselector_3: #main-action",
+    "tip": "Use seletores de tipos diferentes (um ID e um XPath) para aumentar a resiliência."
+},
 }

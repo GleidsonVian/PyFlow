@@ -14,6 +14,7 @@ from ui.variables_panel import VariablesPanel
 from ui.command_palette import CommandPalette
 from ui.debug_toolbar import DebugToolbar
 from ui.templates_dialog import TemplatesDialog
+from ui.api_status_dialog import ApiStatusDialog
 from ui.flow_manager_dialog import FlowManagerDialog
 from ui.scheduler_dialog import SchedulerDialog, get_signals as get_scheduler_signals
 from ui.settings_dialog import SettingsDialog
@@ -21,6 +22,7 @@ from engine.runner import Runner, get_runner_config
 from engine.debug_runner import DebugRunner
 from engine.flow_manager import FlowManager
 from engine.flow_exporter import FlowExporter
+from engine.api_server import get_api_server
 
 
 class RunnerThread(QThread):
@@ -86,28 +88,45 @@ class MainWindow(QMainWindow):
         self.flow_manager      = FlowManager()
         self.flow_exporter     = FlowExporter()
         self._scheduler_dialog = None
+        self._api_dialog       = None
         self._palette          = None
         self._debug_thread     = None
         self._debug_waiting    = False
+        self._current_flow_name = ""
         self._build_ui()
         self._build_menu()
         self._connect_block_signals()
         self._connect_scheduler_signals()
+        self._start_api_server()
         self._apply_styles()
 
     def keyPressEvent(self, event):
         key  = event.key()
         ctrl = event.modifiers() & Qt.ControlModifier
-        if ctrl and key == Qt.Key_P:      self._on_open_palette(); return
-        if ctrl and key == Qt.Key_S:      self._on_save();         return
-        if ctrl and key == Qt.Key_Return: self._on_run();          return
-        if ctrl and key == Qt.Key_L:      self._on_clear();        return
-        if ctrl and key == Qt.Key_D:      self._on_debug();        return
-        if ctrl and key == Qt.Key_T:      self._on_open_templates(); return
+        if ctrl and key == Qt.Key_P:      self._on_open_palette();    return
+        if ctrl and key == Qt.Key_S:      self._on_save();            return
+        if ctrl and key == Qt.Key_Return: self._on_run();             return
+        if ctrl and key == Qt.Key_L:      self._on_clear();           return
+        if ctrl and key == Qt.Key_D:      self._on_debug();           return
+        if ctrl and key == Qt.Key_T:      self._on_open_templates();  return
         if self._debug_thread and self._debug_thread.isRunning():
-            if key == Qt.Key_Space: self._on_debug_step();   return
-            if key == Qt.Key_F5:   self._on_debug_resume();  return
+            if key == Qt.Key_Space: self._on_debug_step();  return
+            if key == Qt.Key_F5:   self._on_debug_resume(); return
         super().keyPressEvent(event)
+
+    # ── API Server ────────────────────────────────────────────────────
+
+    def _start_api_server(self):
+        api = get_api_server()
+        api.set_callbacks(
+            run_cb    = self._on_scheduler_trigger,   # reutiliza o mesmo callback
+            stop_cb   = self._on_stop,
+            flows_dir = "flows",
+        )
+        api.start()
+        self.log_panel.log("info", f"🌐 API REST ativa em {api.url}")
+
+    # ── Sinais ────────────────────────────────────────────────────────
 
     def _connect_block_signals(self):
         from blocks.control.show_message import get_signaller
@@ -138,10 +157,15 @@ class MainWindow(QMainWindow):
         try:
             data = self.flow_manager.load(flow_path)
             self.canvas.load_from_data(data.get("steps", []))
-            self.log_panel.log("info", f"⏰ Agendador iniciou: {data.get('flow_name', '')}")
+            name = data.get("flow_name", flow_path)
+            self._current_flow_name = name
+            self.log_panel.log("info", f"▶ Iniciado: {name}")
+            get_api_server().notify_started(name)
             self._on_run()
         except Exception as e:
-            self.log_panel.log("error", f"Erro no agendador: {str(e)}")
+            self.log_panel.log("error", f"Erro ao carregar fluxo: {str(e)}")
+
+    # ── UI ────────────────────────────────────────────────────────────
 
     def _build_ui(self):
         central = QWidget()
@@ -150,7 +174,7 @@ class MainWindow(QMainWindow):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # ── Toolbar ───────────────────────────────────────────────────
+        # Toolbar
         toolbar = QWidget()
         toolbar.setObjectName("toolbar")
         tb = QHBoxLayout(toolbar)
@@ -174,6 +198,11 @@ class MainWindow(QMainWindow):
         self.btn_stop.setObjectName("btn_stop")
         self.btn_stop.setEnabled(False)
 
+        self.btn_api = QPushButton("🌐  API")
+        self.btn_api.setObjectName("btn_api")
+        self.btn_api.setToolTip(f"API REST local — {get_api_server().url}")
+        self.btn_api.clicked.connect(self._on_open_api)
+
         self.btn_palette = QPushButton("⚡  Ctrl+P")
         self.btn_palette.setObjectName("btn_palette")
         self.btn_palette.setToolTip("Buscar blocos  [Ctrl+P]")
@@ -181,7 +210,7 @@ class MainWindow(QMainWindow):
 
         self.btn_templates = QPushButton("📋  Templates")
         self.btn_templates.setObjectName("btn_templates")
-        self.btn_templates.setToolTip("Templates de fluxos prontos  [Ctrl+T]")
+        self.btn_templates.setToolTip("Templates  [Ctrl+T]")
         self.btn_templates.clicked.connect(self._on_open_templates)
 
         self.btn_scheduler = QPushButton("⏰  Agendar")
@@ -192,7 +221,6 @@ class MainWindow(QMainWindow):
         self.btn_vars.setObjectName("btn_vars")
         self.btn_vars.setCheckable(True)
         self.btn_vars.setChecked(True)
-        self.btn_vars.setToolTip("Painel de variáveis")
         self.btn_vars.clicked.connect(self._on_toggle_vars)
 
         self.btn_settings = QPushButton("⚙")
@@ -225,6 +253,7 @@ class MainWindow(QMainWindow):
         tb.addWidget(title)
         tb.addWidget(self.lbl_retry)
         tb.addStretch()
+        tb.addWidget(self.btn_api)
         tb.addWidget(self.btn_templates)
         tb.addWidget(self.btn_palette)
         tb.addWidget(self.btn_clear)
@@ -239,14 +268,14 @@ class MainWindow(QMainWindow):
         tb.addWidget(self.btn_run)
         root.addWidget(toolbar)
 
-        # ── Debug toolbar ─────────────────────────────────────────────
+        # Debug toolbar
         self.debug_toolbar = DebugToolbar()
         self.debug_toolbar.sig_step.connect(self._on_debug_step)
         self.debug_toolbar.sig_resume.connect(self._on_debug_resume)
         self.debug_toolbar.sig_stop.connect(self._on_debug_stop)
         root.addWidget(self.debug_toolbar)
 
-        # ── Área principal ────────────────────────────────────────────
+        # Área principal
         self.splitter = QSplitter(Qt.Horizontal)
         self.splitter.setObjectName("main_splitter")
 
@@ -296,7 +325,7 @@ class MainWindow(QMainWindow):
         self.status.setObjectName("status_bar")
         self.setStatusBar(self.status)
         self.status.showMessage(
-            "Pronto  •  Ctrl+T templates  •  Ctrl+P buscar blocos  •  Ctrl+Enter executar  •  Ctrl+D debug"
+            "Pronto  •  Ctrl+P buscar blocos  •  Ctrl+Enter executar  •  Ctrl+D debug  •  Ctrl+T templates"
         )
 
     def _build_menu(self):
@@ -314,6 +343,7 @@ class MainWindow(QMainWindow):
         view_menu = menu.addMenu("Ver")
         view_menu.addAction(QAction("Buscar blocos  [Ctrl+P]",     self, triggered=self._on_open_palette))
         view_menu.addAction(QAction("Variáveis ao vivo",           self, triggered=self._on_toggle_vars))
+        view_menu.addAction(QAction("API REST local",              self, triggered=self._on_open_api))
 
         run_menu = menu.addMenu("Executar")
         run_menu.addAction(QAction("Executar  [Ctrl+Enter]",       self, triggered=self._on_run))
@@ -322,6 +352,15 @@ class MainWindow(QMainWindow):
         run_menu.addSeparator()
         run_menu.addAction(QAction("Configurações",                self, triggered=self._on_open_settings))
 
+    # ── API ───────────────────────────────────────────────────────────
+
+    def _on_open_api(self):
+        if self._api_dialog is None or not self._api_dialog.isVisible():
+            self._api_dialog = ApiStatusDialog(get_api_server(), self)
+        self._api_dialog.show()
+        self._api_dialog.raise_()
+        self._api_dialog.activateWindow()
+
     # ── Templates ─────────────────────────────────────────────────────
 
     def _on_open_templates(self):
@@ -329,7 +368,7 @@ class MainWindow(QMainWindow):
         dialog.template_selected.connect(self._on_template_selected)
         dialog.exec()
 
-    def _on_template_selected(self, filepath: str):
+    def _on_template_selected(self, filepath):
         try:
             data = self.flow_manager.load(filepath)
             self.canvas.load_from_data(data.get("steps", []))
@@ -382,6 +421,7 @@ class MainWindow(QMainWindow):
         if hasattr(self, "runner_thread") and self.runner_thread.isRunning():
             self.runner_thread.terminate()
             self.log_panel.log("error", "Execução interrompida.")
+            get_api_server().notify_finished(self._current_flow_name, False, "Interrompido pelo usuário")
             self._set_running(False)
             self.vars_panel.stop_live()
 
@@ -404,13 +444,12 @@ class MainWindow(QMainWindow):
         self._debug_thread.sig_finished.connect(self._on_debug_finished)
         self._debug_thread.start()
 
-    def _on_debug_ready(self, index: int, block_name: str):
+    def _on_debug_ready(self, index, block_name):
         self._debug_waiting = True
         total = self._debug_thread.total if self._debug_thread else 0
         self.canvas.set_block_state(index, "running")
         self.debug_toolbar.update_state(index, total, block_name, waiting=True)
         self.log_panel.log("running", f"🐛 Passo {index + 1}: {block_name}  — pressione ⏭ Próximo")
-        self.status.showMessage(f"Debug pausado: passo {index + 1} — {block_name}  •  Space=avançar")
 
     def _on_debug_step(self):
         if self._debug_thread and self._debug_waiting:
@@ -420,7 +459,6 @@ class MainWindow(QMainWindow):
     def _on_debug_resume(self):
         if self._debug_thread:
             self._debug_waiting = False
-            self.log_panel.log("info", "🐛 Continuando...")
             self._debug_thread.resume()
 
     def _on_debug_stop(self):
@@ -442,7 +480,7 @@ class MainWindow(QMainWindow):
         self.vars_panel.stop_live()
         self._debug_thread = None
 
-    def _set_running(self, running: bool, debug: bool = False):
+    def _set_running(self, running, debug=False):
         self.btn_run.setEnabled(not running)
         self.btn_debug.setEnabled(not running)
         self.btn_stop.setEnabled(running and not debug)
@@ -468,6 +506,10 @@ class MainWindow(QMainWindow):
         self.log_panel.log_run_end(ok, total)
         self.status.showMessage(f"Concluído: {ok}/{total} passos.")
         self.vars_panel.stop_live()
+        get_api_server().notify_finished(
+            self._current_flow_name, ok == total,
+            f"{ok}/{total} passos com sucesso"
+        )
 
     # ── Outros handlers ───────────────────────────────────────────────
 
@@ -495,6 +537,7 @@ class MainWindow(QMainWindow):
             data = self.flow_manager.load(filepath)
             self.canvas.load_from_data(data.get("steps", []))
             name = data.get("flow_name", filepath)
+            self._current_flow_name = name
             self.status.showMessage(f"Fluxo carregado: {name}")
             self.log_panel.log("info", f"Fluxo carregado: {name}")
         except Exception as e:
@@ -523,7 +566,9 @@ class MainWindow(QMainWindow):
             self.status.showMessage("Nada para salvar."); return
         path, _ = QFileDialog.getSaveFileName(self, "Salvar fluxo", "flows/", "JSON (*.json)")
         if path:
-            self.flow_manager.save(path.split("/")[-1].replace(".json", ""), steps)
+            name = path.split("/")[-1].replace(".json", "")
+            self._current_flow_name = name
+            self.flow_manager.save(name, steps)
             self.status.showMessage(f"Fluxo salvo: {path}")
             self.log_panel.log("info", f"Fluxo salvo: {path}")
 
@@ -572,6 +617,8 @@ class MainWindow(QMainWindow):
             #btn_templates:hover { background-color: #3a3020; }
             #btn_scheduler { background-color: #313244; color: #cdd6f4; }
             #btn_scheduler:hover { background-color: #45475a; }
+            #btn_api { background-color: #1a2e40; color: #89b4fa; border: 1px solid #89b4fa; font-weight: 600; }
+            #btn_api:hover { background-color: #1e3a50; }
             #btn_vars { background-color: #1e2a1e; color: #a6e3a1; border: 1px solid #a6e3a1; }
             #btn_vars:checked { background-color: #a6e3a1; color: #1e1e2e; }
             #btn_settings { background-color: #313244; color: #6c7086; font-size: 15px; }
