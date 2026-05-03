@@ -1,0 +1,82 @@
+{
+  "flow_name": "teste_execute_script",
+  "created_at": "2026-04-30T06:00:00.000000",
+  "steps": [
+    {
+      "block": "OpenBrowserBlock",
+      "params": { "url": "https://books.toscrape.com", "maximized": false }
+    },
+    {
+      "block": "SmartWaitBlock",
+      "params": { "condition": "page_loaded", "selector": "", "value": "", "timeout": "10", "poll_interval": "0.5", "variable_name": "" }
+    },
+    {
+      "block": "ExecuteScriptBlock",
+      "params": {
+        "script": "return document.title;",
+        "selector": "",
+        "variable_name": "titulo_js"
+      }
+    },
+    {
+      "block": "ExecuteScriptBlock",
+      "params": {
+        "script": "return document.querySelectorAll('.product_pod').length;",
+        "selector": "",
+        "variable_name": "total_produtos"
+      }
+    },
+    {
+      "block": "ExecuteScriptBlock",
+      "params": {
+        "script": "window.scrollTo(0, document.body.scrollHeight);",
+        "selector": "",
+        "variable_name": ""
+      }
+    },
+    {
+      "block": "WaitBlock",
+      "params": { "seconds": "1" }
+    },
+    {
+      "block": "ExecuteScriptBlock",
+      "params": {
+        "script": "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});",
+        "selector": "footer",
+        "variable_name": ""
+      }
+    },
+    {
+      "block": "WaitBlock",
+      "params": { "seconds": "1" }
+    },
+    {
+      "block": "ExecuteScriptBlock",
+      "params": {
+        "script": "arguments[0].style.border = '3px solid red'; return arguments[0].innerText;",
+        "selector": ".product_pod:first-child h3 a",
+        "variable_name": "primeiro_titulo_js"
+      }
+    },
+    {
+      "block": "ExecuteScriptBlock",
+      "params": {
+        "script": "return { url: window.location.href, largura: window.innerWidth, altura: window.innerHeight };",
+        "selector": "",
+        "variable_name": "info_pagina"
+      }
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "ExecuteScript OK",
+        "message": "Título: {{titulo_js}}\nProdutos: {{total_produtos}}\nPrimeiro: {{primeiro_titulo_js}}\nInfo: {{info_pagina}}",
+        "kind": "info"
+      }
+    },
+    {
+      "block": "CloseBrowserBlock",
+      "params": {}
+    }
+  ]
+}

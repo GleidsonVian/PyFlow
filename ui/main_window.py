@@ -15,6 +15,7 @@ from ui.command_palette import CommandPalette
 from ui.debug_toolbar import DebugToolbar
 from ui.templates_dialog import TemplatesDialog
 from ui.api_status_dialog import ApiStatusDialog
+from ui.assets_dialog import AssetsDialog
 from ui.flow_manager_dialog import FlowManagerDialog
 from ui.scheduler_dialog import SchedulerDialog, get_signals as get_scheduler_signals
 from ui.settings_dialog import SettingsDialog
@@ -109,6 +110,7 @@ class MainWindow(QMainWindow):
         if ctrl and key == Qt.Key_L:      self._on_clear();           return
         if ctrl and key == Qt.Key_D:      self._on_debug();           return
         if ctrl and key == Qt.Key_T:      self._on_open_templates();  return
+        if ctrl and key == Qt.Key_A:      self._on_open_assets();     return
         if self._debug_thread and self._debug_thread.isRunning():
             if key == Qt.Key_Space: self._on_debug_step();  return
             if key == Qt.Key_F5:   self._on_debug_resume(); return
@@ -203,6 +205,11 @@ class MainWindow(QMainWindow):
         self.btn_api.setToolTip(f"API REST local — {get_api_server().url}")
         self.btn_api.clicked.connect(self._on_open_api)
 
+        self.btn_assets = QPushButton("🔑  Assets")
+        self.btn_assets.setObjectName("btn_assets")
+        self.btn_assets.setToolTip("Gerenciar assets e credenciais  [Ctrl+A]")
+        self.btn_assets.clicked.connect(self._on_open_assets)
+
         self.btn_palette = QPushButton("⚡  Ctrl+P")
         self.btn_palette.setObjectName("btn_palette")
         self.btn_palette.setToolTip("Buscar blocos  [Ctrl+P]")
@@ -254,6 +261,7 @@ class MainWindow(QMainWindow):
         tb.addWidget(self.lbl_retry)
         tb.addStretch()
         tb.addWidget(self.btn_api)
+        tb.addWidget(self.btn_assets)
         tb.addWidget(self.btn_templates)
         tb.addWidget(self.btn_palette)
         tb.addWidget(self.btn_clear)
@@ -344,6 +352,7 @@ class MainWindow(QMainWindow):
         view_menu.addAction(QAction("Buscar blocos  [Ctrl+P]",     self, triggered=self._on_open_palette))
         view_menu.addAction(QAction("Variáveis ao vivo",           self, triggered=self._on_toggle_vars))
         view_menu.addAction(QAction("API REST local",              self, triggered=self._on_open_api))
+        view_menu.addAction(QAction("Assets e Credenciais  [Ctrl+A]", self, triggered=self._on_open_assets))
 
         run_menu = menu.addMenu("Executar")
         run_menu.addAction(QAction("Executar  [Ctrl+Enter]",       self, triggered=self._on_run))
@@ -351,6 +360,12 @@ class MainWindow(QMainWindow):
         run_menu.addAction(QAction("Agendador",                    self, triggered=self._on_open_scheduler))
         run_menu.addSeparator()
         run_menu.addAction(QAction("Configurações",                self, triggered=self._on_open_settings))
+
+    # ── Assets ────────────────────────────────────────────────────────
+
+    def _on_open_assets(self):
+        dialog = AssetsDialog(self)
+        dialog.exec()
 
     # ── API ───────────────────────────────────────────────────────────
 
@@ -619,6 +634,8 @@ class MainWindow(QMainWindow):
             #btn_scheduler:hover { background-color: #45475a; }
             #btn_api { background-color: #1a2e40; color: #89b4fa; border: 1px solid #89b4fa; font-weight: 600; }
             #btn_api:hover { background-color: #1e3a50; }
+            #btn_assets { background-color: #2a1a3f; color: #cba6f7; border: 1px solid #cba6f7; font-weight: 600; }
+            #btn_assets:hover { background-color: #3a2a5f; }
             #btn_vars { background-color: #1e2a1e; color: #a6e3a1; border: 1px solid #a6e3a1; }
             #btn_vars:checked { background-color: #a6e3a1; color: #1e1e2e; }
             #btn_settings { background-color: #313244; color: #6c7086; font-size: 15px; }

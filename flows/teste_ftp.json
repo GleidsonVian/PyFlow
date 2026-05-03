@@ -1,0 +1,85 @@
+{
+  "flow_name": "teste_ftp_sftp",
+  "created_at": "2026-04-30T09:00:00.000000",
+  "steps": [
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "arquivo_local",
+        "operation": "set",
+        "value": "saida/relatorio_teste.txt",
+        "format": ""
+      }
+    },
+    {
+      "block": "SaveTextBlock",
+      "params": {
+        "content": "PyFlow RPA — Teste de upload FTP\nGerado em: {{data_atual}}",
+        "filepath": "saida/relatorio_teste.txt",
+        "mode": "overwrite",
+        "add_timestamp": true
+      }
+    },
+    {
+      "block": "FtpBlock",
+      "params": {
+        "protocol": "ftp",
+        "action": "list",
+        "host": "ftp.meuservidor.com",
+        "port": "21",
+        "username": "meu_usuario",
+        "password": "minha_senha",
+        "local_path": "",
+        "remote_path": "/public",
+        "variable_name": "arquivos_remotos",
+        "timeout": "30"
+      }
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Arquivos no servidor",
+        "message": "Total de arquivos: {{arquivos_remotos_total}}\nLista: {{arquivos_remotos}}",
+        "kind": "info"
+      }
+    },
+    {
+      "block": "FtpBlock",
+      "params": {
+        "protocol": "ftp",
+        "action": "upload",
+        "host": "ftp.meuservidor.com",
+        "port": "21",
+        "username": "meu_usuario",
+        "password": "minha_senha",
+        "local_path": "saida/relatorio_teste.txt",
+        "remote_path": "/public/relatorio_teste.txt",
+        "variable_name": "",
+        "timeout": "30"
+      }
+    },
+    {
+      "block": "FtpBlock",
+      "params": {
+        "protocol": "ftp",
+        "action": "download",
+        "host": "ftp.meuservidor.com",
+        "port": "21",
+        "username": "meu_usuario",
+        "password": "minha_senha",
+        "local_path": "downloads/relatorio_baixado.txt",
+        "remote_path": "/public/relatorio_teste.txt",
+        "variable_name": "",
+        "timeout": "30"
+      }
+    },
+    {
+      "block": "DesktopNotificationBlock",
+      "params": {
+        "title": "✅ FTP concluído",
+        "message": "Upload e download realizados com sucesso!",
+        "duration": "6000"
+      }
+    }
+  ]
+}

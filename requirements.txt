@@ -1,8 +1,44 @@
-PySide6
-selenium
-webdriver-manager
-schedule
-pyautogui
-plyer
-winotify
-requests
+# ══════════════════════════════════════════════════════════════════════
+#  PyFlow RPA — requirements.txt
+#  Instale com: pip install -r requirements.txt
+# ══════════════════════════════════════════════════════════════════════
+
+# ── Interface gráfica ─────────────────────────────────────────────────
+PySide6>=6.6.0
+
+# ── Automação web (Selenium) ──────────────────────────────────────────
+selenium>=4.18.0
+webdriver-manager>=4.0.1
+
+# ── Automação de desktop ──────────────────────────────────────────────
+pyautogui>=0.9.54
+pyperclip>=1.9.0
+
+# ── HTTP / APIs REST ──────────────────────────────────────────────────
+requests>=2.31.0
+
+# ── API REST local (servidor embutido) ───────────────────────────────
+flask>=3.0.0
+
+# ── E-mail ────────────────────────────────────────────────────────────
+# (usa smtplib nativo do Python — sem dependência extra)
+
+# ── Arquivos Excel ────────────────────────────────────────────────────
+openpyxl>=3.1.2
+
+# ── OCR ───────────────────────────────────────────────────────────────
+pytesseract>=0.3.10
+Pillow>=10.2.0
+
+# ── FTP / SFTP ────────────────────────────────────────────────────────
+# FTP: usa ftplib nativo do Python — sem dependência extra
+paramiko>=3.4.0        # somente para SFTP
+
+# ── Notificações desktop ─────────────────────────────────────────────
+plyer>=2.1.0
+
+# ── Agendamento ───────────────────────────────────────────────────────
+schedule>=1.2.1
+
+# ── Build / distribuição (opcional) ──────────────────────────────────
+pyinstaller>=6.4.0

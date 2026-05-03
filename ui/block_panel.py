@@ -37,8 +37,11 @@ from blocks.files.save_csv               import SaveCsvBlock
 from blocks.files.sqlite_block           import SQLiteBlock
 from blocks.integration.http_request     import HttpRequestBlock
 from blocks.integration.send_email       import SendEmailBlock
+from blocks.integration.ftp_block        import FtpBlock
 from blocks.system.keyboard_action       import KeyboardActionBlock
 from blocks.system.clipboard_block       import ClipboardBlock
+from blocks.control.subflow_block        import SubfluxoBlock
+from blocks.browser.execute_script       import ExecuteScriptBlock
 
 AVAILABLE_BLOCKS = [
     OpenBrowserBlock,
@@ -78,6 +81,9 @@ AVAILABLE_BLOCKS = [
     SQLiteBlock,
     HttpRequestBlock,
     SendEmailBlock,
+    SubfluxoBlock,
+    ExecuteScriptBlock,
+    FtpBlock,
 ]
 
 
