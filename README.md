@@ -1,55 +1,34 @@
 # ⚡ PyFlow RPA
 
-> Ferramenta visual de automação de processos robóticos (RPA) desenvolvida em Python — inspirada no UiPath, 100% gratuita e open source.
+> Automação de processos robóticos visual e sem código — construído em Python.
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)
-![PySide6](https://img.shields.io/badge/PySide6-6.x-green?logo=qt&logoColor=white)
-![Selenium](https://img.shields.io/badge/Selenium-4.x-43B02A?logo=selenium&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python)
+![PySide6](https://img.shields.io/badge/PySide6-6.6%2B-green?logo=qt)
+![Selenium](https://img.shields.io/badge/Selenium-4.18%2B-orange?logo=selenium)
 ![License](https://img.shields.io/badge/License-MIT-purple)
-![Platform](https://img.shields.io/badge/Platform-Windows-blue?logo=windows)
+![Blocos](https://img.shields.io/badge/Blocos%20RPA-44-blue)
 
 ---
 
-## 📋 Sobre o projeto
+## 📌 O que é o PyFlow RPA?
 
-O **PyFlow RPA** permite criar fluxos de automação arrastando blocos visuais para um canvas central, sem escrever código. Configure os parâmetros de cada bloco, conecte-os em sequência e execute — o motor cuida do resto.
+PyFlow RPA é uma ferramenta desktop de automação visual inspirada no UiPath e no n8n. Você arrasta blocos para um canvas, configura parâmetros e executa fluxos de automação sem escrever uma linha de código.
 
-### ✨ Principais funcionalidades
-
-- 🖱️ **Interface drag-and-drop** — arraste blocos do painel e solte no canvas
-- 🌐 **Automação web** — controle o Chrome com Selenium (clicar, preencher, extrair texto, screenshot...)
-- 🔧 **Blocos de controle** — condições (If), loops, retry automático, variáveis dinâmicas
-- 📁 **Leitura e escrita de arquivos** — CSV, TXT com suporte a variáveis `{{variavel}}`
-- 🔌 **Integração com APIs** — HTTP Request (GET/POST/PUT/PATCH/DELETE) e envio de e-mail SMTP
-- ⏰ **Agendador** — execute fluxos em horários definidos, repetidamente ou em dias da semana
-- 📋 **Gerenciador de fluxos** — salve, carregue, renomeie e delete fluxos em JSON
-- 🐍 **Exportar como Python** — converta qualquer fluxo em script `.py` standalone
-- 🎨 **Blocos coloridos por categoria** — navegador (azul), controle (roxo), arquivos (verde)...
-- 📖 **Ajuda integrada** — documentação de cada bloco no próprio painel de propriedades
-- 🔄 **Duplicar e reordenar** — clique direito para duplicar, arraste para reordenar blocos
+Os fluxos são salvos como **JSON** e podem ser **exportados como scripts Python standalone** para rodar em qualquer máquina.
 
 ---
 
 ## 🖥️ Interface
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  ⚡ PyFlow RPA    [Fluxos] [Salvar] [🐍 Exportar] [▶ Executar] │
-├──────────────┬──────────────────────────────┬───────────────┤
-│   BLOCOS     │         CANVAS               │ PROPRIEDADES  │
-│              │                              │               │
-│ NAVEGADOR    │  1 ┤ Abrir Navegador ├       │ ⚙ Propriedades│
-│ • Abrir Nav  │         ↓                    │ ❓ Ajuda       │
-│ • Clicar     │  2 ┤ Preencher Campo ├       │               │
-│ • Preencher  │         ↓                    │               │
-│              │  3 ┤ Extrair Texto   ├       │               │
-│ CONTROLE     │         ↓                    │               │
-│ • If         │  4 ┤ Salvar em CSV   ├       │               │
-│ • Loop       │                              │               │
-│ • For Each   ├──────────────────────────────┤               │
-│              │  Log de execução             │               │
-└──────────────┴──────────────────────────────┴───────────────┘
-```
+- **Canvas visual** com drag & drop de blocos
+- **Debug step-by-step** com destaque do bloco atual e painel de variáveis ao vivo
+- **Command Palette** `Ctrl+P` estilo VS Code para buscar e adicionar blocos rapidamente
+- **Galeria de templates** prontos para começar
+- **Log panel** com filtros por tipo, busca em tempo real, copiar e exportar como `.txt`
+- **Agendador** integrado para executar fluxos em horários específicos
+- **API REST local** em `http://localhost:8080` para integrar com sistemas externos
+- **Gerenciador de assets** para armazenar credenciais e variáveis reutilizáveis
+- **Modo escuro** com tema Catppuccin
 
 ---
 
@@ -57,266 +36,265 @@ O **PyFlow RPA** permite criar fluxos de automação arrastando blocos visuais p
 
 ### Pré-requisitos
 
-- Python 3.10 ou superior
-- Google Chrome instalado (para automação web)
+- Python 3.11+
+- Google Chrome instalado
+- (opcional) Tesseract OCR instalado para o bloco OCR
 
-### Passo a passo
+### 1. Clone o repositório
 
 ```bash
-# 1. Clone o repositório
 git clone https://github.com/seu-usuario/pyflow-rpa.git
 cd pyflow-rpa
+```
 
-# 2. Crie e ative o ambiente virtual
-python -m venv venv
+### 2. Crie um ambiente virtual
+
+```bash
+python -m venv .venv
 
 # Windows
-venv\Scripts\activate
+.venv\Scripts\activate
 
-# Linux/macOS
-source venv/bin/activate
+# Linux/Mac
+source .venv/bin/activate
+```
 
-# 3. Instale as dependências
+### 3. Instale as dependências
+
+```bash
 pip install -r requirements.txt
+```
 
-# 4. Execute o PyFlow RPA
+### 4. Execute
+
+```bash
 python main.py
 ```
 
-### requirements.txt
+---
 
-```
-PySide6
-selenium
-webdriver-manager
-schedule
-pyautogui
-plyer
-winotify
-```
+## 📦 Dependências principais
+
+| Biblioteca | Uso |
+|---|---|
+| `PySide6` | Interface gráfica |
+| `selenium` + `webdriver-manager` | Automação web |
+| `pyautogui` | Teclado e mouse do sistema |
+| `pyperclip` | Clipboard do sistema |
+| `requests` | Requisições HTTP |
+| `flask` | API REST local embutida |
+| `openpyxl` | Leitura e escrita de arquivos Excel |
+| `pytesseract` + `Pillow` | OCR (extração de texto de imagens) |
+| `paramiko` | Transferência SFTP |
+| `plyer` | Notificações desktop |
+| `schedule` | Agendamento de execuções |
 
 ---
 
-## 📦 Gerar executável (.exe)
+## 🧩 Blocos disponíveis (44)
 
-Para distribuir o PyFlow RPA sem precisar do Python instalado:
-
-```bash
-pip install pyinstaller
-python build.py
-```
-
-O executável será gerado em `dist/PyFlowRPA/PyFlowRPA.exe`. Compacte a pasta em `.zip` para distribuir.
-
----
-
-## 🧩 Blocos disponíveis
-
-### 🌐 Navegador
-| Bloco | Descrição |
+### 🌐 Navegador (22)
+| Bloco | O que faz |
 |---|---|
 | Abrir Navegador | Abre o Chrome em uma URL |
-| Clicar em Elemento | Clica por seletor CSS |
+| Clicar em Elemento | Clica em um elemento pelo seletor CSS |
 | Preencher Campo | Digita texto em um campo |
-| Extrair Texto | Extrai texto de elemento → variável |
-| Extrair Lista | Extrai lista de elementos → variável lista |
+| Extrair Texto | Captura o texto de um elemento → variável |
+| Extrair Lista | Captura múltiplos elementos → lista |
+| Espera Inteligente | Aguarda condição: elemento, URL, texto, carregamento |
+| Executar JavaScript | Executa JS via `driver.execute_script()` |
+| Smart Click | Clique com fallback para múltiplos seletores |
 | Pressionar Tecla | Enter, Tab, Escape, F5... |
-| Scroll na Página | Rola para topo, fim ou elemento |
-| Tirar Screenshot | Salva captura de tela em PNG |
-| Obter URL Atual | Captura URL → variável |
+| Scroll na Página | Rola para topo, rodapé, elemento ou pixels |
+| Tirar Screenshot | Captura a página como PNG |
+| Obter URL Atual | Captura a URL do navegador → variável |
 | Ação de Mouse | Hover, duplo clique, drag & drop |
-| Navegar para URL | Vai para URL sem abrir nova janela |
-| Abrir Nova Aba | Abre aba com URL opcional |
-| Fechar Aba / Trocar de Aba | Gerencia abas |
+| Navegar para URL | Vai para outra URL sem abrir nova janela |
+| Voltar / Avançar / Atualizar | Navegação do browser |
+| Abrir Nova Aba | Abre aba e navega para URL |
+| Fechar Aba / Trocar de Aba | Gerenciamento de abas |
 | Fechar Navegador | Encerra o Chrome |
 
-### 🔧 Controle
-| Bloco | Descrição |
+### 🔧 Controle (10)
+| Bloco | O que faz |
 |---|---|
-| Aguardar | Pausa N segundos |
-| Condição (If) | Pula blocos se condição for falsa |
-| Loop (Repetir) | Repete N blocos X vezes |
-| Para Cada (For Each) | Itera sobre lista de valores |
-| Exibir Mensagem | Diálogo modal com variáveis |
-| Notificação Desktop | Toast notification sem pausar |
-| Manipular Texto | 14 operações: upper, replace, regex, split... |
+| Aguardar | Pausa por N segundos |
+| Condição (If) | Verifica condição e pula blocos |
+| Loop (Repetir) | Repete N vezes um grupo de blocos |
+| Para Cada (For Each) | Itera sobre lista |
+| Definir Variável | Cria/modifica variáveis: set, increment, append, now, multiply... |
+| Manipular Texto | 14 operações: upper, replace, regex, split, substring... |
+| Exibir Mensagem | Caixa de diálogo modal |
+| Notificação Desktop | Notificação sem pausar o fluxo |
+| Início / Fim de Sequência | Agrupa e colapsa blocos no canvas |
+| Subfluxo | Chama outro fluxo JSON dentro do fluxo atual |
 
-### 📁 Arquivos
-| Bloco | Descrição |
+### 📁 Arquivos (5)
+| Bloco | O que faz |
 |---|---|
 | Ler CSV | Lê coluna de CSV → lista |
-| Salvar em TXT | Grava texto com suporte a variáveis |
-| Salvar em CSV | Adiciona linha com timestamp opcional |
+| Salvar em TXT | Escreve texto em arquivo .txt |
+| Salvar em CSV | Adiciona linha em arquivo CSV |
+| Banco de Dados (SQLite) | SELECT, INSERT, UPDATE, DELETE, CREATE TABLE |
+| Excel (.xlsx) | Ler célula/coluna/linha/planilha, escrever célula, adicionar linha |
 
-### 🔌 Integração
-| Bloco | Descrição |
+### 🔌 Integração (3)
+| Bloco | O que faz |
 |---|---|
-| HTTP Request | GET/POST/PUT/PATCH/DELETE para APIs REST |
-| Enviar E-mail | SMTP: Gmail, Outlook, Yahoo ou custom |
+| HTTP Request | GET/POST/PUT/PATCH/DELETE com headers, body e dot notation |
+| Enviar E-mail | SMTP via Gmail, Outlook, Yahoo ou custom |
+| FTP / SFTP | Upload, download, listar e deletar arquivos remotos |
 
-### 💻 Sistema
-| Bloco | Descrição |
+### 💻 Sistema (3)
+| Bloco | O que faz |
 |---|---|
-| Teclado do Sistema | Digita texto e atalhos fora do navegador |
+| Teclado do Sistema | Digitar, pressionar tecla, atalho via PyAutoGUI |
+| Clipboard | Copiar, colar e limpar o clipboard do sistema |
+| OCR (Extrair Texto de Imagem) | Extrai texto de imagem local, screenshot ou navegador |
 
 ---
 
-## 💡 Variáveis dinâmicas
+## 🔑 Assets e Credenciais
 
-Use `{{nome_variavel}}` em qualquer campo de texto para inserir valores dinâmicos:
+O PyFlow possui um gerenciador de assets para armazenar credenciais e valores reutilizáveis com segurança local:
 
-```
-Bloco 1: Extrair Texto → selector: h1 → variável: titulo
-Bloco 2: Salvar em TXT → content: Título encontrado: {{titulo}}
-Bloco 3: HTTP Request  → url: https://api.com/search?q={{titulo}}
-```
-
-As variáveis disponíveis são exibidas automaticamente no painel de propriedades.
+1. Abra com **Ctrl+A** ou clique em **🔑 Assets** na toolbar
+2. Cadastre uma chave (ex: `URL_SISTEMA`) e um valor (ex: `https://sistema.com`)
+3. Use nos blocos com a sintaxe: `{{ASSET:URL_SISTEMA}}`
 
 ---
 
-## 📁 Estrutura do projeto
+## 🌐 API REST Local
+
+O PyFlow sobe um servidor Flask em background em `http://127.0.0.1:8080`:
+
+```bash
+# Listar fluxos salvos
+GET  /flows
+
+# Executar um fluxo
+POST /run
+{ "flow": "nome_do_fluxo" }
+
+# Verificar status
+GET  /status
+
+# Histórico de execuções
+GET  /history
+
+# Parar execução atual
+POST /stop
+```
+
+Clique em **🌐 API** na toolbar para ver a documentação interativa com exemplos prontos.
+
+---
+
+## 🐛 Modo Debug
+
+Clique em **🐛 Debug** ou pressione `Ctrl+D` para executar o fluxo passo a passo:
+
+- `Space` → Avança um bloco
+- `F5` → Continua sem pausar
+- O bloco atual fica destacado no canvas
+- O painel de variáveis atualiza em tempo real após cada passo
+
+---
+
+## ⌨️ Atalhos de teclado
+
+| Atalho | Ação |
+|---|---|
+| `Ctrl+P` | Command Palette — buscar e adicionar blocos |
+| `Ctrl+Enter` | Executar fluxo |
+| `Ctrl+D` | Modo debug step-by-step |
+| `Ctrl+T` | Galeria de templates |
+| `Ctrl+A` | Gerenciador de assets |
+| `Ctrl+S` | Salvar fluxo |
+| `Ctrl+L` | Limpar canvas |
+| `Space` | Próximo passo (modo debug) |
+| `F5` | Continuar sem pausar (modo debug) |
+
+---
+
+## 📂 Estrutura do projeto
 
 ```
-pyflow-rpa/
-├── main.py                     # Entry point
-├── build.py                    # Script de build (.exe)
-├── map_project.py              # Gera mapa da arquitetura
+pyflow/
+├── main.py                    # Entry point
 ├── requirements.txt
+├── assets.json                # Assets e credenciais locais
 │
-├── blocks/
-│   ├── base_block.py           # Classe abstrata BaseBlock
-│   ├── browser/                # Blocos de automação web
-│   ├── control/                # Blocos de controle de fluxo
-│   ├── files/                  # Blocos de leitura/escrita
-│   ├── integration/            # HTTP e e-mail
-│   └── system/                 # Interação com o SO
+├── blocks/                    # Blocos de automação
+│   ├── browser/               # Selenium — automação web
+│   ├── control/               # Lógica e fluxo
+│   ├── files/                 # CSV, TXT, Excel, SQLite
+│   ├── integration/           # HTTP, E-mail, FTP/SFTP
+│   └── system/                # Teclado, Clipboard, OCR
 │
 ├── engine/
-│   ├── runner.py               # Motor de execução com retry
-│   ├── flow_manager.py         # Salvar/carregar fluxos JSON
-│   └── flow_exporter.py        # Exportar como script Python
+│   ├── runner.py              # Motor de execução com retry
+│   ├── debug_runner.py        # Motor step-by-step
+│   ├── flow_manager.py        # Salvar/carregar fluxos JSON
+│   ├── flow_exporter.py       # Exportar fluxo como .py
+│   ├── api_server.py          # API REST Flask local
+│   └── asset_manager.py       # Gerenciador de assets
 │
 ├── ui/
-│   ├── main_window.py          # Janela principal
-│   ├── canvas.py               # Canvas com drag & drop
-│   ├── block_panel.py          # Painel de blocos disponíveis
-│   ├── properties_panel.py     # Propriedades + Ajuda integrada
-│   ├── log_panel.py            # Log de execução em tempo real
-│   ├── flow_manager_dialog.py  # Gerenciador de fluxos
-│   ├── scheduler_dialog.py     # Agendador de execuções
-│   ├── settings_dialog.py      # Configurações (retry, etc)
-│   ├── param_dialog.py         # Popup de parâmetros
-│   └── block_docs.py           # Documentação inline dos blocos
+│   ├── main_window.py         # Janela principal
+│   ├── canvas.py              # Canvas drag & drop
+│   ├── block_panel.py         # Painel de blocos
+│   ├── log_panel.py           # Log com filtros
+│   ├── debug_toolbar.py       # Controles do modo debug
+│   ├── command_palette.py     # Busca Ctrl+P
+│   ├── templates_dialog.py    # Galeria de templates
+│   ├── assets_dialog.py       # Gerenciador de assets
+│   └── ...
 │
-└── flows/                      # Fluxos salvos (.json)
+└── flows/                     # Fluxos salvos (.json)
 ```
 
 ---
 
-## 🔄 Formato dos fluxos (JSON)
+## 🔧 Tesseract OCR (opcional)
 
-Os fluxos são salvos em JSON e podem ser editados manualmente:
+Para usar o bloco OCR, instale o Tesseract no sistema:
 
-```json
-{
-  "flow_name": "meu_fluxo",
-  "created_at": "2026-04-30T00:00:00",
-  "steps": [
-    {
-      "block": "OpenBrowserBlock",
-      "params": { "url": "https://exemplo.com", "maximized": true }
-    },
-    {
-      "block": "ExtractTextBlock",
-      "params": { "selector": "h1", "variable_name": "titulo", "timeout": "10" }
-    },
-    {
-      "block": "SaveTextBlock",
-      "params": { "content": "{{titulo}}", "filepath": "saida/resultado.txt" }
-    }
-  ]
-}
-```
+**Windows:**
+Baixe o instalador em [github.com/UB-Mannheim/tesseract](https://github.com/UB-Mannheim/tesseract/wiki) e marque **Portuguese** durante a instalação.
 
----
-
-## ⏰ Agendador
-
-O agendador permite executar fluxos automaticamente:
-
-- **Uma vez** — em um horário específico
-- **Repetir** — a cada X minutos ou horas
-- **Dias da semana** — toda segunda às 08:00, por exemplo
-
-Acesse pelo botão **⏰ Agendar** na toolbar.
-
----
-
-## ⚙️ Retry automático
-
-Configure o comportamento em caso de falha pelo botão **⚙** na toolbar:
-
-- Número de tentativas (1 a 10)
-- Intervalo entre tentativas (0.5 a 60 segundos)
-- Continuar ou parar em caso de falha definitiva
-
----
-
-## 🤝 Contribuindo
-
-1. Fork o projeto
-2. Crie uma branch: `git checkout -b feature/novo-bloco`
-3. Commit suas mudanças: `git commit -m 'Add: bloco XYZ'`
-4. Push: `git push origin feature/novo-bloco`
-5. Abra um Pull Request
-
-### Criando um novo bloco
-
-Crie um arquivo em `blocks/categoria/meu_bloco.py`:
-
+Adicione ao início do `blocks/system/ocr_block.py`:
 ```python
-from blocks.base_block import BaseBlock
-
-class MeuBlocoBlock(BaseBlock):
-    name        = "Meu Bloco"
-    description = "Descrição do que faz"
-    category    = "Categoria"
-
-    params_schema = [
-        {"name": "param1", "label": "Parâmetro 1", "type": "str",
-         "required": True, "default": "", "placeholder": "Ex: valor"}
-    ]
-
-    def execute(self, params: dict) -> dict:
-        valor = params.get("param1", "")
-        # lógica aqui
-        return {"success": True, "message": f"Executado com: {valor}"}
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 ```
 
-Depois registre em `ui/block_panel.py` e `ui/canvas.py` e adicione a documentação em `ui/block_docs.py`.
+**Linux:**
+```bash
+sudo apt install tesseract-ocr tesseract-ocr-por
+```
+
+**Mac:**
+```bash
+brew install tesseract
+```
+
+---
+
+## 📊 Estatísticas do projeto
+
+| Métrica | Valor |
+|---|---|
+| Arquivos Python | 128 |
+| Linhas de código | 20.715 |
+| Blocos RPA | 44 |
+| Fluxos de exemplo | 75 |
 
 ---
 
 ## 📄 Licença
 
-Este projeto está licenciado sob a [MIT License](LICENSE).
+MIT License — sinta-se livre para usar, modificar e distribuir.
 
 ---
 
-## 🙏 Tecnologias utilizadas
-
-| Tecnologia | Uso |
-|---|---|
-| [PySide6](https://doc.qt.io/qtforpython/) | Interface gráfica |
-| [Selenium](https://selenium.dev) | Automação do navegador |
-| [webdriver-manager](https://github.com/SergeyPirogov/webdriver_manager) | ChromeDriver automático |
-| [schedule](https://schedule.readthedocs.io) | Agendamento de tarefas |
-| [PyAutoGUI](https://pyautogui.readthedocs.io) | Interação com teclado/mouse do sistema |
-| [PyInstaller](https://pyinstaller.org) | Geração do executável |
-
----
-
-<div align="center">
-  Feito com ❤️ em Python
-</div>
+<p align="center">Feito com ⚡ Python + PySide6</p>
