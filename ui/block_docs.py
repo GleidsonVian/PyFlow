@@ -443,23 +443,19 @@ BLOCK_DOCS = {
         "tip": "Para Gmail: gere App Password em myaccount.google.com/apppasswords."
     },
 
-    "FtpBlock": {
-        "title": "FTP / SFTP",
-        "description": "Transfere arquivos via FTP (nativo) ou SFTP (paramiko). Suporta upload, download, listar arquivos remotos e deletar arquivo remoto.",
+    "HashBlock": {
+        "title": "Hash / Criptografia",
+        "description": "Gera hashes (MD5, SHA1, SHA256, SHA512), codifica/decodifica Base64, URL encode/decode e gera assinatura HMAC-SHA256. Usa biblioteca padrão do Python — sem instalar nada.",
         "params": [
-            ("protocol",      "Texto",  "Sim",  "ftp | sftp"),
-            ("action",        "Texto",  "Sim",  "upload | download | list | delete"),
-            ("host",          "Texto",  "Sim",  "Host ou IP do servidor. Ex: ftp.meusite.com | 192.168.1.100"),
-            ("port",          "Número", "Não",  "Porta (vazio = padrão: FTP=21, SFTP=22)"),
-            ("username",      "Texto",  "Sim",  "Usuário FTP/SFTP"),
-            ("password",      "Texto",  "Não",  "Senha do usuário"),
-            ("local_path",    "Texto",  "Cond.", "Caminho local do arquivo. Ex: saida/relatorio.csv"),
-            ("remote_path",   "Texto",  "Cond.", "Caminho remoto no servidor. Ex: /public/relatorio.csv"),
-            ("variable_name", "Texto",  "Não",  "Variável onde salvar lista de arquivos (action=list, padrão: ftp_lista)"),
-            ("timeout",       "Número", "Não",  "Timeout em segundos (padrão: 30)"),
+            ("operation",    "Texto",    "Sim",  "md5 | sha1 | sha256 | sha512 | base64_encode | base64_decode | url_encode | url_decode | hmac_sha256"),
+            ("input_value",  "Texto",    "Sim",  "Texto a processar. Aceita {{variavel}}"),
+            ("secret_key",   "Texto",    "Cond.", "Chave secreta para hmac_sha256. Use {{ASSET:CHAVE}} para não expor"),
+            ("encoding",     "Texto",    "Não",  "Encoding do texto: utf-8 | latin-1 | ascii (padrão: utf-8)"),
+            ("uppercase",    "Booleano", "Não",  "Retorna o hash em maiúsculas (padrão: False)"),
+            ("variable_name","Texto",    "Não",  "Variável onde salvar o resultado (padrão: hash_resultado)"),
         ],
-        "example": "# Upload FTP:\nprotocol: ftp\naction: upload\nhost: ftp.meusite.com\nusername: admin\npassword: senha123\nlocal_path: saida/relatorio.csv\nremote_path: /public/relatorio.csv\n\n# Download SFTP:\nprotocol: sftp\naction: download\nhost: 192.168.1.100\nport: 22\nusername: deploy\npassword: {{ftp_senha}}\nremote_path: /var/data/arquivo.xlsx\nlocal_path: downloads/arquivo.xlsx\n\n# Listar arquivos:\naction: list\nremote_path: /public\nvariable_name: arquivos_remotos",
-        "tip": "FTP usa ftplib nativo do Python — sem instalar nada. SFTP requer 'pip install paramiko'. list salva a lista como variável e gera {{ftp_lista_total}} com a contagem. Use {{variavel}} nos campos para senhas e caminhos dinâmicos."
+        "example": "# Gerar SHA256:\noperation: sha256\ninput_value: {{senha_usuario}}\nvariable_name: senha_hash\n\n# Base64 encode:\noperation: base64_encode\ninput_value: usuario:senha\nvariable_name: auth_header\n\n# URL encode:\noperation: url_encode\ninput_value: https://site.com/?q=pesquisa aqui\nvariable_name: url_safe\n\n# HMAC para webhook:\noperation: hmac_sha256\ninput_value: {{payload}}\nsecret_key: {{ASSET:WEBHOOK_SECRET}}\nvariable_name: assinatura",
+        "tip": "Use SHA256 para senhas, Base64 para headers de autenticação Basic (usuario:senha), URL encode antes de montar query strings, e HMAC-SHA256 para assinar webhooks. Nunca exponha secret_key no fluxo — use {{ASSET:NOME}} para buscar do gerenciador de assets."
     },
 
     "SmartClickBlock": {

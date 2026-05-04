@@ -38,9 +38,10 @@ from blocks.files.save_csv               import SaveCsvBlock
 from blocks.files.sqlite_block           import SQLiteBlock
 from blocks.integration.http_request     import HttpRequestBlock
 from blocks.integration.send_email       import SendEmailBlock
-from blocks.integration.ftp_block        import FtpBlock
 from blocks.system.keyboard_action       import KeyboardActionBlock
 from blocks.system.clipboard_block       import ClipboardBlock
+from blocks.system.hash_block            import HashBlock
+from blocks.system.hash_block            import HashBlock
 from blocks.control.subflow_block        import SubfluxoBlock
 from blocks.browser.execute_script       import ExecuteScriptBlock
 
@@ -84,7 +85,7 @@ BLOCK_REGISTRY = {
     "SendEmailBlock":            SendEmailBlock,
     "SubfluxoBlock":             SubfluxoBlock,
     "ExecuteScriptBlock": ExecuteScriptBlock,
-    "FtpBlock":                  FtpBlock,
+    "HashBlock":                 HashBlock,
 }
 
 CATEGORY_IDLE_COLORS = {
@@ -250,6 +251,9 @@ class CanvasBlockWidget(QFrame):
         elif action == act_up:   self.move_up.emit(self)
         elif action == act_down: self.move_down.emit(self)
         elif action == act_del:  self.removed.emit(self)
+
+
+
 
 
 class ConnectorArrow(QWidget):
