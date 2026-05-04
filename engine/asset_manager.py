@@ -2,7 +2,7 @@ import json
 import os
 
 class AssetManager:
-    ASSETS_FILE = "assets.json"
+    ASSETS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets.json")
 
     @classmethod
     def list_assets(cls) -> dict:

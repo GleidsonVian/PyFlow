@@ -1,7 +1,7 @@
-import re
 import time
 from blocks.base_block import BaseBlock
-from engine.asset_manager import AssetManager
+import engine.execution_context as ctx
+from engine.execution_context import resolve_params
 
 
 # ── Classificação de erros ────────────────────────────────────────────────────
@@ -72,38 +72,6 @@ def _should_retry(message: str, cfg) -> tuple:
                 return True, f"palavra-chave: '{kw}'"
 
     return True, "erro desconhecido (retry por precaução)"
-
-
-# ── Resolve params (mantido igual ao seu) ─────────────────────────────────────
-
-def resolve_params(params: dict, context: dict) -> dict:
-    """
-    Substitui tokens dinâmicos pelo valor real.
-    1. {{ASSET:nome}} → Busca no arquivo de credenciais/configurações.
-    2. {{nome}}       → Busca nas variáveis de execução (contexto).
-    """
-    resolved = {}
-    for key, value in params.items():
-        if isinstance(value, str):
-            def asset_replacer(match):
-                asset_key = match.group(1).strip()
-                val = AssetManager.get_asset(asset_key)
-                if val is not None:
-                    return str(val)
-                return match.group(0)
-
-            temp_value = re.sub(r"\{\{ASSET:(.+?)\}\}", asset_replacer, value)
-
-            def context_replacer(match):
-                var_name = match.group(1).strip()
-                if var_name.startswith("ASSET:"):
-                    return match.group(0)
-                return str(context.get(var_name, match.group(0)))
-
-            resolved[key] = re.sub(r"\{\{(.+?)\}\}", context_replacer, temp_value)
-        else:
-            resolved[key] = value
-    return resolved
 
 
 # ── RunnerConfig — agora com ConditionalRetry ─────────────────────────────────
@@ -177,10 +145,6 @@ class Runner:
         self.on_step_retry = on_step_retry
         self.config = config or _config
 
-    def _get_context(self) -> dict:
-        from blocks.browser.extract_text import ExtractTextBlock
-        return ExtractTextBlock._context
-
     def _execute_with_retry(self, index: int, block: BaseBlock, params: dict) -> dict:
         """Executa um bloco com ConditionalRetry."""
         cfg = self.config
@@ -213,7 +177,7 @@ class Runner:
                 time.sleep(cfg.retry_delay)
 
             # Re-resolve params (variáveis podem ter mudado entre tentativas)
-            resolved = resolve_params(params, self._get_context())
+            resolved = resolve_params(params)
             result = block.execute(resolved)
 
             if result.get("success"):
@@ -234,6 +198,7 @@ class Runner:
         return result
 
     def run(self, steps: list) -> list:
+        ctx.clear()
         results = []
         total = len(steps)
         i = 0
@@ -243,7 +208,7 @@ class Runner:
             block: BaseBlock = step["block_instance"]
             raw_params: dict = step.get("params", {})
 
-            params = resolve_params(raw_params, self._get_context())
+            params = resolve_params(raw_params)
 
             print(f"\n[{i + 1}/{total}] Executando: {block.name}")
 
@@ -313,7 +278,6 @@ class Runner:
 
             # FOR EACH
             if data.get("foreach"):
-                from blocks.browser.extract_text import ExtractTextBlock
                 items        = data["items"]
                 var_name     = data["variable_name"]
                 blocks_count = data["blocks_count"]
@@ -322,7 +286,7 @@ class Runner:
 
                 print(f"  → For Each: {len(items)} item(s), variável '{var_name}'")
                 for idx, item in enumerate(items):
-                    ExtractTextBlock._context[var_name] = item
+                    ctx.get()[var_name] = item
                     print(f"    Item {idx + 1}/{len(items)}: {item}")
                     sub_results = self._run_sub(foreach_steps, i + 1)
                     results.extend(sub_results)
@@ -345,7 +309,7 @@ class Runner:
             block: BaseBlock = step["block_instance"]
             raw_params: dict = step.get("params", {})
             real_index = base_index + j
-            params = resolve_params(raw_params, self._get_context())
+            params = resolve_params(raw_params)
 
             if self.on_step_start:
                 self.on_step_start(real_index, block)

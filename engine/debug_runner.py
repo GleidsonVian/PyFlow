@@ -1,25 +1,11 @@
 """
 Motor de execução em modo debug step-by-step.
 Executa um bloco por vez, aguardando sinal para avançar.
-Coloque em: engine/debug_runner.py
 """
 import threading
-import re
-import time
 from blocks.base_block import BaseBlock
-
-
-def resolve_params(params: dict, context: dict) -> dict:
-    resolved = {}
-    for key, value in params.items():
-        if isinstance(value, str):
-            def replacer(match):
-                var_name = match.group(1).strip()
-                return str(context.get(var_name, match.group(0)))
-            resolved[key] = re.sub(r"\{\{(.+?)\}\}", replacer, value)
-        else:
-            resolved[key] = value
-    return resolved
+import engine.execution_context as ctx
+from engine.execution_context import resolve_params
 
 
 class DebugRunner:
@@ -49,11 +35,8 @@ class DebugRunner:
         self._stop_flag     = False
         self._thread        = None
 
-    def _get_context(self) -> dict:
-        from blocks.browser.extract_text import ExtractTextBlock
-        return ExtractTextBlock._context
-
     def load(self, steps: list):
+        ctx.clear()
         self._steps   = steps
         self._index   = 0
         self._results = []
@@ -102,7 +85,7 @@ class DebugRunner:
         while self._index < total and not self._stop_flag:
             step   = self._steps[self._index]
             block  = step["block_instance"]
-            params = resolve_params(step.get("params", {}), self._get_context())
+            params = resolve_params(step.get("params", {}))
 
             # Notifica que o bloco está pronto e aguarda sinal
             if self.on_step_ready:

@@ -6,87 +6,11 @@ from PySide6.QtCore import Qt, Signal, QPoint, QMimeData
 from PySide6.QtGui import QPainter, QColor, QPen, QDrag, QPixmap, QCursor
 
 from ui.param_dialog import ParamDialog
-from blocks.browser.open_browser         import OpenBrowserBlock
-from blocks.browser.click_element        import ClickElementBlock
-from blocks.browser.fill_field           import FillFieldBlock
-from blocks.browser.screenshot           import ScreenshotBlock
-from blocks.browser.extract_text         import ExtractTextBlock
-from blocks.browser.extract_list         import ExtractListBlock
-from blocks.browser.press_key            import PressKeyBlock
-from blocks.browser.scroll_page          import ScrollPageBlock
-from blocks.browser.get_current_url      import GetCurrentUrlBlock
-from blocks.browser.mouse_action         import MouseActionBlock
-from blocks.browser.smart_wait           import SmartWaitBlock
-from blocks.browser.nav_controls         import (
-    NavigateToUrlBlock, GoBackBlock, GoForwardBlock,
-    RefreshPageBlock, OpenNewTabBlock, CloseTabBlock,
-    SwitchTabBlock, CloseBrowserBlock
-)
-from blocks.control.wait                 import WaitBlock
-from blocks.control.if_block             import IfBlock
-from blocks.control.loop_block           import LoopBlock
-from blocks.control.for_each_block       import ForEachBlock
-from blocks.control.show_message         import ShowMessageBlock
-from blocks.control.desktop_notification import DesktopNotificationBlock
-from blocks.control.text_manipulation    import TextManipulationBlock
-from blocks.control.set_variable         import SetVariableBlock
+from engine.blocks_registry import BLOCK_BY_NAME, ALL_BLOCKS
 from blocks.control.sequence_start_block import SequenceStartBlock
 from blocks.control.sequence_end_block   import SequenceEndBlock
-from blocks.files.read_csv               import ReadCsvBlock
-from blocks.files.save_text              import SaveTextBlock
-from blocks.files.save_csv               import SaveCsvBlock
-from blocks.files.sqlite_block           import SQLiteBlock
-from blocks.integration.http_request     import HttpRequestBlock
-from blocks.integration.send_email       import SendEmailBlock
-from blocks.system.keyboard_action       import KeyboardActionBlock
-from blocks.system.clipboard_block       import ClipboardBlock
-from blocks.system.hash_block            import HashBlock
-from blocks.system.hash_block            import HashBlock
-from blocks.control.subflow_block        import SubfluxoBlock
-from blocks.browser.execute_script       import ExecuteScriptBlock
 
-BLOCK_REGISTRY = {
-    "OpenBrowserBlock":          OpenBrowserBlock,
-    "ClickElementBlock":         ClickElementBlock,
-    "FillFieldBlock":            FillFieldBlock,
-    "ScreenshotBlock":           ScreenshotBlock,
-    "ExtractTextBlock":          ExtractTextBlock,
-    "ExtractListBlock":          ExtractListBlock,
-    "PressKeyBlock":             PressKeyBlock,
-    "ScrollPageBlock":           ScrollPageBlock,
-    "GetCurrentUrlBlock":        GetCurrentUrlBlock,
-    "MouseActionBlock":          MouseActionBlock,
-    "SmartWaitBlock":            SmartWaitBlock,
-    "NavigateToUrlBlock":        NavigateToUrlBlock,
-    "GoBackBlock":               GoBackBlock,
-    "GoForwardBlock":            GoForwardBlock,
-    "RefreshPageBlock":          RefreshPageBlock,
-    "OpenNewTabBlock":           OpenNewTabBlock,
-    "CloseTabBlock":             CloseTabBlock,
-    "SwitchTabBlock":            SwitchTabBlock,
-    "CloseBrowserBlock":         CloseBrowserBlock,
-    "WaitBlock":                 WaitBlock,
-    "IfBlock":                   IfBlock,
-    "LoopBlock":                 LoopBlock,
-    "ForEachBlock":              ForEachBlock,
-    "SetVariableBlock":          SetVariableBlock,
-    "SequenceStartBlock":        SequenceStartBlock,
-    "SequenceEndBlock":          SequenceEndBlock,
-    "ShowMessageBlock":          ShowMessageBlock,
-    "DesktopNotificationBlock":  DesktopNotificationBlock,
-    "TextManipulationBlock":     TextManipulationBlock,
-    "KeyboardActionBlock":       KeyboardActionBlock,
-    "ClipboardBlock":            ClipboardBlock,
-    "ReadCsvBlock":              ReadCsvBlock,
-    "SaveTextBlock":             SaveTextBlock,
-    "SaveCsvBlock":              SaveCsvBlock,
-    "SQLiteBlock":               SQLiteBlock,
-    "HttpRequestBlock":          HttpRequestBlock,
-    "SendEmailBlock":            SendEmailBlock,
-    "SubfluxoBlock":             SubfluxoBlock,
-    "ExecuteScriptBlock": ExecuteScriptBlock,
-    "HashBlock":                 HashBlock,
-}
+BLOCK_REGISTRY = BLOCK_BY_NAME
 
 CATEGORY_IDLE_COLORS = {
     "Navegador":   ("#1a2a40", "#89b4fa"),

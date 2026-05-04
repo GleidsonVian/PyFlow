@@ -11,8 +11,18 @@ Requisitos:
     Mac:     brew install tesseract
 """
 import pytesseract
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 import os
+import shutil
+
+# Permite override via variável de ambiente; caso contrário tenta auto-detectar
+_tesseract_env = os.environ.get("TESSERACT_CMD")
+if _tesseract_env:
+    pytesseract.pytesseract.tesseract_cmd = _tesseract_env
+elif shutil.which("tesseract") is None:
+    # Fallback para o caminho padrão do Windows se não estiver no PATH
+    _win_default = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    if os.path.exists(_win_default):
+        pytesseract.pytesseract.tesseract_cmd = _win_default
 from blocks.base_block import BaseBlock
 
 

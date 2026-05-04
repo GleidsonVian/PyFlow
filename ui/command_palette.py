@@ -10,46 +10,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal, QSize
 from PySide6.QtGui import QKeyEvent, QColor
 
-# Importa todos os blocos disponíveis
-from blocks.browser.open_browser         import OpenBrowserBlock
-from blocks.browser.click_element        import ClickElementBlock
-from blocks.browser.fill_field           import FillFieldBlock
-from blocks.browser.screenshot           import ScreenshotBlock
-from blocks.browser.extract_text         import ExtractTextBlock
-from blocks.browser.extract_list         import ExtractListBlock
-from blocks.browser.press_key            import PressKeyBlock
-from blocks.browser.scroll_page          import ScrollPageBlock
-from blocks.browser.get_current_url      import GetCurrentUrlBlock
-from blocks.browser.mouse_action         import MouseActionBlock
-from blocks.browser.nav_controls         import (
-    NavigateToUrlBlock, GoBackBlock, GoForwardBlock,
-    RefreshPageBlock, OpenNewTabBlock, CloseTabBlock,
-    SwitchTabBlock, CloseBrowserBlock
-)
-from blocks.control.wait                 import WaitBlock
-from blocks.control.if_block             import IfBlock
-from blocks.control.loop_block           import LoopBlock
-from blocks.control.for_each_block       import ForEachBlock
-from blocks.control.show_message         import ShowMessageBlock
-from blocks.control.desktop_notification import DesktopNotificationBlock
-from blocks.control.text_manipulation    import TextManipulationBlock
-from blocks.files.read_csv               import ReadCsvBlock
-from blocks.files.save_text              import SaveTextBlock
-from blocks.files.save_csv               import SaveCsvBlock
-from blocks.integration.http_request     import HttpRequestBlock
-from blocks.integration.send_email       import SendEmailBlock
-from blocks.system.keyboard_action       import KeyboardActionBlock
-
-ALL_BLOCKS = [
-    OpenBrowserBlock, ClickElementBlock, FillFieldBlock, ExtractTextBlock,
-    ExtractListBlock, PressKeyBlock, ScrollPageBlock, GetCurrentUrlBlock,
-    ScreenshotBlock, MouseActionBlock, NavigateToUrlBlock, GoBackBlock,
-    GoForwardBlock, RefreshPageBlock, OpenNewTabBlock, CloseTabBlock,
-    SwitchTabBlock, CloseBrowserBlock, WaitBlock, IfBlock, LoopBlock,
-    ForEachBlock, ShowMessageBlock, DesktopNotificationBlock,
-    TextManipulationBlock, KeyboardActionBlock, ReadCsvBlock,
-    SaveTextBlock, SaveCsvBlock, HttpRequestBlock, SendEmailBlock,
-]
+from engine.blocks_registry import ALL_BLOCKS
 
 CATEGORY_ICONS = {
     "Navegador":  "🌐",

@@ -2,6 +2,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+import engine.execution_context as _ctx
 from blocks.base_block import BaseBlock
 from blocks.browser.open_browser import OpenBrowserBlock
 
@@ -38,8 +39,9 @@ class ExtractTextBlock(BaseBlock):
         }
     ]
 
-    # Contexto compartilhado entre blocos durante execução
-    _context: dict = {}
+    # Aponta para o dict central de execution_context.
+    # Todos os blocos que fazem ExtractTextBlock._context[...] continuam funcionando.
+    _context: dict = _ctx.get()
 
     def execute(self, params: dict) -> dict:
         errors = self.validate_params(params)
