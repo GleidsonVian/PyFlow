@@ -42,6 +42,7 @@ from blocks.files.save_text              import SaveTextBlock
 from blocks.files.save_csv               import SaveCsvBlock
 from blocks.files.sqlite_block           import SQLiteBlock
 from blocks.files.excel_block            import ExcelBlock
+from blocks.files.load_env_block          import LoadEnvBlock
 from blocks.files.zip_block              import ZipBlock
 from blocks.integration.http_request     import HttpRequestBlock
 from blocks.integration.send_email       import SendEmailBlock
@@ -87,6 +88,7 @@ ALL_BLOCKS = [
     TextManipulationBlock,
     SubfluxoBlock,
     # Arquivos
+    LoadEnvBlock,
     ReadCsvBlock,
     SaveTextBlock,
     SaveCsvBlock,

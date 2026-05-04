@@ -46,7 +46,7 @@ class LogPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("log_panel")
-        self.setFixedHeight(180)
+        self.setMinimumHeight(80)
         self._entries: list[LogEntry] = []
         self._active_filter = None
         self._search_text   = ""

@@ -22,12 +22,13 @@ CATEGORY_IDLE_COLORS = {
 
 
 class CanvasBlockWidget(QFrame):
-    clicked    = Signal(object)
-    removed    = Signal(object)
-    duplicated = Signal(object)
-    move_up    = Signal(object)
-    move_down  = Signal(object)
+    clicked      = Signal(object)
+    removed      = Signal(object)
+    duplicated   = Signal(object)
+    move_up      = Signal(object)
+    move_down    = Signal(object)
     toggled_collapse = Signal(object)
+    run_from     = Signal(object)
 
     STATE_COLORS = {
         "running": ("#1c3a5e", "#89b4fa"),
@@ -164,6 +165,8 @@ class CanvasBlockWidget(QFrame):
             QMenu::item:selected { background-color: #313244; color: #cba6f7; }
             QMenu::separator { background-color: #313244; height: 1px; margin: 4px 0; }
         """)
+        act_run  = menu.addAction("▶  Executar a partir daqui")
+        menu.addSeparator()
         act_dup  = menu.addAction("📋  Duplicar bloco")
         menu.addSeparator()
         act_up   = menu.addAction("⬆  Mover para cima")
@@ -171,7 +174,8 @@ class CanvasBlockWidget(QFrame):
         menu.addSeparator()
         act_del  = menu.addAction("✕  Remover bloco")
         action = menu.exec(event.globalPos())
-        if action == act_dup:    self.duplicated.emit(self)
+        if action == act_run:    self.run_from.emit(self)
+        elif action == act_dup:  self.duplicated.emit(self)
         elif action == act_up:   self.move_up.emit(self)
         elif action == act_down: self.move_down.emit(self)
         elif action == act_del:  self.removed.emit(self)
@@ -204,9 +208,10 @@ class ConnectorArrow(QWidget):
 
 
 class Canvas(QWidget):
-    block_selected = Signal(object)
-    canvas_clicked = Signal()
-    block_updated  = Signal()
+    block_selected  = Signal(object)
+    canvas_clicked  = Signal()
+    block_updated   = Signal()
+    run_from_index  = Signal(int)
 
     def __init__(self):
         super().__init__()
@@ -314,6 +319,7 @@ class Canvas(QWidget):
         widget.duplicated.connect(self._duplicate_block)
         widget.move_up.connect(self._move_up)
         widget.move_down.connect(self._move_down)
+        widget.run_from.connect(self._on_run_from)
         if insert_at is not None and 0 <= insert_at < len(self._blocks):
             self._blocks.insert(insert_at, widget)
             self._full_rebuild()
@@ -371,6 +377,10 @@ class Canvas(QWidget):
                 self._blocks[i].setVisible(not is_collapsed)
         self._full_rebuild()
         self.block_updated.emit()
+
+    def _on_run_from(self, widget):
+        if widget in self._blocks:
+            self.run_from_index.emit(self._blocks.index(widget))
 
     def _on_block_clicked(self, widget): self._select_block(widget)
 

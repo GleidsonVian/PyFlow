@@ -197,11 +197,11 @@ class Runner:
         result["retry_attempts"]    = max_attempts
         return result
 
-    def run(self, steps: list) -> list:
+    def run(self, steps: list, start_index: int = 0) -> list:
         ctx.clear()
         results = []
         total = len(steps)
-        i = 0
+        i = max(0, start_index)
 
         while i < total:
             step = steps[i]

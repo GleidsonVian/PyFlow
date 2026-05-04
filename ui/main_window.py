@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
     QSplitter, QPushButton, QLabel, QFileDialog,
-    QMessageBox, QStatusBar, QFrame
+    QMessageBox, QStatusBar, QFrame, QSizePolicy
 )
 from PySide6.QtCore import Qt, QThread, Signal, QTimer
 from PySide6.QtGui import QAction
@@ -23,6 +23,8 @@ from engine.runner import Runner, get_runner_config
 from engine.debug_runner import DebugRunner
 from engine.flow_manager import FlowManager
 from engine.flow_exporter import FlowExporter
+from engine.flow_validator import validate_flow
+import engine.run_history as run_history
 from engine.api_server import get_api_server
 
 
@@ -32,9 +34,10 @@ class RunnerThread(QThread):
     step_retry   = Signal(int, str, int, int)
     run_finished = Signal(int, int)
 
-    def __init__(self, steps):
+    def __init__(self, steps, start_index: int = 0):
         super().__init__()
-        self.steps = steps
+        self.steps       = steps
+        self.start_index = start_index
 
     def run(self):
         runner = Runner(
@@ -44,7 +47,7 @@ class RunnerThread(QThread):
             on_step_retry=lambda i, b, a, m: self.step_retry.emit(i, b.name, a, m),
             config=get_runner_config(),
         )
-        results = runner.run(self.steps)
+        results = runner.run(self.steps, start_index=self.start_index)
         ok = sum(1 for r in results if r.get("success"))
         self.run_finished.emit(ok, len(results))
 
@@ -94,8 +97,9 @@ class MainWindow(QMainWindow):
         self._debug_thread      = None
         self._debug_waiting     = False
         self._current_flow_name = ""
-        self._current_flow_path = ""   # caminho completo do arquivo atual
+        self._current_flow_path = ""
         self._unsaved_changes   = False
+        self._run_start_time    = None
         self._build_ui()
         self._build_menu()
         self._connect_block_signals()
@@ -364,6 +368,7 @@ class MainWindow(QMainWindow):
         self.canvas.canvas_clicked.connect(self.props_panel.clear)
         self.canvas.block_updated.connect(self._on_block_updated)
         self.canvas.block_updated.connect(self._mark_unsaved)
+        self.canvas.run_from_index.connect(self._on_run_from)
 
         self.splitter.addWidget(self.block_panel)
         self.splitter.addWidget(self.canvas)
@@ -371,15 +376,16 @@ class MainWindow(QMainWindow):
         self.splitter.setSizes([220, 720, 280])
         self.splitter.setCollapsible(0, False)
         self.splitter.setCollapsible(2, False)
-        root.addWidget(self.splitter, 1)
-
-        sep = QFrame()
-        sep.setFrameShape(QFrame.HLine)
-        sep.setObjectName("log_top_sep")
-        root.addWidget(sep)
 
         self.log_panel = LogPanel()
-        root.addWidget(self.log_panel)
+
+        self.v_splitter = QSplitter(Qt.Vertical)
+        self.v_splitter.setObjectName("v_splitter")
+        self.v_splitter.addWidget(self.splitter)
+        self.v_splitter.addWidget(self.log_panel)
+        self.v_splitter.setSizes([620, 180])
+        self.v_splitter.setCollapsible(0, False)
+        root.addWidget(self.v_splitter, 1)
 
         self.status = QStatusBar()
         self.status.setObjectName("status_bar")
@@ -412,9 +418,17 @@ class MainWindow(QMainWindow):
         run_menu.addAction(QAction("Debug  [Ctrl+D]",              self, triggered=self._on_debug))
         run_menu.addAction(QAction("Agendador",                    self, triggered=self._on_open_scheduler))
         run_menu.addSeparator()
+        run_menu.addAction(QAction("Histórico de execuções",       self, triggered=self._on_open_history))
+        run_menu.addSeparator()
         run_menu.addAction(QAction("Configurações",                self, triggered=self._on_open_settings))
 
     # ── Assets ────────────────────────────────────────────────────────
+
+    def _on_open_history(self):
+        from ui.run_history_dialog import RunHistoryDialog
+        dlg = RunHistoryDialog(self)
+        dlg.flow_open_requested.connect(self._load_flow_from_path)
+        dlg.exec()
 
     def _on_open_assets(self):
         dialog = AssetsDialog(self)
@@ -468,16 +482,38 @@ class MainWindow(QMainWindow):
     # ── Execução normal ───────────────────────────────────────────────
 
     def _on_run(self):
+        self._start_run(start_index=0)
+
+    def _on_run_from(self, index: int):
+        self._start_run(start_index=index)
+
+    def _start_run(self, start_index: int = 0):
+        from ui.validation_dialog import ValidationDialog
+        import time as _time
+
         steps = self.canvas.get_steps()
         if not steps:
             self.status.showMessage("Nenhum bloco no canvas."); return
+
+        # Validação antes de executar
+        issues = validate_flow(steps)
+        if issues:
+            dlg = ValidationDialog(issues, self)
+            dlg.exec()
+            if not dlg.should_proceed():
+                return
+
         cfg = get_runner_config()
         self._set_running(True)
-        self.log_panel.log_run_start(len(steps))
+        self._run_start_time = _time.time()
+        run_steps = len(steps) - start_index
+        self.log_panel.log_run_start(run_steps)
+        if start_index > 0:
+            self.log_panel.log("info", f"▶ Iniciando a partir do passo {start_index + 1}: {steps[start_index]['block_instance'].name}")
         if cfg.retry_enabled:
             self.log_panel.log("info", f"↻ Retry: {cfg.retry_attempts}x / {cfg.retry_delay}s")
         self.vars_panel.start_live()
-        self.runner_thread = RunnerThread(steps)
+        self.runner_thread = RunnerThread(steps, start_index=start_index)
         self.runner_thread.step_started.connect(self._on_step_started)
         self.runner_thread.step_done.connect(self._on_step_done)
         self.runner_thread.step_retry.connect(self._on_step_retry)
@@ -570,6 +606,7 @@ class MainWindow(QMainWindow):
         self.log_panel.log("success" if success else "error", message or name)
 
     def _on_run_finished(self, ok, total):
+        import time as _time
         self._set_running(False)
         self.log_panel.log_run_end(ok, total)
         self.status.showMessage(f"Concluído: {ok}/{total} passos.")
@@ -577,6 +614,13 @@ class MainWindow(QMainWindow):
         get_api_server().notify_finished(
             self._current_flow_name, ok == total,
             f"{ok}/{total} passos com sucesso"
+        )
+        duration = _time.time() - (self._run_start_time or _time.time())
+        from datetime import datetime
+        run_history.record(
+            self._current_flow_name, self._current_flow_path,
+            ok, total, duration,
+            datetime.fromtimestamp(self._run_start_time or _time.time()).isoformat(),
         )
 
     # ── Outros handlers ───────────────────────────────────────────────
@@ -716,7 +760,8 @@ class MainWindow(QMainWindow):
             #btn_settings { background-color: #313244; color: #6c7086; font-size: 15px; }
             #btn_settings:hover { background-color: #45475a; color: #cdd6f4; }
             #right_panel { background-color: #181825; }
-            QSplitter::handle { background-color: #313244; width: 1px; }
+            QSplitter::handle { background-color: #313244; width: 1px; height: 4px; }
+            #v_splitter::handle { background-color: #313244; height: 4px; }
             #log_top_sep { color: #313244; }
             #status_bar { background-color: #181825; color: #6c7086; border-top: 1px solid #313244; font-size: 12px; }
             QScrollBar:vertical { background: #1e1e2e; width: 8px; border-radius: 4px; }

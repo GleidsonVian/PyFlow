@@ -39,8 +39,16 @@ class BaseBlock(ABC):
     def validate_params(self, params: dict) -> list[str]:
         """
         Valida os parâmetros antes de executar.
+        Preenche defaults ausentes antes de validar.
         Retorna lista de erros (vazia = tudo ok).
         """
+        for schema in self.params_schema:
+            key = schema["name"]
+            if key not in params or params[key] == "":
+                default = schema.get("default")
+                if default not in (None, ""):
+                    params[key] = default
+
         errors = []
         for schema in self.params_schema:
             if schema.get("required") and not params.get(schema["name"]):
