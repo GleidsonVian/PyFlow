@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QSplitter, QPushButton, QLabel, QFileDialog,
     QMessageBox, QStatusBar, QFrame
 )
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt, QThread, Signal, QTimer
 from PySide6.QtGui import QAction
 
 from ui.block_panel import BlockPanel
@@ -86,35 +86,86 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("PyFlow RPA")
         self.setMinimumSize(1280, 720)
-        self.flow_manager      = FlowManager()
-        self.flow_exporter     = FlowExporter()
-        self._scheduler_dialog = None
-        self._api_dialog       = None
-        self._palette          = None
-        self._debug_thread     = None
-        self._debug_waiting    = False
+        self.flow_manager       = FlowManager()
+        self.flow_exporter      = FlowExporter()
+        self._scheduler_dialog  = None
+        self._api_dialog        = None
+        self._palette           = None
+        self._debug_thread      = None
+        self._debug_waiting     = False
         self._current_flow_name = ""
+        self._current_flow_path = ""   # caminho completo do arquivo atual
+        self._unsaved_changes   = False
         self._build_ui()
         self._build_menu()
         self._connect_block_signals()
         self._connect_scheduler_signals()
         self._start_api_server()
         self._apply_styles()
+        self._setup_autosave()
+        self._check_autosave_recovery()
 
     def keyPressEvent(self, event):
-        key  = event.key()
-        ctrl = event.modifiers() & Qt.ControlModifier
-        if ctrl and key == Qt.Key_P:      self._on_open_palette();    return
-        if ctrl and key == Qt.Key_S:      self._on_save();            return
-        if ctrl and key == Qt.Key_Return: self._on_run();             return
-        if ctrl and key == Qt.Key_L:      self._on_clear();           return
-        if ctrl and key == Qt.Key_D:      self._on_debug();           return
-        if ctrl and key == Qt.Key_T:      self._on_open_templates();  return
-        if ctrl and key == Qt.Key_A:      self._on_open_assets();     return
+        key   = event.key()
+        ctrl  = event.modifiers() & Qt.ControlModifier
+        shift = event.modifiers() & Qt.ShiftModifier
+        if ctrl and shift and key == Qt.Key_S: self._on_save_as();         return
+        if ctrl and key == Qt.Key_P:           self._on_open_palette();    return
+        if ctrl and key == Qt.Key_S:           self._on_save();            return
+        if ctrl and key == Qt.Key_Return:      self._on_run();             return
+        if ctrl and key == Qt.Key_L:           self._on_clear();           return
+        if ctrl and key == Qt.Key_D:           self._on_debug();           return
+        if ctrl and key == Qt.Key_T:           self._on_open_templates();  return
+        if ctrl and key == Qt.Key_A:           self._on_open_assets();     return
         if self._debug_thread and self._debug_thread.isRunning():
             if key == Qt.Key_Space: self._on_debug_step();  return
             if key == Qt.Key_F5:   self._on_debug_resume(); return
         super().keyPressEvent(event)
+
+    # ── Autosave & título ─────────────────────────────────────────────
+
+    def _setup_autosave(self):
+        self._autosave_timer = QTimer(self)
+        self._autosave_timer.setInterval(30_000)  # 30 segundos
+        self._autosave_timer.timeout.connect(self._do_autosave)
+        self._autosave_timer.start()
+
+    def _do_autosave(self):
+        steps = self.canvas.get_serialized_steps()
+        if steps and self._unsaved_changes:
+            self.flow_manager.autosave(steps)
+
+    def _check_autosave_recovery(self):
+        if not self.flow_manager.has_autosave():
+            return
+        reply = QMessageBox.question(
+            self, "Recuperar sessão anterior",
+            "Foi encontrado um autosave da última sessão.\nDeseja recuperá-lo?",
+            QMessageBox.Yes | QMessageBox.No,
+        )
+        if reply == QMessageBox.Yes:
+            try:
+                data = self.flow_manager.load_autosave()
+                self.canvas.load_from_data(data.get("steps", []))
+                self._mark_unsaved()
+                self.status.showMessage("Sessão anterior recuperada.")
+                self.log_panel.log("info", "Sessão anterior recuperada do autosave.")
+            except Exception as e:
+                self.log_panel.log("error", f"Erro ao recuperar autosave: {e}")
+        else:
+            self.flow_manager.clear_autosave()
+
+    def _mark_unsaved(self):
+        self._unsaved_changes = True
+        name = self._current_flow_name or "sem título"
+        self.setWindowTitle(f"● {name}  —  PyFlow RPA")
+
+    def _mark_saved(self, name: str, path: str):
+        self._current_flow_name = name
+        self._current_flow_path = path
+        self._unsaved_changes   = False
+        self.setWindowTitle(f"{name}  —  PyFlow RPA")
+        self.flow_manager.clear_autosave()
 
     # ── API Server ────────────────────────────────────────────────────
 
@@ -312,6 +363,7 @@ class MainWindow(QMainWindow):
         self.canvas.block_selected.connect(self.props_panel.show_block)
         self.canvas.canvas_clicked.connect(self.props_panel.clear)
         self.canvas.block_updated.connect(self._on_block_updated)
+        self.canvas.block_updated.connect(self._mark_unsaved)
 
         self.splitter.addWidget(self.block_panel)
         self.splitter.addWidget(self.canvas)
@@ -343,6 +395,7 @@ class MainWindow(QMainWindow):
         file_menu.addAction(QAction("Templates  [Ctrl+T]",         self, triggered=self._on_open_templates))
         file_menu.addAction(QAction("Novo fluxo  [Ctrl+L]",        self, triggered=self._on_clear))
         file_menu.addAction(QAction("Salvar  [Ctrl+S]",            self, triggered=self._on_save))
+        file_menu.addAction(QAction("Salvar como  [Ctrl+Shift+S]", self, triggered=self._on_save_as))
         file_menu.addAction(QAction("Gerenciar fluxos",            self, triggered=self._on_open_flow_manager))
         file_menu.addAction(QAction("Exportar como .py",           self, triggered=self._on_export))
         file_menu.addSeparator()
@@ -552,7 +605,7 @@ class MainWindow(QMainWindow):
             data = self.flow_manager.load(filepath)
             self.canvas.load_from_data(data.get("steps", []))
             name = data.get("flow_name", filepath)
-            self._current_flow_name = name
+            self._mark_saved(name, filepath)
             self.status.showMessage(f"Fluxo carregado: {name}")
             self.log_panel.log("info", f"Fluxo carregado: {name}")
         except Exception as e:
@@ -576,22 +629,44 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Erro na exportação", str(e))
 
     def _on_save(self):
+        """Salva direto se já tem caminho; caso contrário age como Salvar como."""
         steps = self.canvas.get_serialized_steps()
         if not steps:
             self.status.showMessage("Nada para salvar."); return
-        path, _ = QFileDialog.getSaveFileName(self, "Salvar fluxo", "flows/", "JSON (*.json)")
-        if path:
-            name = path.split("/")[-1].replace(".json", "")
-            self._current_flow_name = name
-            self.flow_manager.save(name, steps)
-            self.status.showMessage(f"Fluxo salvo: {path}")
+        if self._current_flow_path:
+            path = self.flow_manager.save(
+                self._current_flow_name, steps, filepath=self._current_flow_path
+            )
+            self._mark_saved(self._current_flow_name, path)
+            self.status.showMessage(f"Salvo: {path}")
             self.log_panel.log("info", f"Fluxo salvo: {path}")
+        else:
+            self._on_save_as()
+
+    def _on_save_as(self):
+        """Sempre abre o diálogo para escolher onde salvar."""
+        steps = self.canvas.get_serialized_steps()
+        if not steps:
+            self.status.showMessage("Nada para salvar."); return
+        initial = self._current_flow_path or FlowManager.FLOWS_DIR + "/"
+        path, _ = QFileDialog.getSaveFileName(self, "Salvar fluxo como", initial, "JSON (*.json)")
+        if path:
+            from pathlib import Path as _Path
+            name = _Path(path).stem
+            saved = self.flow_manager.save(name, steps, filepath=path)
+            self._mark_saved(name, saved)
+            self.status.showMessage(f"Fluxo salvo: {saved}")
+            self.log_panel.log("info", f"Fluxo salvo: {saved}")
 
     def _on_clear(self):
         if QMessageBox.question(self, "Limpar canvas", "Remover todos os blocos?",
                 QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             self.canvas.clear_canvas()
             self.props_panel.clear()
+            self._current_flow_path = ""
+            self._current_flow_name = ""
+            self._unsaved_changes   = False
+            self.setWindowTitle("PyFlow RPA")
             self.status.showMessage("Canvas limpo.")
 
     def _on_block_updated(self):

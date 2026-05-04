@@ -1,0 +1,207 @@
+{
+  "flow_name": "robo_rondonia",
+  "saved_at": "2026-05-04T00:00:00",
+  "description": "Robô de consulta de margem consignada - Governo de Rondônia (dados mockados para demonstração).",
+  "steps": [
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "cpf_usuario",
+        "value": "00000000000",
+        "comment": "CPF do usuário que faz login no portal (mock)"
+      }
+    },
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "senha_usuario",
+        "value": "senha_mock_123",
+        "comment": "Senha do usuário (mock)"
+      }
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "cpf_consulta",
+        "value": "12345678901",
+        "comment": "CPF do servidor a consultar (mock — viria do banco de dados)"
+      }
+    },
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "matricula_consulta",
+        "value": "123456",
+        "comment": "Matrícula do servidor a consultar (mock)"
+      }
+    },
+
+    {
+      "block": "OpenBrowserBlock",
+      "params": {
+        "url": "https://consignacao.sistemas.ro.gov.br/#/",
+        "maximized": true
+      }
+    },
+    {
+      "block": "WaitBlock",
+      "params": { "seconds": "3" }
+    },
+
+    {
+      "block": "FillFieldBlock",
+      "params": {
+        "selector": "input[aria-label='Usuário']",
+        "value": "{{cpf_usuario}}",
+        "clear_before": true,
+        "timeout": "15"
+      }
+    },
+    {
+      "block": "FillFieldBlock",
+      "params": {
+        "selector": "input[aria-label='Senha']",
+        "value": "{{senha_usuario}}",
+        "clear_before": true,
+        "timeout": "10"
+      }
+    },
+    {
+      "block": "ClickElementBlock",
+      "params": {
+        "selector": "//span[contains(text(), 'Entrar')]",
+        "by": "xpath",
+        "timeout": "10"
+      }
+    },
+    {
+      "block": "WaitBlock",
+      "params": { "seconds": "3" }
+    },
+    {
+      "block": "GetCurrentUrlBlock",
+      "params": { "variable_name": "url_apos_login" }
+    },
+    {
+      "block": "ScreenshotBlock",
+      "params": {
+        "filename": "rondonia_pos_login",
+        "folder": "screenshots"
+      }
+    },
+
+    {
+      "block": "ClickElementBlock",
+      "params": {
+        "selector": "//div[@class='q-item__label' and text()='Averbações']",
+        "by": "xpath",
+        "timeout": "15"
+      }
+    },
+    {
+      "block": "WaitBlock",
+      "params": { "seconds": "1" }
+    },
+    {
+      "block": "ClickElementBlock",
+      "params": {
+        "selector": "//div[contains(@class,'q-item__section') and contains(text(),'Gestão')]",
+        "by": "xpath",
+        "timeout": "10"
+      }
+    },
+    {
+      "block": "WaitBlock",
+      "params": { "seconds": "2" }
+    },
+
+    {
+      "block": "NavigateToUrlBlock",
+      "params": {
+        "url": "https://consignacao.sistemas.ro.gov.br/#/privado/averbacao/pesquisa",
+        "timeout": "15"
+      }
+    },
+    {
+      "block": "WaitBlock",
+      "params": { "seconds": "2" }
+    },
+
+    {
+      "block": "FillFieldBlock",
+      "params": {
+        "selector": "input[aria-label='Matrícula']",
+        "value": "{{matricula_consulta}}",
+        "clear_before": true,
+        "timeout": "10"
+      }
+    },
+    {
+      "block": "FillFieldBlock",
+      "params": {
+        "selector": "input[aria-label='CPF']",
+        "value": "{{cpf_consulta}}",
+        "clear_before": true,
+        "timeout": "10"
+      }
+    },
+    {
+      "block": "ClickElementBlock",
+      "params": {
+        "selector": "//span[text()='Buscar Servidor']",
+        "by": "xpath",
+        "timeout": "10"
+      }
+    },
+    {
+      "block": "WaitBlock",
+      "params": { "seconds": "3" }
+    },
+    {
+      "block": "GetCurrentUrlBlock",
+      "params": { "variable_name": "url_resultado" }
+    },
+    {
+      "block": "ScreenshotBlock",
+      "params": {
+        "filename": "rondonia_resultado",
+        "folder": "screenshots"
+      }
+    },
+
+    {
+      "block": "ExtractTextBlock",
+      "params": {
+        "selector": "/html/body/div[1]/div/div[2]/div/div[2]/div",
+        "by": "xpath",
+        "variable_name": "dados_servidor_raw",
+        "timeout": "15"
+      }
+    },
+
+    {
+      "block": "SaveTextBlock",
+      "params": {
+        "content": "=== CONSULTA GOVERNO RONDÔNIA ===\nCPF consultado: {{cpf_consulta}}\nMatrícula: {{matricula_consulta}}\nURL após login: {{url_apos_login}}\nURL resultado: {{url_resultado}}\n\nDados extraídos:\n{{dados_servidor_raw}}",
+        "filepath": "saida/resultado_rondonia.txt",
+        "mode": "overwrite",
+        "add_timestamp": true
+      }
+    },
+    {
+      "block": "CloseBrowserBlock",
+      "params": {}
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Consulta Rondônia concluída",
+        "message": "CPF: {{cpf_consulta}}\n\nResultado salvo em saida/resultado_rondonia.txt\nScreenshots em screenshots/",
+        "kind": "info"
+      }
+    }
+
+  ]
+}

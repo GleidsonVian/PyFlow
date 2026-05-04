@@ -3,14 +3,11 @@ from PySide6.QtWidgets import (
     QPushButton, QScrollArea, QLineEdit, QCheckBox, QTabWidget
 )
 from PySide6.QtCore import Qt
+import engine.execution_context as ctx
 
 
 def _get_available_variables() -> list[str]:
-    try:
-        from blocks.browser.extract_text import ExtractTextBlock
-        return list(ExtractTextBlock._context.keys())
-    except Exception:
-        return []
+    return list(ctx.get().keys())
 
 
 class PropertiesPanel(QWidget):

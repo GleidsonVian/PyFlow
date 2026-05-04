@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QFont
+import engine.execution_context as ctx
 
 
 class VariableRow(QWidget):
@@ -61,36 +62,50 @@ class VariableRow(QWidget):
         layout.addWidget(lbl_val, 1)
         layout.addWidget(btn_copy)
 
-    def _get_type_badge(self) -> dict:
+    def _resolved_value(self):
+        """Retorna o valor real — deserializa strings que são listas em Python."""
         v = self._value
         if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            s = v.strip()
+            if s.startswith("[") and s.endswith("]"):
+                import ast
+                try:
+                    parsed = ast.literal_eval(s)
+                    if isinstance(parsed, list):
+                        return parsed
+                except Exception:
+                    pass
+        return v
+
+    def _get_type_badge(self) -> dict:
+        v = self._resolved_value()
+        if isinstance(v, list):
             return {"label": "[ ]", "id": "list"}
-        elif isinstance(v, bool):
+        if isinstance(v, bool):
             return {"label": "bool", "id": "bool"}
-        elif isinstance(v, int):
+        if isinstance(v, int):
             return {"label": "int", "id": "int"}
-        elif isinstance(v, float):
+        if isinstance(v, float):
             return {"label": "float", "id": "float"}
-        else:
-            s = str(v)
-            if s.isdigit():
-                return {"label": "num", "id": "num"}
-            return {"label": "str", "id": "str"}
+        s = str(v)
+        if s.lstrip("-").isdigit():
+            return {"label": "num", "id": "num"}
+        return {"label": "str", "id": "str"}
 
     def _format_value(self) -> str:
-        v = self._value
+        v = self._resolved_value()
         if isinstance(v, list):
             count = len(v)
             preview = ", ".join(str(i)[:20] for i in v[:3])
             suffix = f" +{count - 3}" if count > 3 else ""
             return f"[{preview}{suffix}]  ({count} itens)"
         s = str(v)
-        if len(s) > 60:
-            return s[:57] + "..."
-        return s
+        return s[:57] + "..." if len(s) > 60 else s
 
     def _copy_value(self):
-        v = self._value
+        v = self._resolved_value()
         text = ", ".join(str(i) for i in v) if isinstance(v, list) else str(v)
         QApplication.clipboard().setText(text)
 
@@ -231,19 +246,11 @@ class VariablesPanel(QWidget):
         self._render(context)
 
     def _get_context(self) -> dict:
-        try:
-            from blocks.browser.extract_text import ExtractTextBlock
-            return dict(ExtractTextBlock._context)
-        except Exception:
-            return {}
+        return dict(ctx.get())
 
     def clear_context(self):
-        try:
-            from blocks.browser.extract_text import ExtractTextBlock
-            ExtractTextBlock._context.clear()
-            self.refresh()
-        except Exception:
-            pass
+        ctx.clear()
+        self.refresh()
 
     def _on_filter(self, text: str):
         self._filter_text = text.lower()
