@@ -15,12 +15,18 @@ class HttpRequestBlock(BaseBlock):
 
     params_schema = [
         {
-            "name":        "method",
-            "label":       "Método HTTP",
-            "type":        "str",
-            "required":    True,
-            "default":     "GET",
-            "placeholder": "GET | POST | PUT | PATCH | DELETE"
+            "name":    "method",
+            "label":   "Método HTTP",
+            "type":    "select",
+            "required": True,
+            "default": "GET",
+            "options": [
+                {"value": "GET",    "label": "GET — Buscar dados",      "description": "Lê/busca dados da API sem alterar nada no servidor. O Body é ignorado."},
+                {"value": "POST",   "label": "POST — Criar recurso",    "description": "Envia dados para criar um novo recurso. Use o campo Body (JSON) para enviar o payload."},
+                {"value": "PUT",    "label": "PUT — Substituir recurso","description": "Substitui completamente um recurso existente. O Body deve conter a representação completa."},
+                {"value": "PATCH",  "label": "PATCH — Atualizar parcial","description": "Atualiza apenas os campos enviados no Body. Não substitui o recurso completo."},
+                {"value": "DELETE", "label": "DELETE — Remover recurso","description": "Remove um recurso no servidor. Geralmente não usa Body."},
+            ],
         },
         {
             "name":        "url",

@@ -1,3 +1,5 @@
+import copy
+
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QLabel,
     QFrame, QHBoxLayout, QMenu, QApplication
@@ -9,8 +11,89 @@ from ui.param_dialog import ParamDialog
 from engine.blocks_registry import BLOCK_BY_NAME, ALL_BLOCKS
 from blocks.control.sequence_start_block import SequenceStartBlock
 from blocks.control.sequence_end_block   import SequenceEndBlock
+<<<<<<< HEAD
 
 BLOCK_REGISTRY = BLOCK_BY_NAME
+=======
+from blocks.control.end_loop_block       import EndLoopBlock
+from blocks.control.end_foreach_block    import EndForEachBlock
+from blocks.control.end_if_block         import EndIfBlock
+from blocks.control.else_block           import ElseBlock
+from blocks.control.try_block            import TryBlock
+from blocks.control.catch_block          import CatchBlock
+from blocks.control.end_try_block        import EndTryBlock
+from blocks.control.while_block          import WhileBlock
+from blocks.control.end_while_block      import EndWhileBlock
+from blocks.files.read_csv               import ReadCsvBlock
+from blocks.files.save_text              import SaveTextBlock
+from blocks.files.save_csv               import SaveCsvBlock
+from blocks.files.sqlite_block           import SQLiteBlock
+from blocks.integration.http_request     import HttpRequestBlock
+from blocks.integration.send_email       import SendEmailBlock
+from blocks.integration.send_webhook     import SendWebhookBlock
+from blocks.system.keyboard_action       import KeyboardActionBlock
+from blocks.system.clipboard_block       import ClipboardBlock
+from blocks.system.hash_block            import HashBlock
+from blocks.system.hash_block            import HashBlock
+from blocks.control.subflow_block        import SubfluxoBlock
+from blocks.browser.execute_script       import ExecuteScriptBlock
+from blocks.system.ocr_block             import OcrBlock
+
+
+BLOCK_REGISTRY = {
+    "OpenBrowserBlock":          OpenBrowserBlock,
+    "ClickElementBlock":         ClickElementBlock,
+    "FillFieldBlock":            FillFieldBlock,
+    "ScreenshotBlock":           ScreenshotBlock,
+    "ExtractTextBlock":          ExtractTextBlock,
+    "ExtractListBlock":          ExtractListBlock,
+    "PressKeyBlock":             PressKeyBlock,
+    "ScrollPageBlock":           ScrollPageBlock,
+    "GetCurrentUrlBlock":        GetCurrentUrlBlock,
+    "MouseActionBlock":          MouseActionBlock,
+    "SmartWaitBlock":            SmartWaitBlock,
+    "NavigateToUrlBlock":        NavigateToUrlBlock,
+    "GoBackBlock":               GoBackBlock,
+    "GoForwardBlock":            GoForwardBlock,
+    "RefreshPageBlock":          RefreshPageBlock,
+    "OpenNewTabBlock":           OpenNewTabBlock,
+    "CloseTabBlock":             CloseTabBlock,
+    "SwitchTabBlock":            SwitchTabBlock,
+    "CloseBrowserBlock":         CloseBrowserBlock,
+    "WaitBlock":                 WaitBlock,
+    "IfBlock":                   IfBlock,
+    "LoopBlock":                 LoopBlock,
+    "ForEachBlock":              ForEachBlock,
+    "SetVariableBlock":          SetVariableBlock,
+    "SequenceStartBlock":        SequenceStartBlock,
+    "SequenceEndBlock":          SequenceEndBlock,
+    "EndLoopBlock":              EndLoopBlock,
+    "EndForEachBlock":           EndForEachBlock,
+    "EndIfBlock":                EndIfBlock,
+    "ElseBlock":                 ElseBlock,
+    "TryBlock":                  TryBlock,
+    "CatchBlock":                CatchBlock,
+    "EndTryBlock":               EndTryBlock,
+    "WhileBlock":                WhileBlock,
+    "EndWhileBlock":             EndWhileBlock,
+    "ShowMessageBlock":          ShowMessageBlock,
+    "DesktopNotificationBlock":  DesktopNotificationBlock,
+    "TextManipulationBlock":     TextManipulationBlock,
+    "KeyboardActionBlock":       KeyboardActionBlock,
+    "ClipboardBlock":            ClipboardBlock,
+    "ReadCsvBlock":              ReadCsvBlock,
+    "SaveTextBlock":             SaveTextBlock,
+    "SaveCsvBlock":              SaveCsvBlock,
+    "SQLiteBlock":               SQLiteBlock,
+    "HttpRequestBlock":          HttpRequestBlock,
+    "SendEmailBlock":            SendEmailBlock,
+    "SendWebhookBlock":          SendWebhookBlock,
+    "SubfluxoBlock":             SubfluxoBlock,
+    "ExecuteScriptBlock": ExecuteScriptBlock,
+    "HashBlock":                 HashBlock,
+    "OcrBlock":     OcrBlock,
+}
+>>>>>>> 23424c6 (commit)
 
 CATEGORY_IDLE_COLORS = {
     "Navegador":   ("#1a2a40", "#89b4fa"),
@@ -47,17 +130,25 @@ class CanvasBlockWidget(QFrame):
         self._drag_start_pos = None
         self._build_ui()
         self._apply_state()
+        self._refresh_nota()
 
     def _get_category(self):
         return getattr(self.block_instance, "category", "Controle")
 
     def _build_ui(self):
         self.setObjectName("canvas_block")
-        self.setFixedHeight(72)
+        self.setMinimumHeight(72)
         self.setCursor(Qt.PointingHandCursor)
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(14, 10, 14, 10)
-        layout.setSpacing(10)
+
+        # Layout vertical externo: linha principal + nota (opcional)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        # ── Linha principal ───────────────────────────────────────────
+        row = QHBoxLayout()
+        row.setContentsMargins(14, 10, 14, 10)
+        row.setSpacing(10)
 
         if self.is_sequence_start:
             self.collapse_button = QLabel("▼")
@@ -66,7 +157,7 @@ class CanvasBlockWidget(QFrame):
             self.collapse_button.setAlignment(Qt.AlignCenter)
             self.collapse_button.setCursor(Qt.PointingHandCursor)
             self.collapse_button.mousePressEvent = self._toggle_collapse
-            layout.addWidget(self.collapse_button)
+            row.addWidget(self.collapse_button)
 
         self.drag_handle = QLabel("⠿")
         self.drag_handle.setObjectName("drag_handle")
@@ -85,7 +176,7 @@ class CanvasBlockWidget(QFrame):
         self.lbl_name.setObjectName("block_name")
         params_text = "  ·  ".join(
             f"{k}: {v}" for k, v in self.params.items()
-            if v not in (None, "", False)
+            if k != "nota" and v not in (None, "", False)
         ) or "Sem parâmetros"
         self.lbl_params = QLabel(params_text)
         self.lbl_params.setObjectName("block_params")
@@ -100,10 +191,19 @@ class CanvasBlockWidget(QFrame):
         self.btn_remove.setCursor(Qt.PointingHandCursor)
         self.btn_remove.mousePressEvent = lambda e: self.removed.emit(self)
 
-        layout.addWidget(self.drag_handle)
-        layout.addWidget(self.lbl_index)
-        layout.addLayout(info, 1)
-        layout.addWidget(self.btn_remove)
+        row.addWidget(self.drag_handle)
+        row.addWidget(self.lbl_index)
+        row.addLayout(info, 1)
+        row.addWidget(self.btn_remove)
+        outer.addLayout(row)
+
+        # ── Nota (linha extra, visível só quando preenchida) ──────────
+        self.lbl_nota = QLabel("")
+        self.lbl_nota.setObjectName("block_nota")
+        self.lbl_nota.setWordWrap(True)
+        self.lbl_nota.setContentsMargins(58, 0, 14, 8)   # alinha com o texto acima
+        self.lbl_nota.hide()
+        outer.addWidget(self.lbl_nota)
 
     def set_state(self, state):
         self.state = state
@@ -125,15 +225,33 @@ class CanvasBlockWidget(QFrame):
             #block_index {{ background-color: {accent}; color: #1e1e2e; border-radius: 14px; font-size: 12px; font-weight: 700; }}
             #block_name {{ color: #cdd6f4; font-size: 13px; font-weight: 600; }}
             #block_params {{ color: #6c7086; font-size: 11px; }}
+            #block_nota {{ color: #585b70; font-size: 10px; font-style: italic; }}
             #btn_remove {{ color: #45475a; border-radius: 11px; font-size: 11px; }}
         """)
+
+    def _set_scope_indicator(self, color: str | None):
+        """Adiciona borda esquerda colorida quando o bloco está dentro de um escopo."""
+        if color:
+            self.setStyleSheet(
+                self.styleSheet() +
+                f"\n#canvas_block {{ border-left: 4px solid {color}; border-radius: 0 10px 10px 0; }}"
+            )
 
     def update_params_label(self):
         params_text = "  ·  ".join(
             f"{k}: {v}" for k, v in self.params.items()
-            if v not in (None, "", False)
+            if k != "nota" and v not in (None, "", False)
         ) or "Sem parâmetros"
         self.lbl_params.setText(params_text)
+        self._refresh_nota()
+
+    def _refresh_nota(self):
+        nota = self.params.get("nota", "").strip()
+        if nota:
+            self.lbl_nota.setText(f"📝  {nota}")
+            self.lbl_nota.show()
+        else:
+            self.lbl_nota.hide()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -213,14 +331,19 @@ class Canvas(QWidget):
     block_updated   = Signal()
     run_from_index  = Signal(int)
 
+    _MAX_HISTORY = 60
+
     def __init__(self):
         super().__init__()
         self.setObjectName("canvas_outer")
         self.setAcceptDrops(True)
         self._blocks: list = []
         self._selected = None
+        self._undo_stack: list = []
+        self._redo_stack: list = []
         self._build_ui()
         self._apply_styles()
+        self.setFocusPolicy(Qt.StrongFocus)
 
     def _build_ui(self):
         outer = QVBoxLayout(self)
@@ -272,6 +395,58 @@ class Canvas(QWidget):
                 return i
         return len(self._blocks)
 
+    # ── Indentação visual ─────────────────────────────────────────────
+
+    # Cores de borda por tipo de container (nível 1 usará a cor do container mais externo)
+    _SCOPE_COLORS = {
+        "LoopBlock":     "#fab387",   # laranja
+        "ForEachBlock":  "#a6e3a1",   # verde
+        "IfBlock":       "#89b4fa",   # azul
+        "ElseBlock":     "#f38ba8",   # rosa (ramo else)
+        "TryBlock":      "#f9e2af",   # amarelo
+        "CatchBlock":    "#f38ba8",   # vermelho (ramo de erro)
+        "WhileBlock":    "#94e2d5",   # teal
+    }
+    _OPEN_TYPES  = frozenset({"LoopBlock", "ForEachBlock", "IfBlock", "TryBlock", "WhileBlock"})
+    _CLOSE_TYPES = frozenset({"EndLoopBlock", "EndForEachBlock", "EndIfBlock", "EndTryBlock", "EndWhileBlock"})
+
+    def _compute_indent(self, blocks: list) -> list:
+        """
+        Retorna lista de (nivel, cor_de_escopo) para cada bloco.
+        Nível 0 = sem indentação.
+        """
+        results    = []
+        stack      = []   # pilha de cores do escopo atual
+
+        for blk in blocks:
+            btype = type(blk.block_instance).__name__
+
+            if btype in self._CLOSE_TYPES:
+                # Fecha escopo — recua ANTES de renderizar este bloco
+                if stack:
+                    stack.pop()
+                color = stack[-1] if stack else None
+                results.append((len(stack), color))
+
+            elif btype in ("ElseBlock", "CatchBlock"):
+                # Mesmo nível do bloco pai mas muda a cor (ramo alternativo)
+                color = self._SCOPE_COLORS.get(btype, "#f38ba8")
+                if stack:
+                    stack[-1] = color
+                results.append((len(stack) - 1 if stack else 0, color))
+
+            elif btype in self._OPEN_TYPES:
+                # Renderiza o bloco de abertura no nível atual
+                color = self._SCOPE_COLORS.get(btype)
+                results.append((len(stack), color))
+                stack.append(color)   # abre escopo APÓS renderizar
+
+            else:
+                color = stack[-1] if stack else None
+                results.append((len(stack), color))
+
+        return results
+
     def _full_rebuild(self):
         # Limpa o layout, mas mantém os widgets dos blocos vivos
         while self.flow_layout.count():
@@ -288,12 +463,20 @@ class Canvas(QWidget):
         self._empty_label.setVisible(not self._blocks)  # Mostra se não houver blocos
         self.flow_layout.addWidget(self._empty_label)
 
+        # Calcula nível de indentação por bloco
+        indent_levels = self._compute_indent(visible_blocks)
+
         # Adiciona apenas os blocos visíveis e conectores ao layout
         for i, blk in enumerate(visible_blocks):
             blk.lbl_index.setText(str(i + 1))
             blk._apply_state()
+            level, scope_color = indent_levels[i]
+            blk.setContentsMargins(level * 24, 0, 0, 0)
+            blk._set_scope_indicator(scope_color)
             if i > 0:
-                self.flow_layout.addWidget(ConnectorArrow())
+                arrow = ConnectorArrow()
+                arrow.setContentsMargins(level * 24, 0, 0, 0)
+                self.flow_layout.addWidget(arrow)
             self.flow_layout.addWidget(blk)
 
         self.flow_layout.addStretch(1)
@@ -310,16 +493,78 @@ class Canvas(QWidget):
         self.flow_layout.addWidget(widget)
         self.flow_layout.addStretch(1)
 
-    def _add_block(self, block_instance, params, insert_at=None):
-        widget = CanvasBlockWidget(block_instance, params,
-                                   insert_at if insert_at is not None else len(self._blocks))
+    # ── Undo / Redo ───────────────────────────────────────────────────────
+
+    def _snapshot(self) -> list:
+        """Captura o estado atual do canvas como lista serializável."""
+        return [
+            {"block": type(b.block_instance).__name__, "params": copy.deepcopy(b.params)}
+            for b in self._blocks
+        ]
+
+    def _push_history(self):
+        """Salva o estado atual na pilha de undo e apaga o redo."""
+        self._undo_stack.append(self._snapshot())
+        if len(self._undo_stack) > self._MAX_HISTORY:
+            self._undo_stack.pop(0)
+        self._redo_stack.clear()
+
+    def _restore(self, snapshot: list):
+        """Restaura o canvas a partir de um snapshot sem gerar novo histórico."""
+        self._blocks.clear()
+        self._selected = None
+        for step in snapshot:
+            cls = BLOCK_REGISTRY.get(step["block"])
+            if cls:
+                widget = CanvasBlockWidget(cls(), copy.deepcopy(step["params"]),
+                                           len(self._blocks))
+                self._connect_block(widget)
+                self._blocks.append(widget)
+        self._full_rebuild()
+        self.canvas_clicked.emit()
+        self.block_updated.emit()
+
+    def undo(self):
+        """Desfaz a última ação (Ctrl+Z)."""
+        if not self._undo_stack:
+            return
+        self._redo_stack.append(self._snapshot())
+        self._restore(self._undo_stack.pop())
+
+    def redo(self):
+        """Refaz a última ação desfeita (Ctrl+Y)."""
+        if not self._redo_stack:
+            return
+        self._undo_stack.append(self._snapshot())
+        self._restore(self._redo_stack.pop())
+
+    def keyPressEvent(self, event):
+        if event.modifiers() == Qt.ControlModifier:
+            if event.key() == Qt.Key_Z:
+                self.undo(); return
+            if event.key() == Qt.Key_Y:
+                self.redo(); return
+        super().keyPressEvent(event)
+
+    # ── Conexão de sinais do bloco ────────────────────────────────────────
+
+    def _connect_block(self, widget):
         widget.clicked.connect(self._on_block_clicked)
         widget.removed.connect(self._remove_block)
         widget.toggled_collapse.connect(self._on_sequence_toggled)
         widget.duplicated.connect(self._duplicate_block)
         widget.move_up.connect(self._move_up)
         widget.move_down.connect(self._move_down)
+<<<<<<< HEAD
         widget.run_from.connect(self._on_run_from)
+=======
+
+    def _add_block(self, block_instance, params, insert_at=None):
+        self._push_history()
+        widget = CanvasBlockWidget(block_instance, params,
+                                   insert_at if insert_at is not None else len(self._blocks))
+        self._connect_block(widget)
+>>>>>>> 23424c6 (commit)
         if insert_at is not None and 0 <= insert_at < len(self._blocks):
             self._blocks.insert(insert_at, widget)
             self._full_rebuild()
@@ -330,7 +575,7 @@ class Canvas(QWidget):
         self.scroll.verticalScrollBar().setValue(self.scroll.verticalScrollBar().maximum())
 
     def _duplicate_block(self, widget):
-        import copy
+        # _add_block já chama _push_history internamente
         idx = self._blocks.index(widget) + 1 if widget in self._blocks else len(self._blocks)
         self._add_block(type(widget.block_instance)(), copy.deepcopy(widget.params), insert_at=idx)
         self.block_updated.emit()
@@ -338,17 +583,20 @@ class Canvas(QWidget):
     def _move_up(self, widget):
         idx = self._blocks.index(widget) if widget in self._blocks else -1
         if idx > 0:
+            self._push_history()
             self._blocks[idx], self._blocks[idx - 1] = self._blocks[idx - 1], self._blocks[idx]
             self._full_rebuild(); self._select_block(widget); self.block_updated.emit()
 
     def _move_down(self, widget):
         idx = self._blocks.index(widget) if widget in self._blocks else -1
         if 0 <= idx < len(self._blocks) - 1:
+            self._push_history()
             self._blocks[idx], self._blocks[idx + 1] = self._blocks[idx + 1], self._blocks[idx]
             self._full_rebuild(); self._select_block(widget); self.block_updated.emit()
 
     def _reorder(self, widget, new_index):
         if widget not in self._blocks: return
+        self._push_history()
         self._blocks.pop(self._blocks.index(widget))
         self._blocks.insert(min(new_index, len(self._blocks)), widget)
         self._full_rebuild(); self._select_block(widget); self.block_updated.emit()
@@ -389,6 +637,7 @@ class Canvas(QWidget):
         self.block_selected.emit(widget)
 
     def _remove_block(self, widget):
+        self._push_history()
         if widget in self._blocks: self._blocks.remove(widget)
         self._full_rebuild()
         if self._selected == widget:
@@ -426,6 +675,8 @@ class Canvas(QWidget):
             if cls: self._add_block(cls(), step.get("params", {}))
 
     def clear_canvas(self):
+        if self._blocks:
+            self._push_history()
         self._blocks.clear(); self._selected = None; self._full_rebuild()
 
     def _apply_styles(self):

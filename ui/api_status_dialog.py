@@ -2,6 +2,8 @@
 Janela de status e documentação da API REST do PyFlow RPA.
 Coloque em: ui/api_status_dialog.py
 """
+import webbrowser
+
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QFrame, QWidget, QListWidget,
@@ -47,10 +49,16 @@ class ApiStatusDialog(QDialog):
         self.btn_copy_url.setObjectName("btn_api_copy")
         self.btn_copy_url.clicked.connect(self._copy_url)
 
+        self.btn_open_dashboard = QPushButton("🖥  Abrir Dashboard")
+        self.btn_open_dashboard.setObjectName("btn_api_dashboard")
+        self.btn_open_dashboard.setToolTip(f"Abre {self.server.url}/dashboard no navegador")
+        self.btn_open_dashboard.clicked.connect(self._open_dashboard)
+
         h.addWidget(title)
         h.addStretch()
         h.addWidget(self.lbl_status)
         h.addWidget(self.btn_copy_url)
+        h.addWidget(self.btn_open_dashboard)
         root.addWidget(header)
 
         sep = QFrame()
@@ -73,12 +81,13 @@ class ApiStatusDialog(QDialog):
         te_layout.addWidget(self.lbl_url)
 
         endpoints = [
-            ("GET",  "/",        "Informações gerais da API"),
-            ("GET",  "/flows",   "Lista todos os fluxos salvos"),
-            ("POST", "/run",     'Executa um fluxo — body: {"flow": "nome"}'),
-            ("GET",  "/status",  "Estado atual da execução"),
-            ("GET",  "/history", "Histórico das últimas execuções"),
-            ("POST", "/stop",    "Para a execução atual"),
+            ("GET",  "/",           "Informações gerais da API"),
+            ("GET",  "/dashboard",  "Painel web de monitoramento (abra no browser)"),
+            ("GET",  "/flows",      "Lista todos os fluxos salvos"),
+            ("POST", "/run",        'Executa um fluxo — body: {"flow": "nome"}'),
+            ("GET",  "/status",     "Estado atual da execução"),
+            ("GET",  "/history",    "Histórico das últimas execuções"),
+            ("POST", "/stop",       "Para a execução atual"),
         ]
 
         for method, path, desc in endpoints:
@@ -223,6 +232,9 @@ class ApiStatusDialog(QDialog):
     def _copy_url(self):
         QApplication.clipboard().setText(self.server.url)
 
+    def _open_dashboard(self):
+        webbrowser.open(f"{self.server.url}/dashboard")
+
     def _apply_styles(self):
         self.setStyleSheet("""
             QDialog { background-color: #1e1e2e; color: #cdd6f4; }
@@ -282,4 +294,10 @@ class ApiStatusDialog(QDialog):
                 border-radius: 6px; padding: 6px 16px; font-size: 12px;
             }
             #btn_api_close:hover { background-color: #45475a; }
+            #btn_api_dashboard {
+                background-color: #1c3a5c; color: #89b4fa;
+                border: 1px solid #89b4fa; border-radius: 6px;
+                padding: 5px 14px; font-size: 12px; font-weight: 600;
+            }
+            #btn_api_dashboard:hover { background-color: #1e3d66; }
         """)

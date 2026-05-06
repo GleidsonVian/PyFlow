@@ -74,6 +74,43 @@ def _should_retry(message: str, cfg) -> tuple:
     return True, "erro desconhecido (retry por precaução)"
 
 
+<<<<<<< HEAD
+=======
+# ── Resolve params (mantido igual ao seu) ─────────────────────────────────────
+
+def resolve_params(params: dict, context: dict) -> dict:
+    """
+    Substitui tokens dinâmicos pelo valor real.
+    1. {{ASSET:nome}} → Busca no arquivo de credenciais/configurações.
+    2. {{nome}}       → Busca nas variáveis de execução (contexto).
+    """
+    resolved = {}
+    for key, value in params.items():
+        if key == "nota":          # campo de anotação do canvas — não passa para execute()
+            continue
+        if isinstance(value, str):
+            def asset_replacer(match):
+                asset_key = match.group(1).strip()
+                val = AssetManager.get_asset(asset_key)
+                if val is not None:
+                    return str(val)
+                return match.group(0)
+
+            temp_value = re.sub(r"\{\{ASSET:(.+?)\}\}", asset_replacer, value)
+
+            def context_replacer(match):
+                var_name = match.group(1).strip()
+                if var_name.startswith("ASSET:"):
+                    return match.group(0)
+                return str(context.get(var_name, match.group(0)))
+
+            resolved[key] = re.sub(r"\{\{(.+?)\}\}", context_replacer, temp_value)
+        else:
+            resolved[key] = value
+    return resolved
+
+
+>>>>>>> 23424c6 (commit)
 # ── RunnerConfig — agora com ConditionalRetry ─────────────────────────────────
 
 class RunnerConfig:
@@ -197,18 +234,101 @@ class Runner:
         result["retry_attempts"]    = max_attempts
         return result
 
+<<<<<<< HEAD
     def run(self, steps: list, start_index: int = 0) -> list:
         ctx.clear()
+=======
+    # ── Helpers para blocos de controle ──────────────────────────────────
+
+    @staticmethod
+    def _block_type(step) -> str:
+        return type(step["block_instance"]).__name__
+
+    @staticmethod
+    def _find_scope_end(steps, start: int, end_type: str, start_type: str) -> int:
+        """
+        Busca o índice do marcador de fim (end_type) a partir de start.
+        Lida com aninhamento: ignora end_type dentro de start_type aninhados.
+        Retorna -1 se não encontrar.
+        """
+        depth = 0
+        for j in range(start, len(steps)):
+            t = type(steps[j]["block_instance"]).__name__
+            if t == start_type:
+                depth += 1
+            elif t == end_type:
+                if depth == 0:
+                    return j
+                depth -= 1
+        return -1
+
+    @staticmethod
+    def _find_else(steps, start: int, end_type: str, start_type: str) -> int:
+        """
+        Busca o índice do ElseBlock dentro do escopo atual.
+        Retorna -1 se não houver Else (ou se estiver dentro de If aninhado).
+        """
+        depth = 0
+        for j in range(start, len(steps)):
+            t = type(steps[j]["block_instance"]).__name__
+            if t == start_type:
+                depth += 1
+            elif t == end_type:
+                if depth == 0:
+                    return -1   # chegou ao fim sem Else
+                depth -= 1
+            elif t == "ElseBlock" and depth == 0:
+                return j
+        return -1
+
+    @staticmethod
+    def _find_branch(steps, start: int, end_type: str, start_type: str,
+                     branch_type: str) -> int:
+        """
+        Versão genérica de _find_else — acha qualquer bloco de ramo (CatchBlock, etc.)
+        dentro do escopo atual. Retorna -1 se não encontrar.
+        """
+        depth = 0
+        for j in range(start, len(steps)):
+            t = type(steps[j]["block_instance"]).__name__
+            if t == start_type:
+                depth += 1
+            elif t == end_type:
+                if depth == 0:
+                    return -1
+                depth -= 1
+            elif t == branch_type and depth == 0:
+                return j
+        return -1
+
+    def run(self, steps: list) -> list:
+>>>>>>> 23424c6 (commit)
         results = []
         total = len(steps)
         i = max(0, start_index)
 
+        # Tipos de marcadores — consumidos pelo bloco de controle, não executar diretamente
+        _SKIP_TYPES = frozenset({
+            "EndLoopBlock", "EndForEachBlock", "EndIfBlock", "ElseBlock",
+            "EndTryBlock", "CatchBlock", "EndWhileBlock",
+        })
+
         while i < total:
-            step = steps[i]
+            step  = steps[i]
             block: BaseBlock = step["block_instance"]
+            btype = self._block_type(step)
             raw_params: dict = step.get("params", {})
 
+<<<<<<< HEAD
             params = resolve_params(raw_params)
+=======
+            # Marcadores de fim/else são consumidos pelo bloco de controle — não executar
+            if btype in _SKIP_TYPES:
+                i += 1
+                continue
+
+            params = resolve_params(raw_params, self._get_context())
+>>>>>>> 23424c6 (commit)
 
             print(f"\n[{i + 1}/{total}] Executando: {block.name}")
 
@@ -240,62 +360,193 @@ class Runner:
                     continue
 
             retried = result.get("retried", 0)
-            suffix = f" (após {retried} retry)" if retried else ""
+            suffix  = f" (após {retried} retry)" if retried else ""
             print(f"  ✓ {result.get('message', 'OK')}{suffix}")
 
             if self.on_step_done:
                 self.on_step_done(i, block, result)
 
-            # ── Lógica de fluxo (If / Loop / ForEach) ─────────────────
             data = result.get("data", {})
 
-            # IF
-            if data.get("skip_blocks", 0) > 0:
-                skip = data["skip_blocks"]
-                print(f"  → Condição falsa: pulando {skip} bloco(s)")
-                i += 1 + skip
-                continue
-
-            # LOOP
+            # ── LOOP ──────────────────────────────────────────────────
             if data.get("loop"):
-                times        = data["times"]
-                blocks_count = data["blocks_count"]
-                delay        = data.get("delay_between", 0)
-                loop_steps   = steps[i + 1: i + 1 + blocks_count]
+                end_idx = self._find_scope_end(steps, i + 1, "EndLoopBlock", "LoopBlock")
+                if end_idx == -1:
+                    print("  ⚠ Loop sem 'Fim do Loop' — pulando.")
+                    i += 1
+                    continue
 
-                print(f"  → Loop: {times}x sobre {blocks_count} bloco(s)")
+                times      = data["times"]
+                delay      = data.get("delay_between", 0)
+                body_steps = steps[i + 1: end_idx]
+                print(f"  → Loop: {times}x, {len(body_steps)} bloco(s) internos")
+
                 for iteration in range(times):
                     print(f"    Iteração {iteration + 1}/{times}")
-                    sub_results = self._run_sub(loop_steps, i + 1)
-                    results.extend(sub_results)
-                    if any(not r.get("success") for r in sub_results) and self.config.stop_on_failure:
+                    sub = self._run_sub(body_steps, i + 1)
+                    results.extend(sub)
+                    if any(not r.get("success") for r in sub) and self.config.stop_on_failure:
                         break
                     if delay > 0:
                         time.sleep(delay)
 
-                i += 1 + blocks_count
+                i = end_idx + 1
                 continue
 
-            # FOR EACH
+            # ── FOR EACH ──────────────────────────────────────────────
             if data.get("foreach"):
+<<<<<<< HEAD
                 items        = data["items"]
                 var_name     = data["variable_name"]
                 blocks_count = data["blocks_count"]
                 delay        = data.get("delay_between", 0)
                 foreach_steps = steps[i + 1: i + 1 + blocks_count]
+=======
+                from blocks.browser.extract_text import ExtractTextBlock
+                end_idx = self._find_scope_end(steps, i + 1, "EndForEachBlock", "ForEachBlock")
+                if end_idx == -1:
+                    print("  ⚠ Para Cada sem 'Fim do Para Cada' — pulando.")
+                    i += 1
+                    continue
 
-                print(f"  → For Each: {len(items)} item(s), variável '{var_name}'")
+                items      = data["items"]
+                var_name   = data["variable_name"]
+                delay      = data.get("delay_between", 0)
+                body_steps = steps[i + 1: end_idx]
+                print(f"  → Para Cada: {len(items)} item(s), variável '{var_name}'")
+>>>>>>> 23424c6 (commit)
+
                 for idx, item in enumerate(items):
                     ctx.get()[var_name] = item
                     print(f"    Item {idx + 1}/{len(items)}: {item}")
-                    sub_results = self._run_sub(foreach_steps, i + 1)
-                    results.extend(sub_results)
-                    if any(not r.get("success") for r in sub_results) and self.config.stop_on_failure:
+                    sub = self._run_sub(body_steps, i + 1)
+                    results.extend(sub)
+                    if any(not r.get("success") for r in sub) and self.config.stop_on_failure:
                         break
                     if delay > 0:
                         time.sleep(delay)
 
-                i += 1 + blocks_count
+                i = end_idx + 1
+                continue
+
+            # ── IF / SE ───────────────────────────────────────────────
+            if "if_result" in data:
+                condition   = data["if_result"]
+                else_idx    = self._find_else(steps, i + 1, "EndIfBlock", "IfBlock")
+                end_idx     = self._find_scope_end(steps, i + 1, "EndIfBlock", "IfBlock")
+
+                if end_idx == -1:
+                    print("  ⚠ Se sem 'Fim do Se' — pulando.")
+                    i += 1
+                    continue
+
+                if condition:
+                    # Executa ramo verdadeiro (até Else ou EndIf)
+                    true_end  = else_idx if else_idx != -1 else end_idx
+                    true_steps = steps[i + 1: true_end]
+                    print(f"  → Se VERDADEIRO: executando {len(true_steps)} bloco(s)")
+                    sub = self._run_sub(true_steps, i + 1)
+                    results.extend(sub)
+                else:
+                    if else_idx != -1:
+                        # Executa ramo falso (entre Else e EndIf)
+                        false_steps = steps[else_idx + 1: end_idx]
+                        print(f"  → Se FALSO (Senão): executando {len(false_steps)} bloco(s)")
+                        sub = self._run_sub(false_steps, else_idx + 1)
+                        results.extend(sub)
+                    else:
+                        print("  → Se FALSO: pulando bloco(s)")
+
+                i = end_idx + 1
+                continue
+
+            # ── TRY / CATCH ───────────────────────────────────────────
+            if data.get("try"):
+                catch_idx = self._find_branch(steps, i + 1, "EndTryBlock",
+                                              "TryBlock", "CatchBlock")
+                end_idx   = self._find_scope_end(steps, i + 1, "EndTryBlock", "TryBlock")
+
+                if end_idx == -1:
+                    print("  ⚠ Tentar sem 'Fim do Tentar' — pulando.")
+                    i += 1
+                    continue
+
+                try_steps   = steps[i + 1: catch_idx if catch_idx != -1 else end_idx]
+                print(f"  → Tentar: {len(try_steps)} bloco(s) no ramo protegido")
+
+                sub = self._run_sub(try_steps, i + 1)
+                failed = [r for r in sub if not r.get("success")]
+
+                if failed:
+                    error_msg = failed[0].get("message", "Erro desconhecido")
+                    print(f"  ↳ Erro capturado: {error_msg}")
+                    results.extend(sub)   # registra os resultados do try (incluindo falha)
+
+                    if catch_idx != -1:
+                        # Salva mensagem do erro na variável configurada no CatchBlock
+                        catch_step = steps[catch_idx]
+                        save_to = catch_step.get("params", {}).get("save_error_to", "").strip()
+                        if save_to:
+                            from blocks.browser.extract_text import ExtractTextBlock
+                            ExtractTextBlock._context[save_to] = error_msg
+                            print(f"  ↳ Erro salvo em '{save_to}'")
+
+                        catch_steps = steps[catch_idx + 1: end_idx]
+                        print(f"  → Capturar: executando {len(catch_steps)} bloco(s)")
+                        sub_catch = self._run_sub(catch_steps, catch_idx + 1)
+                        results.extend(sub_catch)
+                else:
+                    results.extend(sub)
+
+                i = end_idx + 1
+                continue
+
+            # ── WHILE / ENQUANTO ─────────────────────────────────────
+            if data.get("while"):
+                end_idx = self._find_scope_end(steps, i + 1, "EndWhileBlock", "WhileBlock")
+                if end_idx == -1:
+                    print("  ⚠ Enquanto sem 'Fim do Enquanto' — pulando.")
+                    i += 1
+                    continue
+
+                condition_met  = data["condition_met"]
+                max_iter       = data.get("max_iterations", 100)
+                delay          = data.get("delay_between", 0)
+                body_steps     = steps[i + 1: end_idx]
+                iteration      = 0
+
+                if not condition_met:
+                    print(f"  → Enquanto: condição já falsa — pulando {len(body_steps)} bloco(s)")
+                    i = end_idx + 1
+                    continue
+
+                print(f"  → Enquanto: iniciando (máx {max_iter} iterações)")
+
+                while condition_met and iteration < max_iter:
+                    iteration += 1
+                    print(f"    Iteração {iteration}/{max_iter}")
+                    sub = self._run_sub(body_steps, i + 1)
+                    results.extend(sub)
+
+                    if any(not r.get("success") for r in sub) and self.config.stop_on_failure:
+                        print("  ↳ Enquanto interrompido por falha.")
+                        break
+
+                    if delay > 0:
+                        time.sleep(delay)
+
+                    # Reavalia a condição executando o WhileBlock novamente
+                    re_params = resolve_params(raw_params, self._get_context())
+                    re_result = block.execute(re_params)
+                    if not re_result.get("success"):
+                        print(f"  ↳ Erro ao reavaliar condição: {re_result.get('message')}")
+                        break
+                    condition_met = re_result.get("data", {}).get("condition_met", False)
+
+                if iteration >= max_iter and condition_met:
+                    print(f"  ⚠ Enquanto: limite de {max_iter} iterações atingido — encerrando.")
+
+                i = end_idx + 1
                 continue
 
             i += 1
@@ -303,6 +554,7 @@ class Runner:
         return results
 
     def _run_sub(self, steps: list, base_index: int) -> list:
+<<<<<<< HEAD
         """Executa sub-fluxos (usado por Loop e ForEach)."""
         results = []
         for j, step in enumerate(steps):
@@ -329,3 +581,10 @@ class Runner:
                     break
 
         return results
+=======
+        """
+        Executa sub-fluxos (Loop / ForEach / If).
+        Delega ao run() principal para que If/Loop/ForEach aninhados funcionem corretamente.
+        """
+        return self.run(steps)
+>>>>>>> 23424c6 (commit)

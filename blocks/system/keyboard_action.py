@@ -24,12 +24,17 @@ class KeyboardActionBlock(BaseBlock):
 
     params_schema = [
         {
-            "name": "action",
-            "label": "Ação",
-            "type": "str",
+            "name":    "action",
+            "label":   "Ação",
+            "type":    "select",
             "required": True,
             "default": "type",
-            "placeholder": "type | press | hotkey | shortcut"
+            "options": [
+                {"value": "type",    "label": "⌨ Digitar texto",          "description": "Digita o texto caractere por caractere na janela ativa. Preencha 'Valor / Tecla(s)' com o texto."},
+                {"value": "press",   "label": "⬇ Pressionar tecla",       "description": "Pressiona uma tecla especial. Exemplos: enter, tab, escape, f5, up, down. Preencha 'Valor / Tecla(s)'."},
+                {"value": "hotkey",  "label": "⚡ Atalho de teclado",     "description": "Pressiona combinação de teclas simultâneas. Ex: ctrl+c, ctrl+shift+t, alt+tab. Use '+' como separador."},
+                {"value": "shortcut","label": "⚡ Atalho (alias hotkey)", "description": "Mesmo que hotkey — pressiona múltiplas teclas ao mesmo tempo. Ex: ctrl+z, win+d."},
+            ],
         },
         {
             "name": "value",

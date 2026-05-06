@@ -9,12 +9,17 @@ class ScrollPageBlock(BaseBlock):
 
     params_schema = [
         {
-            "name": "direction",
-            "label": "Direção (top / bottom / element)",
-            "type": "str",
+            "name":    "direction",
+            "label":   "Direção",
+            "type":    "select",
             "required": True,
             "default": "bottom",
-            "placeholder": "top, bottom ou element"
+            "options": [
+                {"value": "bottom",  "label": "⬇ Ir para o final da página",  "description": "Rola até o rodapé — útil para páginas com carregamento infinito."},
+                {"value": "top",     "label": "⬆ Ir para o início da página", "description": "Rola de volta ao topo da página."},
+                {"value": "element", "label": "🎯 Rolar até um elemento",      "description": "Rola até que o elemento CSS especificado fique visível. Preencha o seletor abaixo."},
+                {"value": "pixels",  "label": "📏 Rolar N pixels",             "description": "Rola exatamente a quantidade de pixels definida em 'Pixels'. Positivo = baixo, negativo = cima."},
+            ],
         },
         {
             "name": "selector",

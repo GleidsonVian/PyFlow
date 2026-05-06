@@ -1,13 +1,13 @@
-from selenium.webdriver.common.by import By
-
 from blocks.base_block import BaseBlock
-from blocks.browser.open_browser import OpenBrowserBlock
-from blocks.browser.extract_text import ExtractTextBlock
 
 
 class IfBlock(BaseBlock):
-    name = "Condição (If)"
-    description = "Verifica uma condição. Se verdadeira, continua. Se falsa, pula os próximos N blocos."
+    name = "Condição (Se)"
+    description = (
+        "Verifica uma condição. Se verdadeira, executa os blocos até 'Senão' ou 'Fim do Se'. "
+        "Se falsa, pula para os blocos do 'Senão' (opcional) ou vai direto ao 'Fim do Se'. "
+        "Sempre termine com um bloco 'Fim do Se'."
+    )
     category = "Controle"
 
     params_schema = [
@@ -16,41 +16,38 @@ class IfBlock(BaseBlock):
             "label": "Tipo de condição",
             "type": "str",
             "required": True,
-            "default": "element_exists",
-            "placeholder": "element_exists, element_not_exists, variable_contains, variable_equals"
+            "default": "variable_equals",
+            "placeholder": (
+                "element_exists | element_not_exists | "
+                "variable_equals | variable_not_equals | "
+                "variable_contains | variable_not_contains | "
+                "variable_greater | variable_less | variable_empty | variable_not_empty"
+            ),
         },
         {
             "name": "selector",
-            "label": "Seletor CSS (para condições de elemento)",
+            "label": "Seletor CSS (condições de elemento)",
             "type": "str",
             "required": False,
             "default": "",
-            "placeholder": "Ex: .mensagem-erro, #btn-continuar"
+            "placeholder": "Ex: .mensagem-erro  (só para element_exists / element_not_exists)",
         },
         {
             "name": "variable_name",
-            "label": "Nome da variável (para condições de variável)",
+            "label": "Nome da variável (condições de variável)",
             "type": "str",
             "required": False,
             "default": "",
-            "placeholder": "Ex: texto_extraido, url_atual"
+            "placeholder": "Ex: preco_extraido, url_atual",
         },
         {
             "name": "expected_value",
-            "label": "Valor esperado (para contains/equals)",
+            "label": "Valor esperado (para equals / contains / greater / less)",
             "type": "str",
             "required": False,
             "default": "",
-            "placeholder": "Texto que a variável deve conter ou ser igual"
+            "placeholder": "Texto ou número a comparar",
         },
-        {
-            "name": "skip_on_false",
-            "label": "Blocos para pular se falso",
-            "type": "str",
-            "required": False,
-            "default": "1",
-            "placeholder": "Quantos blocos seguintes pular se condição for falsa"
-        }
     ]
 
     def execute(self, params: dict) -> dict:
@@ -58,57 +55,74 @@ class IfBlock(BaseBlock):
         if errors:
             return {"success": False, "message": "\n".join(errors)}
 
-        condition_type = params.get("condition_type", "element_exists").strip()
-        selector       = params.get("selector", "").strip()
-        variable_name  = params.get("variable_name", "").strip()
-        expected_value = params.get("expected_value", "").strip()
-        try:
-            skip_on_false = int(params.get("skip_on_false", 1))
-        except ValueError:
-            skip_on_false = 1
+        ctype    = params.get("condition_type", "variable_equals").strip()
+        selector = params.get("selector", "").strip()
+        var_name = params.get("variable_name", "").strip()
+        expected = params.get("expected_value", "").strip()
 
         result = False
+        label  = ""
 
         try:
-            if condition_type == "element_exists":
+            # ── condições de elemento ──────────────────────────────────
+            if ctype in ("element_exists", "element_not_exists"):
+                from blocks.browser.open_browser import OpenBrowserBlock
+                from selenium.webdriver.common.by import By
                 driver = OpenBrowserBlock.get_driver()
                 if not driver:
                     return {"success": False, "message": "Nenhum navegador aberto."}
-                elements = driver.find_elements(By.CSS_SELECTOR, selector)
-                result = len(elements) > 0
-                label = f"Elemento '{selector}' {'existe' if result else 'não existe'}"
+                found = len(driver.find_elements(By.CSS_SELECTOR, selector)) > 0
+                result = found if ctype == "element_exists" else not found
+                label  = f"Elemento '{selector}' {'existe' if found else 'não existe'}"
 
-            elif condition_type == "element_not_exists":
-                driver = OpenBrowserBlock.get_driver()
-                if not driver:
-                    return {"success": False, "message": "Nenhum navegador aberto."}
-                elements = driver.find_elements(By.CSS_SELECTOR, selector)
-                result = len(elements) == 0
-                label = f"Elemento '{selector}' {'não existe (condição OK)' if result else 'existe (condição falhou)'}"
+            # ── condições de variável ──────────────────────────────────
+            elif ctype in (
+                "variable_equals", "variable_not_equals",
+                "variable_contains", "variable_not_contains",
+                "variable_greater", "variable_less",
+                "variable_empty", "variable_not_empty",
+            ):
+                from blocks.browser.extract_text import ExtractTextBlock
+                raw = ExtractTextBlock._context.get(var_name, "")
+                val = str(raw)
 
-            elif condition_type == "variable_contains":
-                context = ExtractTextBlock.get_context()
-                value = str(context.get(variable_name, ""))
-                result = expected_value.lower() in value.lower()
-                label = f"Variável '{variable_name}' ({'contém' if result else 'não contém'}) '{expected_value}'"
-
-            elif condition_type == "variable_equals":
-                context = ExtractTextBlock.get_context()
-                value = str(context.get(variable_name, ""))
-                result = value.strip().lower() == expected_value.strip().lower()
-                label = f"Variável '{variable_name}' ({'=' if result else '≠'}) '{expected_value}'"
-
+                if ctype == "variable_equals":
+                    result = val.strip().lower() == expected.strip().lower()
+                    label  = f"'{var_name}' == '{expected}'"
+                elif ctype == "variable_not_equals":
+                    result = val.strip().lower() != expected.strip().lower()
+                    label  = f"'{var_name}' != '{expected}'"
+                elif ctype == "variable_contains":
+                    result = expected.lower() in val.lower()
+                    label  = f"'{var_name}' contém '{expected}'"
+                elif ctype == "variable_not_contains":
+                    result = expected.lower() not in val.lower()
+                    label  = f"'{var_name}' não contém '{expected}'"
+                elif ctype == "variable_greater":
+                    result = float(val) > float(expected)
+                    label  = f"'{var_name}' ({val}) > {expected}"
+                elif ctype == "variable_less":
+                    result = float(val) < float(expected)
+                    label  = f"'{var_name}' ({val}) < {expected}"
+                elif ctype == "variable_empty":
+                    result = val.strip() == ""
+                    label  = f"'{var_name}' está vazio"
+                elif ctype == "variable_not_empty":
+                    result = val.strip() != ""
+                    label  = f"'{var_name}' não está vazio"
             else:
-                return {"success": False, "message": f"Tipo de condição desconhecido: '{condition_type}'"}
+                return {"success": False, "message": f"Tipo de condição desconhecido: '{ctype}'"}
 
+            icon = "✓" if result else "✗"
             return {
                 "success": True,
-                "message": f"{'✓' if result else '✗'} {label}",
+                "message": f"{icon} Se: {label} → {'VERDADEIRO' if result else 'FALSO'}",
                 "data": {
-                    "condition_result": result,
-                    "skip_blocks": 0 if result else skip_on_false
+                    "if_result": result,
                 }
             }
 
+        except (ValueError, TypeError) as e:
+            return {"success": False, "message": f"Erro de comparação numérica: {e}"}
         except Exception as e:
-            return {"success": False, "message": f"Erro na condição: {str(e)}"}
+            return {"success": False, "message": f"Erro na condição: {e}"}

@@ -15,12 +15,16 @@ class ClipboardBlock(BaseBlock):
 
     params_schema = [
         {
-            "name":        "action",
-            "label":       "Ação",
-            "type":        "str",
-            "required":    True,
-            "default":     "copy",
-            "placeholder": "copy = copiar para clipboard | paste = ler do clipboard | clear = limpar"
+            "name":    "action",
+            "label":   "Ação",
+            "type":    "select",
+            "required": True,
+            "default": "copy",
+            "options": [
+                {"value": "copy",  "label": "📋 Copiar para clipboard", "description": "Copia o Texto informado para o clipboard do sistema. Substitui qualquer conteúdo anterior."},
+                {"value": "paste", "label": "📄 Ler do clipboard",      "description": "Lê o conteúdo atual do clipboard e salva na Variável configurada abaixo."},
+                {"value": "clear", "label": "🗑 Limpar clipboard",      "description": "Apaga o conteúdo atual do clipboard (equivale a copiar texto vazio)."},
+            ],
         },
         {
             "name":        "value",

@@ -148,6 +148,69 @@ class SettingsDialog(QDialog):
         beh_layout.addWidget(nota2)
 
         root.addWidget(group_behavior)
+
+        # ── Configurações do Navegador ────────────────────────────────
+        group_browser = QGroupBox("🌐  Navegador (Chrome)")
+        group_browser.setObjectName("settings_group")
+        br_layout = QVBoxLayout(group_browser)
+        br_layout.setSpacing(10)
+
+        self.chk_headless = QCheckBox("Modo Headless — Chrome sem janela (produção/servidor)")
+        self.chk_headless.setObjectName("settings_check")
+        self.chk_headless.toggled.connect(self._on_headless_toggled)
+        br_layout.addWidget(self.chk_headless)
+
+        nota_hl = QLabel(
+            "Headless: o Chrome roda invisível — mais rápido, sem interferir na tela.\n"
+            "Ideal para servidores ou execuções agendadas em background."
+        )
+        nota_hl.setObjectName("settings_nota")
+        nota_hl.setWordWrap(True)
+        br_layout.addWidget(nota_hl)
+
+        br_layout.addWidget(self._sep())
+
+        self.chk_disable_images = QCheckBox("Desativar carregamento de imagens (mais rápido)")
+        self.chk_disable_images.setObjectName("settings_check")
+        br_layout.addWidget(self.chk_disable_images)
+
+        self.chk_incognito = QCheckBox("Modo anônimo (incógnito)")
+        self.chk_incognito.setObjectName("settings_check")
+        br_layout.addWidget(self.chk_incognito)
+
+        row_size = QHBoxLayout()
+        lbl_size = QLabel("Resolução (headless):")
+        lbl_size.setObjectName("settings_label")
+        self.spin_w = QSpinBox()
+        self.spin_w.setObjectName("settings_spin")
+        self.spin_w.setRange(800, 3840)
+        self.spin_w.setValue(1920)
+        self.spin_w.setFixedWidth(90)
+        self.spin_w.setSuffix(" px")
+        lbl_x = QLabel("×")
+        lbl_x.setObjectName("settings_label")
+        self.spin_h = QSpinBox()
+        self.spin_h.setObjectName("settings_spin")
+        self.spin_h.setRange(600, 2160)
+        self.spin_h.setValue(1080)
+        self.spin_h.setFixedWidth(90)
+        self.spin_h.setSuffix(" px")
+        row_size.addWidget(lbl_size)
+        row_size.addStretch()
+        row_size.addWidget(self.spin_w)
+        row_size.addWidget(lbl_x)
+        row_size.addWidget(self.spin_h)
+        br_layout.addLayout(row_size)
+
+        lbl_ua = QLabel("User-Agent personalizado (opcional):")
+        lbl_ua.setObjectName("settings_label")
+        br_layout.addWidget(lbl_ua)
+        self.edit_ua = QLineEdit()
+        self.edit_ua.setObjectName("settings_input")
+        self.edit_ua.setPlaceholderText("Deixe vazio para usar o padrão do Chrome")
+        br_layout.addWidget(self.edit_ua)
+
+        root.addWidget(group_browser)
         root.addStretch()
         root.addWidget(self._sep())
 
@@ -196,12 +259,12 @@ class SettingsDialog(QDialog):
 
     def _load_current(self):
         from engine.runner import get_runner_config
+        from engine.browser_config import get_browser_config
         cfg = get_runner_config()
         self.chk_retry.setChecked(cfg.retry_enabled)
         self.spin_attempts.setValue(cfg.retry_attempts)
         self.spin_delay.setValue(cfg.retry_delay)
         self.chk_stop.setChecked(cfg.stop_on_failure)
-        # ConditionalRetry — usa getattr para compatibilidade com configs antigas
         self._get_chk(self.chk_timeout).setChecked(getattr(cfg, "retry_on_timeout",  True))
         self._get_chk(self.chk_network).setChecked(getattr(cfg, "retry_on_network",  True))
         self._get_chk(self.chk_stale).setChecked(getattr(cfg,   "retry_on_stale",    True))
@@ -209,11 +272,24 @@ class SettingsDialog(QDialog):
         self._get_chk(self.chk_invalid).setChecked(getattr(cfg, "retry_on_invalid",  False))
         self.edit_custom.setText(getattr(cfg, "retry_on_custom", ""))
         self._on_retry_toggled(cfg.retry_enabled)
+        # Navegador
+        bcfg = get_browser_config()
+        self.chk_headless.setChecked(bcfg.headless)
+        self.chk_disable_images.setChecked(bcfg.disable_images)
+        self.chk_incognito.setChecked(bcfg.incognito)
+        self.spin_w.setValue(bcfg.window_width)
+        self.spin_h.setValue(bcfg.window_height)
+        self.edit_ua.setText(bcfg.user_agent)
+        self._on_headless_toggled(bcfg.headless)
 
     def _on_retry_toggled(self, enabled: bool):
         self.spin_attempts.setEnabled(enabled)
         self.spin_delay.setEnabled(enabled)
         self.group_cond.setEnabled(enabled)
+
+    def _on_headless_toggled(self, enabled: bool):
+        self.spin_w.setEnabled(enabled)
+        self.spin_h.setEnabled(enabled)
 
     def _on_reset(self):
         self.chk_retry.setChecked(False)
@@ -227,9 +303,18 @@ class SettingsDialog(QDialog):
         self._get_chk(self.chk_invalid).setChecked(False)
         self.edit_custom.clear()
         self._on_retry_toggled(False)
+        # Browser reset
+        self.chk_headless.setChecked(False)
+        self.chk_disable_images.setChecked(False)
+        self.chk_incognito.setChecked(False)
+        self.spin_w.setValue(1920)
+        self.spin_h.setValue(1080)
+        self.edit_ua.clear()
+        self._on_headless_toggled(False)
 
     def _on_save(self):
         from engine.runner import get_runner_config
+        from engine.browser_config import get_browser_config
         cfg = get_runner_config()
         cfg.retry_enabled    = self.chk_retry.isChecked()
         cfg.retry_attempts   = self.spin_attempts.value()
@@ -241,6 +326,14 @@ class SettingsDialog(QDialog):
         cfg.retry_on_notfound = self._get_chk(self.chk_notfound).isChecked()
         cfg.retry_on_invalid  = self._get_chk(self.chk_invalid).isChecked()
         cfg.retry_on_custom   = self.edit_custom.text().strip()
+        # Salva configurações do navegador
+        bcfg = get_browser_config()
+        bcfg.headless       = self.chk_headless.isChecked()
+        bcfg.disable_images = self.chk_disable_images.isChecked()
+        bcfg.incognito      = self.chk_incognito.isChecked()
+        bcfg.window_width   = self.spin_w.value()
+        bcfg.window_height  = self.spin_h.value()
+        bcfg.user_agent     = self.edit_ua.text().strip()
         self.accept()
 
     def _apply_styles(self):

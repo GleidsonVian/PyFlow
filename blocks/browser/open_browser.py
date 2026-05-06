@@ -1,6 +1,5 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
 from blocks.base_block import BaseBlock
@@ -8,7 +7,7 @@ from blocks.base_block import BaseBlock
 
 class OpenBrowserBlock(BaseBlock):
     name = "Abrir Navegador"
-    description = "Abre o Google Chrome em uma URL especificada"
+    description = "Abre o Google Chrome em uma URL especificada. O modo Headless é configurado globalmente em ⚙ Configurações → Navegador."
     category = "Navegador"
 
     params_schema = [
@@ -22,7 +21,7 @@ class OpenBrowserBlock(BaseBlock):
         },
         {
             "name": "maximized",
-            "label": "Abrir maximizado",
+            "label": "Abrir maximizado (ignorado no modo Headless)",
             "type": "bool",
             "required": False,
             "default": True
@@ -37,30 +36,33 @@ class OpenBrowserBlock(BaseBlock):
         if errors:
             return {"success": False, "message": "\n".join(errors)}
 
-        url = params.get("url", "").strip()
+        url       = params.get("url", "").strip()
         maximized = params.get("maximized", True)
 
-        # Garante que a URL tem protocolo
         if not url.startswith("http"):
             url = "https://" + url
 
         try:
-            options = Options()
-            if maximized:
-                options.add_argument("--start-maximized")
+            from engine.browser_config import get_browser_config
+            cfg = get_browser_config()
 
-            # webdriver-manager baixa o chromedriver automaticamente
+            # Usa BrowserConfig global; sobrescreve maximized com o param do bloco
+            # apenas se não estiver em headless
+            if not cfg.headless:
+                cfg.maximized = maximized
+
+            options = cfg.to_chrome_options()
             service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=options)
+            driver  = webdriver.Chrome(service=service, options=options)
             driver.get(url)
 
-            # Salva o driver na classe para blocos seguintes reutilizarem
             OpenBrowserBlock._driver_instance = driver
 
+            mode = "headless" if cfg.headless else "visual"
             return {
                 "success": True,
-                "message": f"Navegador aberto em: {url}",
-                "data": {"driver": driver}
+                "message": f"Navegador aberto ({mode}): {url}",
+                "data":    {"driver": driver}
             }
 
         except Exception as e:
@@ -71,12 +73,10 @@ class OpenBrowserBlock(BaseBlock):
 
     @classmethod
     def get_driver(cls):
-        """Retorna o driver ativo para outros blocos usarem."""
         return cls._driver_instance
 
     @classmethod
     def close_driver(cls):
-        """Fecha o navegador e limpa a instância."""
         if cls._driver_instance:
             cls._driver_instance.quit()
             cls._driver_instance = None

@@ -1,0 +1,30 @@
+{
+  "flow_name": "Teste — Receber Webhook",
+  "created_at": "2026-05-06",
+  "steps": [
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "message": "Webhook recebido!\n\nPayload completo:\n{{webhook_payload}}\n\nCampo 'nome': {{webhook_nome}}\nCampo 'valor': {{webhook_valor}}",
+        "nota": "1. Mostra os dados que chegaram via POST no webhook"
+      }
+    },
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "processado",
+        "operation": "set",
+        "value": "sim",
+        "nota": "2. Marca que o webhook foi processado"
+      }
+    },
+    {
+      "block": "SaveTextBlock",
+      "params": {
+        "filename": "webhook_log.txt",
+        "content": "Payload recebido: {{webhook_payload}}\nNome: {{webhook_nome}}\nValor: {{webhook_valor}}",
+        "nota": "3. Salva o payload em arquivo de log"
+      }
+    }
+  ]
+}

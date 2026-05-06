@@ -18,12 +18,27 @@ class TextManipulationBlock(BaseBlock):
             "placeholder": "Ex: texto_extraido, url_atual"
         },
         {
-            "name": "operation",
-            "label": "Operação",
-            "type": "str",
+            "name":    "operation",
+            "label":   "Operação",
+            "type":    "select",
             "required": True,
             "default": "upper",
-            "placeholder": "upper, lower, trim, replace, regex_extract, regex_replace, split, join, count, contains, starts_with, ends_with, substring, length"
+            "options": [
+                {"value": "upper",         "label": "🔠 Maiúsculas (upper)",          "description": "Converte todo o texto para MAIÚSCULAS."},
+                {"value": "lower",         "label": "🔡 Minúsculas (lower)",          "description": "Converte todo o texto para minúsculas."},
+                {"value": "trim",          "label": "✂ Remover espaços (trim)",       "description": "Remove espaços em branco do início e do fim do texto."},
+                {"value": "replace",       "label": "🔄 Substituir texto",            "description": "Substitui Parâmetro 1 por Parâmetro 2 no texto. Ex: P1='foo' P2='bar'."},
+                {"value": "regex_extract", "label": "🔍 Extrair com Regex",           "description": "Extrai o primeiro match do padrão regex em Parâmetro 1. Usa grupo 1 se existir."},
+                {"value": "regex_replace", "label": "🔄 Substituir com Regex",        "description": "Substitui matches do padrão regex (P1) por P2 no texto."},
+                {"value": "split",         "label": "✂ Dividir (split)",              "description": "Divide o texto pelo separador em Parâmetro 1. Resultado: lista. Padrão: vírgula."},
+                {"value": "join",          "label": "🔗 Juntar lista (join)",         "description": "Une os itens de uma lista usando o separador em Parâmetro 1. A variável deve ser lista."},
+                {"value": "count",         "label": "🔢 Contar ocorrências",          "description": "Conta quantas vezes P1 aparece no texto. Se P1 vazio, retorna o comprimento total."},
+                {"value": "contains",      "label": "🔎 Contém texto (contains)",     "description": "Retorna True se o texto contiver Parâmetro 1 (case-insensitive)."},
+                {"value": "starts_with",   "label": "⏮ Começa com (starts_with)",    "description": "Retorna True se o texto começar com Parâmetro 1."},
+                {"value": "ends_with",     "label": "⏭ Termina com (ends_with)",     "description": "Retorna True se o texto terminar com Parâmetro 1."},
+                {"value": "substring",     "label": "✂ Recortar trecho (substring)",  "description": "Extrai do índice P1 ao índice P2. Ex: P1=0 P2=10 pega os primeiros 10 caracteres."},
+                {"value": "length",        "label": "📏 Comprimento (length)",        "description": "Retorna o número de caracteres do texto (ou itens se for lista)."},
+            ],
         },
         {
             "name": "param1",

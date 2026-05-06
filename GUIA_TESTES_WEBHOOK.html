@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Guia de Testes — Webhook PyFlow</title>
+<style>
+  :root {
+    --bg: #1e1e2e; --surface: #181825; --overlay: #313244;
+    --muted: #45475a; --text: #cdd6f4; --subtext: #a6adc8;
+    --accent: #cba6f7; --green: #a6e3a1; --blue: #89b4fa;
+    --red: #f38ba8; --orange: #fab387; --yellow: #f9e2af;
+    --teal: #94e2d5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.6; }
+  .container { max-width: 860px; margin: 0 auto; padding: 32px 24px; }
+
+  h1 { font-size: 26px; color: var(--accent); margin-bottom: 4px; }
+  .subtitle { color: var(--subtext); font-size: 13px; margin-bottom: 32px; }
+
+  h2 { font-size: 17px; color: var(--blue); margin: 28px 0 12px; display: flex; align-items: center; gap: 8px; }
+  h3 { font-size: 14px; color: var(--orange); margin: 18px 0 8px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--overlay);
+    border-radius: 12px; padding: 20px 24px; margin-bottom: 20px;
+  }
+  .card.green  { border-left: 4px solid var(--green); }
+  .card.blue   { border-left: 4px solid var(--blue); }
+  .card.orange { border-left: 4px solid var(--orange); }
+  .card.teal   { border-left: 4px solid var(--teal); }
+
+  .step {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 10px 0; border-bottom: 1px solid var(--overlay);
+  }
+  .step:last-child { border-bottom: none; }
+  .step-num {
+    background: var(--overlay); color: var(--accent);
+    font-weight: 700; font-size: 13px;
+    min-width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-body { flex: 1; }
+  .step-body strong { color: var(--text); }
+  .step-body p { color: var(--subtext); font-size: 13px; margin-top: 3px; }
+
+  code {
+    background: var(--overlay); color: var(--green);
+    padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', monospace;
+    font-size: 12px;
+  }
+  pre {
+    background: var(--overlay); color: var(--green);
+    padding: 14px 16px; border-radius: 8px;
+    font-family: 'Consolas', monospace; font-size: 12px;
+    overflow-x: auto; margin: 10px 0;
+    border: 1px solid var(--muted);
+  }
+  pre .key   { color: var(--blue); }
+  pre .val   { color: var(--yellow); }
+  pre .str   { color: var(--green); }
+  pre .url   { color: var(--teal); }
+  pre .cmt   { color: var(--muted); }
+
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+  }
+  .badge.post   { background: #1c3a2a; color: var(--green); }
+  .badge.get    { background: #1e3a5f; color: var(--blue); }
+  .badge.outbox { background: #3a2a1c; color: var(--orange); }
+  .badge.inbox  { background: #2a1e3f; color: var(--accent); }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  th { background: var(--overlay); color: var(--accent); padding: 8px 12px; text-align: left; }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--overlay); color: var(--subtext); }
+  td code { font-size: 11px; }
+
+  .tip {
+    background: #1e2a1e; border: 1px solid var(--green);
+    border-radius: 8px; padding: 12px 16px; margin: 12px 0;
+    color: var(--green); font-size: 13px;
+  }
+  .warn {
+    background: #2a1e18; border: 1px solid var(--orange);
+    border-radius: 8px; padding: 12px 16px; margin: 12px 0;
+    color: var(--orange); font-size: 13px;
+  }
+
+  .copy-btn {
+    background: var(--overlay); border: 1px solid var(--muted);
+    color: var(--subtext); border-radius: 6px; padding: 4px 10px;
+    font-size: 11px; cursor: pointer; float: right; margin-top: -4px;
+  }
+  .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  a { color: var(--blue); }
+  hr { border: none; border-top: 1px solid var(--overlay); margin: 28px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>🔗 Guia de Testes — Webhook PyFlow RPA</h1>
+  <p class="subtitle">Testando os dois sentidos: enviar dados para fora e receber dados de fora.</p>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <h2>📤 PARTE 1 — Enviar para Webhook externo</h2>
+  <p style="color:var(--subtext);margin-bottom:12px">PyFlow faz POST para uma URL de fora (Zapier, Make, n8n, Discord, ou qualquer sistema).</p>
+
+  <div class="card green">
+    <h3>Passo 1 — Criar uma URL de teste gratuita</h3>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Abra o site <a href="https://webhook.site" target="_blank">webhook.site</a></strong>
+        <p>Ao entrar, você recebe uma URL única automaticamente. Ex: <code>https://webhook.site/abc12345-...</code></p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Copie a URL gerada</strong>
+        <p>Ela fica no topo da página. Parece: <code>https://webhook.site/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</code></p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>No PyFlow — abra o fluxo <code>teste_send_webhook</code></strong>
+        <p>Clique no bloco <strong>Enviar para Webhook</strong> → campo <strong>URL do Webhook</strong> → cole a URL do webhook.site</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <strong>Execute o fluxo no PyFlow</strong>
+        <p>Clique ▶ Executar. O bloco vai fazer POST com os dados.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <strong>Veja o resultado no webhook.site</strong>
+        <p>A página atualiza automaticamente e mostra o payload que chegou:</p>
+      </div>
+    </div>
+    <pre>{
+  <span class="key">"produto"</span>: <span class="str">"Notebook Dell XPS"</span>,
+  <span class="key">"preco"</span>:   <span class="str">"4999.90"</span>,
+  <span class="key">"origem"</span>:  <span class="str">"PyFlow RPA"</span>,
+  <span class="key">"timestamp"</span>: <span class="str">"agora"</span>
+}</pre>
+    <div class="tip">✅ Se aparecer no webhook.site — funcionou! O PyFlow enviou dados para fora com sucesso.</div>
+  </div>
+
+  <div class="card blue">
+    <h3>Payload personalizável — como funciona</h3>
+    <p style="color:var(--subtext);margin-bottom:10px">No campo <strong>Payload JSON</strong> do bloco você pode usar <code>{{variavel}}</code> para incluir qualquer variável do contexto:</p>
+    <pre>{
+  <span class="key">"nome"</span>:    <span class="str">"{{nome_cliente}}"</span>,   <span class="cmt">← variável do contexto</span>
+  <span class="key">"preco"</span>:   <span class="str">"{{preco_total}}"</span>,   <span class="cmt">← variável do contexto</span>
+  <span class="key">"fixo"</span>:    <span class="str">"PyFlow RPA"</span>,        <span class="cmt">← valor fixo</span>
+  <span class="key">"lista"</span>:   <span class="str">"{{itens_extraidos}}"</span> <span class="cmt">← lista de scraping</span>
+}</pre>
+    <p style="color:var(--subtext);font-size:13px">A resposta do servidor fica na variável configurada em <strong>Salvar resposta</strong> (padrão: <code>webhook_resposta</code>).</p>
+  </div>
+
+  <hr>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <h2>📥 PARTE 2 — Receber Webhook (o PyFlow como servidor)</h2>
+  <p style="color:var(--subtext);margin-bottom:12px">Um sistema externo (ou você mesmo via curl/Postman) chama o PyFlow e o fluxo dispara automaticamente.</p>
+
+  <div class="card teal">
+    <h3>Como funciona a rota</h3>
+    <table>
+      <tr><th>Método</th><th>URL</th><th>O que faz</th></tr>
+      <tr>
+        <td><span class="badge post">POST</span></td>
+        <td><code>/webhook/{nome_do_fluxo}</code></td>
+        <td>Recebe payload JSON e dispara o fluxo</td>
+      </tr>
+      <tr>
+        <td><span class="badge get">GET</span></td>
+        <td><code>/webhook/inbox</code></td>
+        <td>Mostra os últimos payloads recebidos (debug)</td>
+      </tr>
+    </table>
+    <p style="color:var(--subtext);font-size:13px;margin-top:8px">
+      O payload é injetado automaticamente como variáveis: cada campo vira <code>webhook_CAMPO</code> e o dict completo fica em <code>webhook_payload</code>.
+    </p>
+  </div>
+
+  <div class="card orange">
+    <h3>Passo a passo — Testar com PowerShell (sem instalar nada)</h3>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Abra o PyFlow e confirme que o servidor está rodando</strong>
+        <p>Olhe na barra inferior — deve mostrar <code>API: http://127.0.0.1:8080</code> ou similar.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Abra o PowerShell (Win + R → powershell → Enter)</strong>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Cole e execute este comando:</strong>
+      </div>
+    </div>
+    <pre><span class="cmt"># Envia POST para o PyFlow disparar o fluxo "teste_webhook_receber"</span>
+$body = @{
+    nome  = "Gleidson"
+    valor = "42"
+    acao  = "teste_webhook"
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+    -Uri "http://127.0.0.1:8080/webhook/teste_webhook_receber" `
+    -Method POST `
+    -Body $body `
+    -ContentType "application/json"</pre>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <strong>Observe no PyFlow</strong>
+        <p>O fluxo <code>teste_webhook_receber</code> vai disparar automaticamente. A janela de mensagem vai aparecer com os dados que você enviou.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <strong>Resposta esperada do PowerShell:</strong>
+      </div>
+    </div>
+    <pre>{
+  <span class="key">"success"</span>:    <span class="val">true</span>,
+  <span class="key">"message"</span>:    <span class="str">"Webhook recebido — fluxo 'Teste — Receber Webhook' disparado."</span>,
+  <span class="key">"flow"</span>:       <span class="str">"Teste — Receber Webhook"</span>,
+  <span class="key">"payload"</span>:    { <span class="key">"nome"</span>: <span class="str">"Gleidson"</span>, <span class="key">"valor"</span>: <span class="str">"42"</span> },
+  <span class="key">"variables"</span>:  [<span class="str">"webhook_nome"</span>, <span class="str">"webhook_valor"</span>, <span class="str">"webhook_acao"</span>, <span class="str">"webhook_payload"</span>]
+}</pre>
+  </div>
+
+  <div class="card blue">
+    <h3>Alternativa — Testar com curl (se tiver instalado)</h3>
+    <pre>curl -X POST http://127.0.0.1:8080/webhook/teste_webhook_receber ^
+  -H "Content-Type: application/json" ^
+  -d "{\"nome\": \"Gleidson\", \"valor\": \"42\"}"</pre>
+
+    <h3 style="margin-top:16px">Alternativa — Testar pelo Swagger UI (sem precisar de terminal)</h3>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Abra no navegador: <a href="http://127.0.0.1:8080/docs" target="_blank">http://127.0.0.1:8080/docs</a></strong>
+        <p>A página do Swagger já lista todos os endpoints, incluindo <code>POST /webhook/{flow_name}</code></p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Clique em <code>POST /webhook/{flow_name}</code> → "Try it out"</strong>
+        <p>Preencha <code>flow_name</code> = <code>teste_webhook_receber</code> e o body JSON</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Clique "Execute" — o fluxo dispara no PyFlow</strong>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <h2>🔄 PARTE 3 — Variáveis disponíveis no fluxo após receber webhook</h2>
+
+  <div class="card green">
+    <p style="color:var(--subtext);margin-bottom:12px">Se você enviou este payload:</p>
+    <pre>{ <span class="key">"nome"</span>: <span class="str">"Gleidson"</span>, <span class="key">"valor"</span>: <span class="str">"42"</span>, <span class="key">"acao"</span>: <span class="str">"cadastrar"</span> }</pre>
+    <p style="color:var(--subtext);margin:12px 0 8px">Estas variáveis ficam disponíveis no fluxo via <code>{{variavel}}</code>:</p>
+    <table>
+      <tr><th>Variável</th><th>Valor</th><th>Descrição</th></tr>
+      <tr><td><code>{{webhook_nome}}</code></td><td><code>"Gleidson"</code></td><td>Campo "nome" do payload</td></tr>
+      <tr><td><code>{{webhook_valor}}</code></td><td><code>"42"</code></td><td>Campo "valor" do payload</td></tr>
+      <tr><td><code>{{webhook_acao}}</code></td><td><code>"cadastrar"</code></td><td>Campo "acao" do payload</td></tr>
+      <tr><td><code>{{webhook_payload}}</code></td><td><code>{...}</code></td><td>Dict completo</td></tr>
+    </table>
+    <div class="tip">💡 Regra: cada campo de primeiro nível vira <code>webhook_CAMPO</code>. Campos aninhados ficam no <code>webhook_payload</code>.</div>
+  </div>
+
+  <hr>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <h2>🌍 PARTE 4 — Expor para a internet (ngrok)</h2>
+  <p style="color:var(--subtext);margin-bottom:12px">Para que sistemas externos (Zapier, Make, GitHub, etc.) consigam chamar o seu PyFlow, você precisa expor a porta 8080 para a internet.</p>
+
+  <div class="card orange">
+    <h3>Usando ngrok (gratuito, 5 min para configurar)</h3>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Baixe o ngrok em <a href="https://ngrok.com/download" target="_blank">ngrok.com/download</a></strong>
+        <p>Crie conta gratuita, extraia o .exe na pasta que quiser.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Abra PowerShell na pasta do ngrok e rode:</strong>
+        <pre>.\ngrok.exe http 8080</pre>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Copie a URL pública gerada. Exemplo:</strong>
+        <pre><span class="url">https://abc123.ngrok-free.app</span></pre>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <strong>Agora qualquer sistema externo pode chamar:</strong>
+        <pre>POST <span class="url">https://abc123.ngrok-free.app</span>/webhook/meu_fluxo</pre>
+        <p>E o PyFlow na sua máquina vai executar o fluxo 🚀</p>
+      </div>
+    </div>
+    <div class="warn">⚠️ A URL do ngrok muda a cada sessão (no plano gratuito). Para URL fixa, use o plano pago ou hospede o PyFlow em um servidor.</div>
+  </div>
+
+  <hr>
+
+  <h2>📋 Resumo rápido</h2>
+  <table>
+    <tr><th>O que você quer</th><th>Como fazer</th></tr>
+    <tr>
+      <td>PyFlow envia dados para Zapier/Make/n8n</td>
+      <td>Bloco <strong>Enviar para Webhook</strong> + URL deles no campo URL</td>
+    </tr>
+    <tr>
+      <td>Testar envio sem Zapier</td>
+      <td>Use <a href="https://webhook.site" target="_blank">webhook.site</a> → cole a URL gerada no bloco</td>
+    </tr>
+    <tr>
+      <td>Sistema externo dispara um fluxo no PyFlow</td>
+      <td><code>POST http://127.0.0.1:8080/webhook/nome_do_fluxo</code></td>
+    </tr>
+    <tr>
+      <td>Testar disparo sem sistema externo</td>
+      <td>PowerShell com <code>Invoke-RestMethod</code> ou Swagger em <code>/docs</code></td>
+    </tr>
+    <tr>
+      <td>Expor PyFlow para a internet</td>
+      <td>ngrok → <code>ngrok http 8080</code></td>
+    </tr>
+    <tr>
+      <td>Ver payloads recebidos</td>
+      <td><code>GET http://127.0.0.1:8080/webhook/inbox</code></td>
+    </tr>
+  </table>
+
+  <p style="color:var(--muted);font-size:11px;margin-top:32px;text-align:center">PyFlow RPA — Guia de Testes Webhook | Python 3.11+ | FastAPI + Uvicorn</p>
+</div>
+</body>
+</html>

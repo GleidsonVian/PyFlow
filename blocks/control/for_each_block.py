@@ -1,36 +1,31 @@
 from blocks.base_block import BaseBlock
-from blocks.browser.extract_text import ExtractTextBlock
 
 
 class ForEachBlock(BaseBlock):
     name = "Para Cada (For Each)"
-    description = "Itera sobre uma lista de valores ou sobre uma variável de lista (ex: csv_linhas). Os próximos N blocos são executados para cada item."
+    description = (
+        "Itera sobre uma lista, executando os blocos seguintes para cada item. "
+        "Adicione um bloco 'Fim do Para Cada' para marcar onde o loop termina. "
+        "Use {{item_atual}} nos blocos internos para acessar o valor corrente."
+    )
     category = "Controle"
 
     params_schema = [
         {
             "name": "items",
-            "label": "Lista de valores (separados por vírgula) ou nome de variável de lista",
+            "label": "Lista (separada por vírgula) ou nome de variável de lista",
             "type": "str",
             "required": True,
             "default": "",
-            "placeholder": "Ex: google.com, github.com  OU  csv_linhas"
+            "placeholder": "Ex: google.com, github.com  OU  minha_lista"
         },
         {
             "name": "variable_name",
-            "label": "Nome da variável de iteração",
+            "label": "Variável de iteração",
             "type": "str",
             "required": False,
             "default": "item_atual",
-            "placeholder": "Variável que recebe o valor atual a cada iteração"
-        },
-        {
-            "name": "blocks_count",
-            "label": "Quantos blocos incluir no loop",
-            "type": "str",
-            "required": True,
-            "default": "1",
-            "placeholder": "Blocos seguintes que fazem parte do For Each"
+            "placeholder": "Nome da variável que recebe o item atual"
         },
         {
             "name": "delay_between",
@@ -39,7 +34,7 @@ class ForEachBlock(BaseBlock):
             "required": False,
             "default": "0",
             "placeholder": "0"
-        }
+        },
     ]
 
     def execute(self, params: dict) -> dict:
@@ -47,36 +42,34 @@ class ForEachBlock(BaseBlock):
         if errors:
             return {"success": False, "message": "\n".join(errors)}
 
-        items_param  = params.get("items", "").strip()
-        var_name     = params.get("variable_name", "item_atual").strip() or "item_atual"
+        items_param = params.get("items", "").strip()
+        var_name    = params.get("variable_name", "item_atual").strip() or "item_atual"
         try:
-            blocks_count = int(params.get("blocks_count", 1))
-            delay        = float(params.get("delay_between", 0))
+            delay = float(params.get("delay_between", 0))
         except ValueError:
-            return {"success": False, "message": "Valores inválidos para blocos ou delay."}
+            delay = 0.0
 
-        # Verifica se é uma variável de lista no contexto
+        from blocks.browser.extract_text import ExtractTextBlock
         context = ExtractTextBlock._context
+
         if items_param in context and isinstance(context[items_param], list):
             items = context[items_param]
         else:
-            # Trata como lista literal separada por vírgula
             items = [i.strip() for i in items_param.split(",") if i.strip()]
 
         if not items:
             return {"success": False, "message": "A lista de valores está vazia."}
 
-        # Salva o primeiro item para inicializar
-        ExtractTextBlock._context[var_name] = items[0]
+        # Define o primeiro item para que blocos de preview já tenham acesso
+        context[var_name] = items[0]
 
         return {
             "success": True,
-            "message": f"For Each: {len(items)} item(s) → variável '{var_name}'",
+            "message": f"Para Cada: {len(items)} item(s) → variável '{var_name}'",
             "data": {
                 "foreach": True,
                 "items": items,
                 "variable_name": var_name,
-                "blocks_count": blocks_count,
-                "delay_between": delay
+                "delay_between": delay,
             }
         }

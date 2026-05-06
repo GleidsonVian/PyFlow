@@ -9,6 +9,7 @@ from PySide6.QtGui import QAction
 from ui.block_panel import BlockPanel
 from ui.canvas import Canvas
 from ui.properties_panel import PropertiesPanel
+from ui.recorder_dialog import RecorderDialog
 from ui.log_panel import LogPanel
 from ui.variables_panel import VariablesPanel
 from ui.command_palette import CommandPalette
@@ -29,8 +30,8 @@ from engine.api_server import get_api_server
 
 
 class RunnerThread(QThread):
-    step_started = Signal(int, str)
-    step_done    = Signal(int, str, bool, str)
+    step_started = Signal(int, str, str)       # index, name, category
+    step_done    = Signal(int, str, str, bool, str)  # index, name, category, success, message
     step_retry   = Signal(int, str, int, int)
     run_finished = Signal(int, int)
 
@@ -41,9 +42,9 @@ class RunnerThread(QThread):
 
     def run(self):
         runner = Runner(
-            on_step_start=lambda i, b: self.step_started.emit(i, b.name),
-            on_step_done= lambda i, b, r: self.step_done.emit(i, b.name, True,  r.get("message", "")),
-            on_step_error=lambda i, b, r: self.step_done.emit(i, b.name, False, r.get("message", "")),
+            on_step_start=lambda i, b: self.step_started.emit(i, b.name, getattr(b, "category", "")),
+            on_step_done= lambda i, b, r: self.step_done.emit(i, b.name, getattr(b, "category", ""), True,  r.get("message", "")),
+            on_step_error=lambda i, b, r: self.step_done.emit(i, b.name, getattr(b, "category", ""), False, r.get("message", "")),
             on_step_retry=lambda i, b, a, m: self.step_retry.emit(i, b.name, a, m),
             config=get_runner_config(),
         )
@@ -110,6 +111,7 @@ class MainWindow(QMainWindow):
         self._check_autosave_recovery()
 
     def keyPressEvent(self, event):
+<<<<<<< HEAD
         key   = event.key()
         ctrl  = event.modifiers() & Qt.ControlModifier
         shift = event.modifiers() & Qt.ShiftModifier
@@ -121,6 +123,20 @@ class MainWindow(QMainWindow):
         if ctrl and key == Qt.Key_D:           self._on_debug();           return
         if ctrl and key == Qt.Key_T:           self._on_open_templates();  return
         if ctrl and key == Qt.Key_A:           self._on_open_assets();     return
+=======
+        key  = event.key()
+        ctrl = event.modifiers() & Qt.ControlModifier
+        if ctrl and key == Qt.Key_Z:      self.canvas.undo();         return
+        if ctrl and key == Qt.Key_Y:      self.canvas.redo();         return
+        if ctrl and key == Qt.Key_P:      self._on_open_palette();    return
+        if ctrl and key == Qt.Key_S:      self._on_save();            return
+        if ctrl and key == Qt.Key_Return: self._on_run();             return
+        if ctrl and key == Qt.Key_L:      self._on_clear();           return
+        if ctrl and key == Qt.Key_D:      self._on_debug();           return
+        if ctrl and key == Qt.Key_T:      self._on_open_templates();  return
+        if ctrl and key == Qt.Key_A:      self._on_open_assets();     return
+        if ctrl and key == Qt.Key_R:      self._on_open_recorder();   return
+>>>>>>> 23424c6 (commit)
         if self._debug_thread and self._debug_thread.isRunning():
             if key == Qt.Key_Space: self._on_debug_step();  return
             if key == Qt.Key_F5:   self._on_debug_resume(); return
@@ -285,6 +301,13 @@ class MainWindow(QMainWindow):
         self.btn_vars.setChecked(True)
         self.btn_vars.clicked.connect(self._on_toggle_vars)
 
+        self.btn_headless = QPushButton("🖥  Visível")
+        self.btn_headless.setObjectName("btn_headless_off")
+        self.btn_headless.setCheckable(True)
+        self.btn_headless.setChecked(False)
+        self.btn_headless.setToolTip("Modo Headless — Chrome sem janela (para produção/servidor)")
+        self.btn_headless.clicked.connect(self._on_toggle_headless)
+
         self.btn_settings = QPushButton("⚙")
         self.btn_settings.setObjectName("btn_settings")
         self.btn_settings.setFixedWidth(36)
@@ -303,6 +326,11 @@ class MainWindow(QMainWindow):
         self.btn_export.setObjectName("btn_export")
         self.btn_export.clicked.connect(self._on_export)
 
+        self.btn_record = QPushButton("⏺  Gravar")
+        self.btn_record.setObjectName("btn_record")
+        self.btn_record.setToolTip("Gravar ações do navegador e gerar blocos automaticamente  [Ctrl+R]")
+        self.btn_record.clicked.connect(self._on_open_recorder)
+
         self.btn_clear = QPushButton("🗑  Limpar")
         self.btn_clear.setObjectName("btn_secondary")
         self.btn_clear.setToolTip("Limpar  [Ctrl+L]")
@@ -319,12 +347,14 @@ class MainWindow(QMainWindow):
         tb.addWidget(self.btn_assets)
         tb.addWidget(self.btn_templates)
         tb.addWidget(self.btn_palette)
+        tb.addWidget(self.btn_record)
         tb.addWidget(self.btn_clear)
         tb.addWidget(self.btn_flows)
         tb.addWidget(self.btn_save)
         tb.addWidget(self.btn_export)
         tb.addWidget(self.btn_vars)
         tb.addWidget(self.btn_scheduler)
+        tb.addWidget(self.btn_headless)
         tb.addWidget(self.btn_settings)
         tb.addWidget(self.btn_stop)
         tb.addWidget(self.btn_debug)
@@ -353,8 +383,9 @@ class MainWindow(QMainWindow):
 
         self.props_panel = PropertiesPanel()
         self.vars_panel  = VariablesPanel()
-        self.vars_panel.setFixedWidth(280)
-        self.vars_panel.setMaximumHeight(280)
+        # painel de variáveis: altura mínima mas sem largura fixa (herda do splitter)
+        self.vars_panel.setMinimumHeight(160)
+        self.vars_panel.setMaximumHeight(320)
 
         sep_mid = QFrame()
         sep_mid.setFrameShape(QFrame.HLine)
@@ -367,13 +398,21 @@ class MainWindow(QMainWindow):
         self.canvas.block_selected.connect(self.props_panel.show_block)
         self.canvas.canvas_clicked.connect(self.props_panel.clear)
         self.canvas.block_updated.connect(self._on_block_updated)
+<<<<<<< HEAD
         self.canvas.block_updated.connect(self._mark_unsaved)
         self.canvas.run_from_index.connect(self._on_run_from)
+=======
+        # Undo/Redo: salva histórico antes de aplicar edição de parâmetros
+        self.props_panel.params_about_to_change.connect(self.canvas._push_history)
+
+        # painel direito: largura mínima de 260px, sem fixação — redimensionável
+        right_panel.setMinimumWidth(260)
+>>>>>>> 23424c6 (commit)
 
         self.splitter.addWidget(self.block_panel)
         self.splitter.addWidget(self.canvas)
         self.splitter.addWidget(right_panel)
-        self.splitter.setSizes([220, 720, 280])
+        self.splitter.setSizes([200, 680, 360])
         self.splitter.setCollapsible(0, False)
         self.splitter.setCollapsible(2, False)
 
@@ -406,6 +445,10 @@ class MainWindow(QMainWindow):
         file_menu.addAction(QAction("Exportar como .py",           self, triggered=self._on_export))
         file_menu.addSeparator()
         file_menu.addAction(QAction("Sair",                        self, triggered=self.close))
+
+        edit_menu = menu.addMenu("Editar")
+        edit_menu.addAction(QAction("Desfazer  [Ctrl+Z]", self, triggered=self.canvas.undo))
+        edit_menu.addAction(QAction("Refazer   [Ctrl+Y]", self, triggered=self.canvas.redo))
 
         view_menu = menu.addMenu("Ver")
         view_menu.addAction(QAction("Buscar blocos  [Ctrl+P]",     self, triggered=self._on_open_palette))
@@ -444,6 +487,25 @@ class MainWindow(QMainWindow):
         self._api_dialog.activateWindow()
 
     # ── Templates ─────────────────────────────────────────────────────
+
+    def _on_open_recorder(self):
+        """Abre o Macro Recorder para gravar ações do Chrome e gerar blocos."""
+        dialog = RecorderDialog(parent=self)
+        dialog.steps_ready.connect(self._on_recorder_steps_ready)
+        dialog.exec()
+
+    def _on_recorder_steps_ready(self, steps: list):
+        """Recebe os steps gravados e adiciona ao canvas."""
+        if not steps:
+            return
+        current = self.canvas.get_serialized_steps()
+        all_steps = current + steps
+        self.canvas.load_from_data(all_steps)
+        self.log_panel.log(
+            "info",
+            f"⏺ Macro Recorder: {len(steps)} bloco(s) adicionado(s) ao canvas."
+        )
+        self.status.showMessage(f"Gravação concluída — {len(steps)} bloco(s) adicionado(s)")
 
     def _on_open_templates(self):
         dialog = TemplatesDialog(templates_dir="flows", parent=self)
@@ -593,17 +655,23 @@ class MainWindow(QMainWindow):
 
     # ── Callbacks execução normal ─────────────────────────────────────
 
-    def _on_step_started(self, index, name):
+    def _on_step_started(self, index, name, category=""):
         self.canvas.set_block_state(index, "running")
         self.status.showMessage(f"Passo {index + 1}: {name}...")
-        self.log_panel.log("running", f"Passo {index + 1}: {name}")
+        self.log_panel.log("running", f"Passo {index + 1}: {name}", step=index + 1, block_name=name, category=category)
 
     def _on_step_retry(self, index, name, attempt, max_attempts):
-        self.log_panel.log("running", f"↻ Retry {attempt}/{max_attempts}: {name}")
+        self.log_panel.log("warning", f"↻ Retry {attempt}/{max_attempts}: {name}")
 
-    def _on_step_done(self, index, name, success, message):
+    def _on_step_done(self, index, name, success, message, category=""):
         self.canvas.set_block_state(index, "success" if success else "error")
-        self.log_panel.log("success" if success else "error", message or name)
+        self.log_panel.log(
+            "success" if success else "error",
+            message or name,
+            step=index + 1,
+            block_name=name,
+            category=category,
+        )
 
     def _on_run_finished(self, ok, total):
         import time as _time
@@ -628,9 +696,39 @@ class MainWindow(QMainWindow):
     def _on_toggle_vars(self):
         self.vars_panel.setVisible(self.btn_vars.isChecked())
 
+    def _on_toggle_headless(self):
+        from engine.browser_config import get_browser_config
+        cfg = get_browser_config()
+        cfg.headless = self.btn_headless.isChecked()
+        if cfg.headless:
+            self.btn_headless.setText("👻  Headless")
+            self.btn_headless.setObjectName("btn_headless_on")
+            self.log_panel.log("info", "👻 Modo Headless ATIVADO — Chrome rodará sem janela")
+        else:
+            self.btn_headless.setText("🖥  Visível")
+            self.btn_headless.setObjectName("btn_headless_off")
+            self.log_panel.log("info", "🖥  Modo Visível ATIVADO — Chrome abrirá com janela")
+        # Força reaplicação do estilo
+        self.btn_headless.style().unpolish(self.btn_headless)
+        self.btn_headless.style().polish(self.btn_headless)
+
     def _on_open_settings(self):
         if SettingsDialog(self).exec():
             self.lbl_retry.setVisible(get_runner_config().retry_enabled)
+            # Sincroniza botão headless com o valor salvo nas configurações
+            from engine.browser_config import get_browser_config
+            is_headless = get_browser_config().headless
+            self.btn_headless.blockSignals(True)
+            self.btn_headless.setChecked(is_headless)
+            self.btn_headless.blockSignals(False)
+            if is_headless:
+                self.btn_headless.setText("👻  Headless")
+                self.btn_headless.setObjectName("btn_headless_on")
+            else:
+                self.btn_headless.setText("🖥  Visível")
+                self.btn_headless.setObjectName("btn_headless_off")
+            self.btn_headless.style().unpolish(self.btn_headless)
+            self.btn_headless.style().polish(self.btn_headless)
 
     def _on_open_scheduler(self):
         if self._scheduler_dialog is None or not self._scheduler_dialog.isVisible():
@@ -719,6 +817,7 @@ class MainWindow(QMainWindow):
             self.props_panel.show_block(selected)
 
     def _apply_styles(self):
+<<<<<<< HEAD
         self.setStyleSheet("""
             QMainWindow, QWidget {
                 background-color: #1e1e2e; color: #cdd6f4;
@@ -771,3 +870,8 @@ class MainWindow(QMainWindow):
             QScrollBar::handle:horizontal { background: #45475a; border-radius: 4px; }
             QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
         """)
+=======
+        import engine.theme_manager as tm
+        self.setStyleSheet(tm.build_main_qss())
+
+>>>>>>> 23424c6 (commit)

@@ -32,12 +32,28 @@ class PressKeyBlock(BaseBlock):
 
     params_schema = [
         {
-            "name": "key",
-            "label": "Tecla",
-            "type": "str",
+            "name":    "key",
+            "label":   "Tecla",
+            "type":    "select",
             "required": True,
             "default": "Enter",
-            "placeholder": "Enter, Tab, Escape, ArrowDown, F5..."
+            "options": [
+                {"value": "Enter",      "label": "Enter",      "description": "Confirma ação, submete formulário ou ativa botão focado."},
+                {"value": "Tab",        "label": "Tab",        "description": "Avança o foco para o próximo campo ou elemento interativo."},
+                {"value": "Escape",     "label": "Escape",     "description": "Cancela ação, fecha modais, popups ou dropdowns."},
+                {"value": "Space",      "label": "Space",      "description": "Pressiona Espaço — ativa checkboxes e botões focados."},
+                {"value": "Backspace",  "label": "Backspace",  "description": "Apaga o caractere à esquerda do cursor."},
+                {"value": "Delete",     "label": "Delete",     "description": "Apaga o caractere à direita do cursor."},
+                {"value": "ArrowUp",    "label": "↑ ArrowUp",    "description": "Move o cursor ou seleção para cima."},
+                {"value": "ArrowDown",  "label": "↓ ArrowDown",  "description": "Move o cursor ou seleção para baixo."},
+                {"value": "ArrowLeft",  "label": "← ArrowLeft",  "description": "Move o cursor para a esquerda."},
+                {"value": "ArrowRight", "label": "→ ArrowRight", "description": "Move o cursor para a direita."},
+                {"value": "Home",       "label": "Home",       "description": "Vai para o início da linha ou do campo."},
+                {"value": "End",        "label": "End",        "description": "Vai para o fim da linha ou do campo."},
+                {"value": "PageUp",     "label": "PageUp",     "description": "Rola a página para cima (uma tela inteira)."},
+                {"value": "PageDown",   "label": "PageDown",   "description": "Rola a página para baixo (uma tela inteira)."},
+                {"value": "F5",         "label": "F5",         "description": "Atualiza / recarrega a página atual."},
+            ],
         },
         {
             "name": "selector",

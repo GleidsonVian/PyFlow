@@ -14,12 +14,19 @@ class MouseActionBlock(BaseBlock):
 
     params_schema = [
         {
-            "name": "action",
-            "label": "Ação",
-            "type": "str",
+            "name":    "action",
+            "label":   "Ação",
+            "type":    "select",
             "required": True,
             "default": "double_click",
-            "placeholder": "double_click, right_click, hover, drag_and_drop, click_offset, move_to"
+            "options": [
+                {"value": "double_click",  "label": "🖱 Duplo clique",          "description": "Clica duas vezes no elemento. Preencha o Seletor CSS."},
+                {"value": "right_click",   "label": "🖱 Clique direito",         "description": "Abre o menu de contexto no elemento. Preencha o Seletor CSS."},
+                {"value": "hover",         "label": "✋ Hover (passar o mouse)",  "description": "Move o mouse sobre o elemento sem clicar — ativa tooltips e menus suspensos."},
+                {"value": "drag_and_drop", "label": "↔ Arrastar e soltar",       "description": "Arrasta o elemento (Seletor) e solta no destino (Seletor de Destino)."},
+                {"value": "click_offset",  "label": "🎯 Clicar por coordenadas", "description": "Clica em um ponto específico do elemento usando Offset X e Y em pixels."},
+                {"value": "move_to",       "label": "➡ Mover para posição",      "description": "Move o cursor até coordenadas (Offset X, Y) relativas ao elemento, sem clicar."},
+            ],
         },
         {
             "name": "selector",

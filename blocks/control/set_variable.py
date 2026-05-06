@@ -23,12 +23,22 @@ class SetVariableBlock(BaseBlock):
             "placeholder": "Ex: contador, nome_completo, total"
         },
         {
-            "name":        "operation",
-            "label":       "Operação",
-            "type":        "str",
-            "required":    True,
-            "default":     "set",
-            "placeholder": "set | increment | decrement | append | prepend | multiply | divide | now | clear"
+            "name":    "operation",
+            "label":   "Operação",
+            "type":    "select",
+            "required": True,
+            "default": "set",
+            "options": [
+                {"value": "set",       "label": "= Definir valor",         "description": "Define a variável com o Valor informado. Sobrescreve qualquer valor anterior."},
+                {"value": "increment", "label": "+ Incrementar",           "description": "Soma o Valor ao número atual da variável. Padrão: +1 se o campo Valor estiver vazio."},
+                {"value": "decrement", "label": "- Decrementar",           "description": "Subtrai o Valor do número atual da variável. Padrão: -1 se o campo Valor estiver vazio."},
+                {"value": "append",    "label": "⟶ Concatenar ao final",  "description": "Adiciona o Valor ao final do texto atual da variável (string append)."},
+                {"value": "prepend",   "label": "⟵ Concatenar ao início", "description": "Adiciona o Valor antes do texto atual da variável (string prepend)."},
+                {"value": "multiply",  "label": "× Multiplicar",           "description": "Multiplica o valor atual pelo Valor informado. Ex: variável=5, Valor=3 → 15."},
+                {"value": "divide",    "label": "÷ Dividir",               "description": "Divide o valor atual pelo Valor informado. Retorna erro se Valor=0."},
+                {"value": "now",       "label": "🕐 Data/hora atual",      "description": "Salva a data e hora atual na variável. Use o campo Formato para personalizar. Ex: %d/%m/%Y"},
+                {"value": "clear",     "label": "🗑 Remover variável",     "description": "Remove a variável do contexto completamente. Ela deixará de existir."},
+            ],
         },
         {
             "name":        "value",

@@ -19,12 +19,23 @@ class SmartWaitBlock(BaseBlock):
 
     params_schema = [
         {
-            "name":        "condition",
-            "label":       "Condição a aguardar",
-            "type":        "str",
-            "required":    True,
-            "default":     "element_visible",
-            "placeholder": "element_visible | element_clickable | element_hidden | element_exists | url_contains | url_equals | text_in_element | text_in_page | page_loaded | element_count"
+            "name":    "condition",
+            "label":   "Condição a aguardar",
+            "type":    "select",
+            "required": True,
+            "default": "element_visible",
+            "options": [
+                {"value": "element_visible",   "label": "👁 Elemento visível",        "description": "Aguarda até o elemento CSS estar visível na tela. Preencha o Seletor CSS."},
+                {"value": "element_clickable",  "label": "🖱 Elemento clicável",       "description": "Aguarda até o elemento estar visível e habilitado para clique. Preencha o Seletor CSS."},
+                {"value": "element_hidden",     "label": "🙈 Elemento oculto",         "description": "Aguarda até o elemento desaparecer ou ficar invisível. Preencha o Seletor CSS."},
+                {"value": "element_exists",     "label": "🔍 Elemento no DOM",         "description": "Aguarda até o elemento existir no DOM (mesmo invisível). Preencha o Seletor CSS."},
+                {"value": "url_contains",       "label": "🔗 URL contém texto",        "description": "Aguarda até a URL atual conter o Valor informado. Ex: /dashboard"},
+                {"value": "url_equals",         "label": "🔗 URL igual a",             "description": "Aguarda até a URL ser exatamente igual ao Valor informado."},
+                {"value": "text_in_element",    "label": "📝 Texto no elemento",       "description": "Aguarda até o elemento CSS conter o Valor como texto. Preencha Seletor CSS e Valor."},
+                {"value": "text_in_page",       "label": "📄 Texto na página",         "description": "Aguarda até o Valor aparecer em qualquer lugar no HTML da página."},
+                {"value": "page_loaded",        "label": "✅ Página carregada",        "description": "Aguarda até document.readyState = 'complete'. Não precisa de seletor."},
+                {"value": "element_count",      "label": "🔢 Contagem de elementos",   "description": "Aguarda até encontrar ao menos N elementos CSS. Preencha Seletor CSS e Valor (número)."},
+            ],
         },
         {
             "name":        "selector",

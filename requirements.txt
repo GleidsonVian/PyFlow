@@ -13,12 +13,14 @@ webdriver-manager>=4.0.1
 # ── Automação de desktop ──────────────────────────────────────────────
 pyautogui>=0.9.54
 pyperclip>=1.9.0
+pynput>=1.7.6
 
 # ── HTTP / APIs REST ──────────────────────────────────────────────────
 requests>=2.31.0
 
 # ── API REST local (servidor embutido) ───────────────────────────────
-flask>=3.0.0
+fastapi>=0.111.0
+uvicorn>=0.29.0
 
 # ── E-mail ────────────────────────────────────────────────────────────
 # (usa smtplib nativo do Python — sem dependência extra)

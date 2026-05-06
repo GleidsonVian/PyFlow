@@ -1,0 +1,496 @@
+{
+  "flow_name": "teste_controle_fluxo",
+  "created_at": "2026-05-05T10:00:00.000000",
+  "steps": [
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "log",
+        "operation": "set",
+        "value": "=== TESTE DE CONTROLE DE FLUXO ===\n",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "contador_loop",
+        "operation": "set",
+        "value": "0",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "contador_foreach",
+        "operation": "set",
+        "value": "0",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "resultado_if",
+        "operation": "set",
+        "value": "nao_definido",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "resultado_else",
+        "operation": "set",
+        "value": "nao_definido",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "numero_alto",
+        "operation": "set",
+        "value": "150",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "numero_baixo",
+        "operation": "set",
+        "value": "30",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "texto_busca",
+        "operation": "set",
+        "value": "PyFlow RPA automacao",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Iniciando Testes",
+        "message": "Testando blocos de controle de fluxo:\n\n1. Loop (3 iteracoes)\n2. Para Cada (sobre lista)\n3. Se — ramo verdadeiro\n4. Se — ramo Senao\n5. Se aninhado dentro de Loop\n\nClique OK para comecar.",
+        "kind": "info"
+      }
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "log",
+        "operation": "set",
+        "value": "{{log}}\n--- TESTE 1: LOOP ---",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "LoopBlock",
+      "params": {
+        "times": "3",
+        "delay_between": "0"
+      }
+    },
+
+      {
+        "block": "SetVariableBlock",
+        "params": {
+          "variable_name": "contador_loop",
+          "operation": "increment",
+          "value": "1",
+          "format": ""
+        }
+      },
+
+      {
+        "block": "SetVariableBlock",
+        "params": {
+          "variable_name": "log",
+          "operation": "set",
+          "value": "{{log}}\n  Loop iteracao {{contador_loop}}",
+          "format": ""
+        }
+      },
+
+    {
+      "block": "EndLoopBlock",
+      "params": {}
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "log",
+        "operation": "set",
+        "value": "{{log}}\nLoop concluido: {{contador_loop}} iteracoes",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "log",
+        "operation": "set",
+        "value": "{{log}}\n\n--- TESTE 2: PARA CADA ---",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "ForEachBlock",
+      "params": {
+        "items": "alpha, beta, gamma, delta",
+        "variable_name": "item_atual",
+        "delay_between": "0"
+      }
+    },
+
+      {
+        "block": "SetVariableBlock",
+        "params": {
+          "variable_name": "contador_foreach",
+          "operation": "increment",
+          "value": "1",
+          "format": ""
+        }
+      },
+
+      {
+        "block": "SetVariableBlock",
+        "params": {
+          "variable_name": "log",
+          "operation": "set",
+          "value": "{{log}}\n  Item {{contador_foreach}}: {{item_atual}}",
+          "format": ""
+        }
+      },
+
+    {
+      "block": "EndForEachBlock",
+      "params": {}
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "log",
+        "operation": "set",
+        "value": "{{log}}\nPara Cada concluido: {{contador_foreach}} items processados",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "log",
+        "operation": "set",
+        "value": "{{log}}\n\n--- TESTE 3: SE (ramo verdadeiro) ---",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "IfBlock",
+      "params": {
+        "condition_type": "variable_less",
+        "selector": "",
+        "variable_name": "numero_baixo",
+        "expected_value": "100"
+      }
+    },
+
+      {
+        "block": "SetVariableBlock",
+        "params": {
+          "variable_name": "resultado_if",
+          "operation": "set",
+          "value": "VERDADEIRO (30 < 100 - correto!)",
+          "format": ""
+        }
+      },
+
+    {
+      "block": "ElseBlock",
+      "params": {}
+    },
+
+      {
+        "block": "SetVariableBlock",
+        "params": {
+          "variable_name": "resultado_if",
+          "operation": "set",
+          "value": "FALSO (erro - 30 deveria ser < 100)",
+          "format": ""
+        }
+      },
+
+    {
+      "block": "EndIfBlock",
+      "params": {}
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "log",
+        "operation": "set",
+        "value": "{{log}}\n  Se (30 < 100): {{resultado_if}}",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "log",
+        "operation": "set",
+        "value": "{{log}}\n\n--- TESTE 4: SE (ramo Senao) ---",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "IfBlock",
+      "params": {
+        "condition_type": "variable_greater",
+        "selector": "",
+        "variable_name": "numero_baixo",
+        "expected_value": "100"
+      }
+    },
+
+      {
+        "block": "SetVariableBlock",
+        "params": {
+          "variable_name": "resultado_else",
+          "operation": "set",
+          "value": "VERDADEIRO (erro - 30 nao eh > 100)",
+          "format": ""
+        }
+      },
+
+    {
+      "block": "ElseBlock",
+      "params": {}
+    },
+
+      {
+        "block": "SetVariableBlock",
+        "params": {
+          "variable_name": "resultado_else",
+          "operation": "set",
+          "value": "SENAO correto (30 nao eh > 100, entrou no Senao)",
+          "format": ""
+        }
+      },
+
+    {
+      "block": "EndIfBlock",
+      "params": {}
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "log",
+        "operation": "set",
+        "value": "{{log}}\n  Se (30 > 100): {{resultado_else}}",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "log",
+        "operation": "set",
+        "value": "{{log}}\n\n--- TESTE 5: SE ANINHADO NO LOOP ---",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "pares_encontrados",
+        "operation": "set",
+        "value": "0",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "ForEachBlock",
+      "params": {
+        "items": "2, 7, 4, 9, 6",
+        "variable_name": "num",
+        "delay_between": "0"
+      }
+    },
+
+      {
+        "block": "IfBlock",
+        "params": {
+          "condition_type": "variable_contains",
+          "selector": "",
+          "variable_name": "num",
+          "expected_value": "2"
+        }
+      },
+
+        {
+          "block": "SetVariableBlock",
+          "params": {
+            "variable_name": "pares_encontrados",
+            "operation": "increment",
+            "value": "1",
+            "format": ""
+          }
+        },
+
+        {
+          "block": "SetVariableBlock",
+          "params": {
+            "variable_name": "log",
+            "operation": "set",
+            "value": "{{log}}\n  Numero {{num}} contem '2' (pares: {{pares_encontrados}})",
+            "format": ""
+          }
+        },
+
+      {
+        "block": "ElseBlock",
+        "params": {}
+      },
+
+        {
+          "block": "SetVariableBlock",
+          "params": {
+            "variable_name": "log",
+            "operation": "set",
+            "value": "{{log}}\n  Numero {{num}} nao contem '2'",
+            "format": ""
+          }
+        },
+
+      {
+        "block": "EndIfBlock",
+        "params": {}
+      },
+
+    {
+      "block": "EndForEachBlock",
+      "params": {}
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "log",
+        "operation": "set",
+        "value": "{{log}}\nNums com digito 2: {{pares_encontrados}} (esperado: 2 = '2' e '4' nao, '6' nao, '7' nao, '9' nao — so o '2')",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "log",
+        "operation": "set",
+        "value": "{{log}}\n\n--- TESTE 6: variable_contains e variable_not_empty ---",
+        "format": ""
+      }
+    },
+
+    {
+      "block": "IfBlock",
+      "params": {
+        "condition_type": "variable_contains",
+        "selector": "",
+        "variable_name": "texto_busca",
+        "expected_value": "automacao"
+      }
+    },
+
+      {
+        "block": "SetVariableBlock",
+        "params": {
+          "variable_name": "log",
+          "operation": "set",
+          "value": "{{log}}\n  variable_contains OK: texto contem 'automacao'",
+          "format": ""
+        }
+      },
+
+    {
+      "block": "EndIfBlock",
+      "params": {}
+    },
+
+    {
+      "block": "IfBlock",
+      "params": {
+        "condition_type": "variable_not_empty",
+        "selector": "",
+        "variable_name": "texto_busca",
+        "expected_value": ""
+      }
+    },
+
+      {
+        "block": "SetVariableBlock",
+        "params": {
+          "variable_name": "log",
+          "operation": "set",
+          "value": "{{log}}\n  variable_not_empty OK: texto_busca nao esta vazio",
+          "format": ""
+        }
+      },
+
+    {
+      "block": "EndIfBlock",
+      "params": {}
+    },
+
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Resultado dos Testes",
+        "message": "{{log}}\n\n================\nTodos os testes concluidos!",
+        "kind": "info"
+      }
+    },
+
+    {
+      "block": "SaveTextBlock",
+      "params": {
+        "content": "{{log}}\n\n================\nTodos os testes concluidos!",
+        "filepath": "saida/teste_controle_fluxo.txt",
+        "mode": "overwrite",
+        "add_timestamp": true
+      }
+    }
+
+  ]
+}
