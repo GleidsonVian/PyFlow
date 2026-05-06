@@ -1,0 +1,21 @@
+{
+  "flow_name": "teste",
+  "saved_at": "2026-05-06T00:00:00",
+  "steps": [
+    {
+      "block": "WebhookTriggerBlock",
+      "params": {
+        "path": "teste",
+        "save_payload": "webhook_data"
+      }
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Webhook recebido!",
+        "message": "Payload recebido:\n{{webhook_data}}\n\nCampos individuais:\nnome  → {{webhook_nome}}\nvalor → {{webhook_valor}}",
+        "kind": "info"
+      }
+    }
+  ]
+}

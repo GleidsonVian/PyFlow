@@ -11,89 +11,8 @@ from ui.param_dialog import ParamDialog
 from engine.blocks_registry import BLOCK_BY_NAME, ALL_BLOCKS
 from blocks.control.sequence_start_block import SequenceStartBlock
 from blocks.control.sequence_end_block   import SequenceEndBlock
-<<<<<<< HEAD
 
 BLOCK_REGISTRY = BLOCK_BY_NAME
-=======
-from blocks.control.end_loop_block       import EndLoopBlock
-from blocks.control.end_foreach_block    import EndForEachBlock
-from blocks.control.end_if_block         import EndIfBlock
-from blocks.control.else_block           import ElseBlock
-from blocks.control.try_block            import TryBlock
-from blocks.control.catch_block          import CatchBlock
-from blocks.control.end_try_block        import EndTryBlock
-from blocks.control.while_block          import WhileBlock
-from blocks.control.end_while_block      import EndWhileBlock
-from blocks.files.read_csv               import ReadCsvBlock
-from blocks.files.save_text              import SaveTextBlock
-from blocks.files.save_csv               import SaveCsvBlock
-from blocks.files.sqlite_block           import SQLiteBlock
-from blocks.integration.http_request     import HttpRequestBlock
-from blocks.integration.send_email       import SendEmailBlock
-from blocks.integration.send_webhook     import SendWebhookBlock
-from blocks.system.keyboard_action       import KeyboardActionBlock
-from blocks.system.clipboard_block       import ClipboardBlock
-from blocks.system.hash_block            import HashBlock
-from blocks.system.hash_block            import HashBlock
-from blocks.control.subflow_block        import SubfluxoBlock
-from blocks.browser.execute_script       import ExecuteScriptBlock
-from blocks.system.ocr_block             import OcrBlock
-
-
-BLOCK_REGISTRY = {
-    "OpenBrowserBlock":          OpenBrowserBlock,
-    "ClickElementBlock":         ClickElementBlock,
-    "FillFieldBlock":            FillFieldBlock,
-    "ScreenshotBlock":           ScreenshotBlock,
-    "ExtractTextBlock":          ExtractTextBlock,
-    "ExtractListBlock":          ExtractListBlock,
-    "PressKeyBlock":             PressKeyBlock,
-    "ScrollPageBlock":           ScrollPageBlock,
-    "GetCurrentUrlBlock":        GetCurrentUrlBlock,
-    "MouseActionBlock":          MouseActionBlock,
-    "SmartWaitBlock":            SmartWaitBlock,
-    "NavigateToUrlBlock":        NavigateToUrlBlock,
-    "GoBackBlock":               GoBackBlock,
-    "GoForwardBlock":            GoForwardBlock,
-    "RefreshPageBlock":          RefreshPageBlock,
-    "OpenNewTabBlock":           OpenNewTabBlock,
-    "CloseTabBlock":             CloseTabBlock,
-    "SwitchTabBlock":            SwitchTabBlock,
-    "CloseBrowserBlock":         CloseBrowserBlock,
-    "WaitBlock":                 WaitBlock,
-    "IfBlock":                   IfBlock,
-    "LoopBlock":                 LoopBlock,
-    "ForEachBlock":              ForEachBlock,
-    "SetVariableBlock":          SetVariableBlock,
-    "SequenceStartBlock":        SequenceStartBlock,
-    "SequenceEndBlock":          SequenceEndBlock,
-    "EndLoopBlock":              EndLoopBlock,
-    "EndForEachBlock":           EndForEachBlock,
-    "EndIfBlock":                EndIfBlock,
-    "ElseBlock":                 ElseBlock,
-    "TryBlock":                  TryBlock,
-    "CatchBlock":                CatchBlock,
-    "EndTryBlock":               EndTryBlock,
-    "WhileBlock":                WhileBlock,
-    "EndWhileBlock":             EndWhileBlock,
-    "ShowMessageBlock":          ShowMessageBlock,
-    "DesktopNotificationBlock":  DesktopNotificationBlock,
-    "TextManipulationBlock":     TextManipulationBlock,
-    "KeyboardActionBlock":       KeyboardActionBlock,
-    "ClipboardBlock":            ClipboardBlock,
-    "ReadCsvBlock":              ReadCsvBlock,
-    "SaveTextBlock":             SaveTextBlock,
-    "SaveCsvBlock":              SaveCsvBlock,
-    "SQLiteBlock":               SQLiteBlock,
-    "HttpRequestBlock":          HttpRequestBlock,
-    "SendEmailBlock":            SendEmailBlock,
-    "SendWebhookBlock":          SendWebhookBlock,
-    "SubfluxoBlock":             SubfluxoBlock,
-    "ExecuteScriptBlock": ExecuteScriptBlock,
-    "HashBlock":                 HashBlock,
-    "OcrBlock":     OcrBlock,
-}
->>>>>>> 23424c6 (commit)
 
 CATEGORY_IDLE_COLORS = {
     "Navegador":   ("#1a2a40", "#89b4fa"),
@@ -101,6 +20,7 @@ CATEGORY_IDLE_COLORS = {
     "Arquivos":    ("#1a2e20", "#a6e3a1"),
     "Integração":  ("#2e2018", "#fab387"),
     "Sistema":     ("#2e1818", "#f38ba8"),
+    "Gatilhos":    ("#2e2a18", "#f9e2af"),
 }
 
 
@@ -219,14 +139,24 @@ class CanvasBlockWidget(QFrame):
         bg, accent = (self.STATE_COLORS.get(self.state)
                       or CATEGORY_IDLE_COLORS.get(cat, ("#313244", "#cba6f7")))
         self.setStyleSheet(f"""
-            #canvas_block {{ background-color: {bg}; border: 1.5px solid {accent}; border-radius: 10px; }}
-            #collapse_button {{ color: #6c7086; font-size: 12px; border-radius: 11px; }}
-            #drag_handle {{ color: #45475a; font-size: 16px; }}
-            #block_index {{ background-color: {accent}; color: #1e1e2e; border-radius: 14px; font-size: 12px; font-weight: 700; }}
-            #block_name {{ color: #cdd6f4; font-size: 13px; font-weight: 600; }}
-            #block_params {{ color: #6c7086; font-size: 11px; }}
+            #canvas_block {{ 
+                background-color: {bg}; 
+                border: 1px solid {accent}; 
+                border-radius: 8px;
+            }}
+            #drag_handle {{ color: #45475a; font-size: 14px; }}
+            #block_index {{ 
+                background-color: rgba(0,0,0,0.2); 
+                color: {accent}; 
+                border-radius: 4px; 
+                font-size: 10px; 
+                font-weight: 800; 
+            }}
+            #block_name {{ color: #cdd6f4; font-size: 12px; font-weight: 700; }}
+            #block_params {{ color: #9399b2; font-size: 10px; font-family: 'Segoe UI', sans-serif; }}
             #block_nota {{ color: #585b70; font-size: 10px; font-style: italic; }}
-            #btn_remove {{ color: #45475a; border-radius: 11px; font-size: 11px; }}
+            #btn_remove {{ color: #45475a; border-radius: 4px; font-size: 10px; }}
+            #btn_remove:hover {{ color: #f38ba8; background-color: rgba(243, 139, 168, 0.1); }}
         """)
 
     def _set_scope_indicator(self, color: str | None):
@@ -555,16 +485,13 @@ class Canvas(QWidget):
         widget.duplicated.connect(self._duplicate_block)
         widget.move_up.connect(self._move_up)
         widget.move_down.connect(self._move_down)
-<<<<<<< HEAD
         widget.run_from.connect(self._on_run_from)
-=======
 
     def _add_block(self, block_instance, params, insert_at=None):
         self._push_history()
         widget = CanvasBlockWidget(block_instance, params,
                                    insert_at if insert_at is not None else len(self._blocks))
         self._connect_block(widget)
->>>>>>> 23424c6 (commit)
         if insert_at is not None and 0 <= insert_at < len(self._blocks):
             self._blocks.insert(insert_at, widget)
             self._full_rebuild()
@@ -681,8 +608,36 @@ class Canvas(QWidget):
 
     def _apply_styles(self):
         self.setStyleSheet("""
-            #canvas_outer { background-color: #1e1e2e; }
-            #canvas_scroll { background-color: #1e1e2e; border: none; }
-            #canvas_inner { background-color: #1e1e2e; }
+            #canvas_outer { background-color: #11111b; }
+            #canvas_scroll { background-color: transparent; border: none; }
+            #canvas_inner { background-color: transparent; }
             #empty_hint { color: #45475a; font-size: 15px; padding: 60px 20px; }
         """)
+
+    def paintEvent(self, event):
+        """Desenha o grid de fundo estilo n8n/UiPath."""
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # Cor do fundo
+        painter.fillRect(self.rect(), QColor("#11111b"))
+        
+        # Desenha grid
+        pen = QPen(QColor("#1e1e2e"), 1)
+        painter.setPen(pen)
+        
+        grid_size = 20
+        # Linhas verticais
+        for x in range(0, self.width(), grid_size):
+            painter.drawLine(x, 0, x, self.height())
+        # Linhas horizontais
+        for y in range(0, self.height(), grid_size):
+            painter.drawLine(0, y, self.width(), y)
+            
+        # Linhas de destaque (opcional, estilo n8n)
+        pen_bold = QPen(QColor("#181825"), 1)
+        painter.setPen(pen_bold)
+        for x in range(0, self.width(), grid_size * 5):
+            painter.drawLine(x, 0, x, self.height())
+        for y in range(0, self.height(), grid_size * 5):
+            painter.drawLine(0, y, self.width(), y)

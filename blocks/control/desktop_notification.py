@@ -56,17 +56,16 @@ class DesktopNotificationBlock(BaseBlock):
 
             def show_tray():
                 tray = QSystemTrayIcon(app)
-                # Usa ícone padrão do sistema
                 tray.setIcon(app.style().standardIcon(
                     __import__('PySide6.QtWidgets', fromlist=['QStyle']).QStyle.SP_ComputerIcon
                 ))
                 tray.show()
                 tray.showMessage(title, message, QSystemTrayIcon.Information, duration)
-                # Mantém vivo até a notificação sumir
-                QTimer.singleShot(duration + 1000, tray.hide)
+                QTimer.singleShot(duration + 2000, tray.hide)
+                QTimer.singleShot(duration + 3000, tray.deleteLater)
 
-            from PySide6.QtCore import QTimer
-            QTimer.singleShot(0, show_tray)
+            from PySide6.QtCore import Qt
+            QTimer.singleShot(0, app, show_tray)
 
             return {
                 "success": True,

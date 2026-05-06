@@ -41,16 +41,20 @@ class RunnerThread(QThread):
         self.start_index = start_index
 
     def run(self):
-        runner = Runner(
+        self.runner = Runner(
             on_step_start=lambda i, b: self.step_started.emit(i, b.name, getattr(b, "category", "")),
             on_step_done= lambda i, b, r: self.step_done.emit(i, b.name, getattr(b, "category", ""), True,  r.get("message", "")),
             on_step_error=lambda i, b, r: self.step_done.emit(i, b.name, getattr(b, "category", ""), False, r.get("message", "")),
             on_step_retry=lambda i, b, a, m: self.step_retry.emit(i, b.name, a, m),
             config=get_runner_config(),
         )
-        results = runner.run(self.steps, start_index=self.start_index)
+        results = self.runner.run(self.steps, start_index=self.start_index)
         ok = sum(1 for r in results if r.get("success"))
         self.run_finished.emit(ok, len(results))
+
+    def stop(self):
+        if hasattr(self, "runner"):
+            self.runner.stop()
 
 
 class DebugSignals(QThread):
@@ -86,6 +90,10 @@ class DebugSignals(QThread):
 
 
 class MainWindow(QMainWindow):
+    # Signals para receber chamadas da thread da API com segurança
+    _api_run_signal  = Signal(str)   # flow_path
+    _api_stop_signal = Signal()
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("PyFlow RPA")
@@ -111,11 +119,13 @@ class MainWindow(QMainWindow):
         self._check_autosave_recovery()
 
     def keyPressEvent(self, event):
-<<<<<<< HEAD
         key   = event.key()
         ctrl  = event.modifiers() & Qt.ControlModifier
         shift = event.modifiers() & Qt.ShiftModifier
+        
         if ctrl and shift and key == Qt.Key_S: self._on_save_as();         return
+        if ctrl and key == Qt.Key_Z:           self.canvas.undo();         return
+        if ctrl and key == Qt.Key_Y:           self.canvas.redo();         return
         if ctrl and key == Qt.Key_P:           self._on_open_palette();    return
         if ctrl and key == Qt.Key_S:           self._on_save();            return
         if ctrl and key == Qt.Key_Return:      self._on_run();             return
@@ -123,20 +133,7 @@ class MainWindow(QMainWindow):
         if ctrl and key == Qt.Key_D:           self._on_debug();           return
         if ctrl and key == Qt.Key_T:           self._on_open_templates();  return
         if ctrl and key == Qt.Key_A:           self._on_open_assets();     return
-=======
-        key  = event.key()
-        ctrl = event.modifiers() & Qt.ControlModifier
-        if ctrl and key == Qt.Key_Z:      self.canvas.undo();         return
-        if ctrl and key == Qt.Key_Y:      self.canvas.redo();         return
-        if ctrl and key == Qt.Key_P:      self._on_open_palette();    return
-        if ctrl and key == Qt.Key_S:      self._on_save();            return
-        if ctrl and key == Qt.Key_Return: self._on_run();             return
-        if ctrl and key == Qt.Key_L:      self._on_clear();           return
-        if ctrl and key == Qt.Key_D:      self._on_debug();           return
-        if ctrl and key == Qt.Key_T:      self._on_open_templates();  return
-        if ctrl and key == Qt.Key_A:      self._on_open_assets();     return
-        if ctrl and key == Qt.Key_R:      self._on_open_recorder();   return
->>>>>>> 23424c6 (commit)
+        if ctrl and key == Qt.Key_R:           self._on_open_recorder();   return
         if self._debug_thread and self._debug_thread.isRunning():
             if key == Qt.Key_Space: self._on_debug_step();  return
             if key == Qt.Key_F5:   self._on_debug_resume(); return
@@ -190,10 +187,15 @@ class MainWindow(QMainWindow):
     # ── API Server ────────────────────────────────────────────────────
 
     def _start_api_server(self):
+        # Conecta os signals antes de passar os callbacks para a API.
+        # Signal.emit() é thread-safe — despacha para a thread principal via event loop.
+        self._api_run_signal.connect(self._on_scheduler_trigger)
+        self._api_stop_signal.connect(self._on_stop)
+
         api = get_api_server()
         api.set_callbacks(
-            run_cb    = self._on_scheduler_trigger,   # reutiliza o mesmo callback
-            stop_cb   = self._on_stop,
+            run_cb    = self._api_run_signal.emit,   # chamado da thread Uvicorn → signal → main thread
+            stop_cb   = self._api_stop_signal.emit,  # idem
             flows_dir = "flows",
         )
         api.start()
@@ -232,9 +234,9 @@ class MainWindow(QMainWindow):
             self.canvas.load_from_data(data.get("steps", []))
             name = data.get("flow_name", flow_path)
             self._current_flow_name = name
-            self.log_panel.log("info", f"▶ Iniciado: {name}")
+            self.log_panel.log("info", f"▶ Iniciado remotamente: {name}")
             get_api_server().notify_started(name)
-            self._on_run()
+            self._start_run(start_index=0, interactive=False)   # sem dialog de validação
         except Exception as e:
             self.log_panel.log("error", f"Erro ao carregar fluxo: {str(e)}")
 
@@ -398,16 +400,14 @@ class MainWindow(QMainWindow):
         self.canvas.block_selected.connect(self.props_panel.show_block)
         self.canvas.canvas_clicked.connect(self.props_panel.clear)
         self.canvas.block_updated.connect(self._on_block_updated)
-<<<<<<< HEAD
         self.canvas.block_updated.connect(self._mark_unsaved)
         self.canvas.run_from_index.connect(self._on_run_from)
-=======
+        
         # Undo/Redo: salva histórico antes de aplicar edição de parâmetros
         self.props_panel.params_about_to_change.connect(self.canvas._push_history)
 
         # painel direito: largura mínima de 260px, sem fixação — redimensionável
         right_panel.setMinimumWidth(260)
->>>>>>> 23424c6 (commit)
 
         self.splitter.addWidget(self.block_panel)
         self.splitter.addWidget(self.canvas)
@@ -544,12 +544,12 @@ class MainWindow(QMainWindow):
     # ── Execução normal ───────────────────────────────────────────────
 
     def _on_run(self):
-        self._start_run(start_index=0)
+        self._start_run(start_index=0, interactive=True)
 
     def _on_run_from(self, index: int):
-        self._start_run(start_index=index)
+        self._start_run(start_index=index, interactive=True)
 
-    def _start_run(self, start_index: int = 0):
+    def _start_run(self, start_index: int = 0, interactive: bool = True):
         from ui.validation_dialog import ValidationDialog
         import time as _time
 
@@ -560,10 +560,23 @@ class MainWindow(QMainWindow):
         # Validação antes de executar
         issues = validate_flow(steps)
         if issues:
-            dlg = ValidationDialog(issues, self)
-            dlg.exec()
-            if not dlg.should_proceed():
-                return
+            if interactive:
+                # Execução manual: mostra dialog e aguarda confirmação
+                dlg = ValidationDialog(issues, self)
+                dlg.exec()
+                if not dlg.should_proceed():
+                    return
+            else:
+                # Execução remota (API/agendador): apenas loga, nunca bloqueia
+                errors   = [x for x in issues if x["level"] == "error"]
+                warnings = [x for x in issues if x["level"] == "warning"]
+                for w in warnings:
+                    self.log_panel.log("warning", f"⚠ Passo {w['step']} — {w['block']}: {w['msg']}")
+                if errors:
+                    for e in errors:
+                        self.log_panel.log("error", f"✗ Passo {e['step']} — {e['block']}: {e['msg']}")
+                    self.log_panel.log("error", "Execução remota cancelada: erros de validação impedem a execução.")
+                    return
 
         cfg = get_runner_config()
         self._set_running(True)
@@ -585,11 +598,9 @@ class MainWindow(QMainWindow):
 
     def _on_stop(self):
         if hasattr(self, "runner_thread") and self.runner_thread.isRunning():
-            self.runner_thread.terminate()
-            self.log_panel.log("error", "Execução interrompida.")
-            get_api_server().notify_finished(self._current_flow_name, False, "Interrompido pelo usuário")
-            self._set_running(False)
-            self.vars_panel.stop_live()
+            self.runner_thread.stop()
+            self.log_panel.log("warning", "Solicitando parada... aguardando passo atual finalizar.")
+            # Não chamamos _set_running(False) aqui, o sinal run_finished cuidará disso ao terminar
 
     # ── Modo debug ────────────────────────────────────────────────────
 
@@ -663,7 +674,7 @@ class MainWindow(QMainWindow):
     def _on_step_retry(self, index, name, attempt, max_attempts):
         self.log_panel.log("warning", f"↻ Retry {attempt}/{max_attempts}: {name}")
 
-    def _on_step_done(self, index, name, success, message, category=""):
+    def _on_step_done(self, index, name, category, success, message):
         self.canvas.set_block_state(index, "success" if success else "error")
         self.log_panel.log(
             "success" if success else "error",
@@ -817,61 +828,5 @@ class MainWindow(QMainWindow):
             self.props_panel.show_block(selected)
 
     def _apply_styles(self):
-<<<<<<< HEAD
-        self.setStyleSheet("""
-            QMainWindow, QWidget {
-                background-color: #1e1e2e; color: #cdd6f4;
-                font-family: 'Segoe UI', sans-serif; font-size: 13px;
-            }
-            QMenuBar { background-color: #181825; color: #cdd6f4; padding: 2px; border-bottom: 1px solid #313244; }
-            QMenuBar::item:selected { background-color: #313244; border-radius: 4px; }
-            QMenu { background-color: #1e1e2e; border: 1px solid #313244; border-radius: 6px; padding: 4px; }
-            QMenu::item { padding: 6px 20px; border-radius: 4px; }
-            QMenu::item:selected { background-color: #313244; }
-            #toolbar { background-color: #181825; border-bottom: 1px solid #313244; }
-            #app_title { font-size: 15px; font-weight: 600; color: #cba6f7; }
-            #retry_badge { font-size: 11px; font-weight: 600; color: #fab387; background-color: #2e1e0e; border: 1px solid #fab387; border-radius: 4px; padding: 2px 8px; }
-            QPushButton { border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 500; }
-            #btn_run { background-color: #a6e3a1; color: #1e1e2e; }
-            #btn_run:hover { background-color: #b9f0b3; }
-            #btn_run:disabled { background-color: #45475a; color: #6c7086; }
-            #btn_debug { background-color: #1e2a10; color: #a6e3a1; border: 1px solid #a6e3a1; }
-            #btn_debug:hover { background-color: #2a3a1a; }
-            #btn_debug:disabled { background-color: #45475a; color: #6c7086; border-color: #45475a; }
-            #btn_stop { background-color: #f38ba8; color: #1e1e2e; }
-            #btn_stop:hover { background-color: #f5a0b8; }
-            #btn_stop:disabled { background-color: #45475a; color: #6c7086; }
-            #btn_secondary { background-color: #313244; color: #cdd6f4; }
-            #btn_secondary:hover { background-color: #45475a; }
-            #btn_export { background-color: #1e3a5f; color: #89b4fa; border: 1px solid #89b4fa; }
-            #btn_palette { background-color: #2a1e3f; color: #cba6f7; border: 1px solid #cba6f7; font-weight: 600; }
-            #btn_palette:hover { background-color: #3a2e5f; }
-            #btn_templates { background-color: #2a2010; color: #fab387; border: 1px solid #fab387; }
-            #btn_templates:hover { background-color: #3a3020; }
-            #btn_scheduler { background-color: #313244; color: #cdd6f4; }
-            #btn_scheduler:hover { background-color: #45475a; }
-            #btn_api { background-color: #1a2e40; color: #89b4fa; border: 1px solid #89b4fa; font-weight: 600; }
-            #btn_api:hover { background-color: #1e3a50; }
-            #btn_assets { background-color: #2a1a3f; color: #cba6f7; border: 1px solid #cba6f7; font-weight: 600; }
-            #btn_assets:hover { background-color: #3a2a5f; }
-            #btn_vars { background-color: #1e2a1e; color: #a6e3a1; border: 1px solid #a6e3a1; }
-            #btn_vars:checked { background-color: #a6e3a1; color: #1e1e2e; }
-            #btn_settings { background-color: #313244; color: #6c7086; font-size: 15px; }
-            #btn_settings:hover { background-color: #45475a; color: #cdd6f4; }
-            #right_panel { background-color: #181825; }
-            QSplitter::handle { background-color: #313244; width: 1px; height: 4px; }
-            #v_splitter::handle { background-color: #313244; height: 4px; }
-            #log_top_sep { color: #313244; }
-            #status_bar { background-color: #181825; color: #6c7086; border-top: 1px solid #313244; font-size: 12px; }
-            QScrollBar:vertical { background: #1e1e2e; width: 8px; border-radius: 4px; }
-            QScrollBar::handle:vertical { background: #45475a; border-radius: 4px; min-height: 20px; }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
-            QScrollBar:horizontal { background: #1e1e2e; height: 8px; border-radius: 4px; }
-            QScrollBar::handle:horizontal { background: #45475a; border-radius: 4px; }
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
-        """)
-=======
         import engine.theme_manager as tm
         self.setStyleSheet(tm.build_main_qss())
-
->>>>>>> 23424c6 (commit)

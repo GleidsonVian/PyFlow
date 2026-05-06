@@ -6,110 +6,9 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QMimeData, QSize, QPropertyAnimation, QEasingCurve
 from PySide6.QtGui import QDrag, QColor, QFont, QCursor
 
-<<<<<<< HEAD
 from engine.blocks_registry import ALL_BLOCKS
 
 AVAILABLE_BLOCKS = ALL_BLOCKS
-=======
-from blocks.browser.open_browser         import OpenBrowserBlock
-from blocks.browser.click_element        import ClickElementBlock
-from blocks.browser.fill_field           import FillFieldBlock
-from blocks.browser.screenshot           import ScreenshotBlock
-from blocks.browser.extract_text         import ExtractTextBlock
-from blocks.browser.extract_list         import ExtractListBlock
-from blocks.browser.press_key            import PressKeyBlock
-from blocks.browser.scroll_page          import ScrollPageBlock
-from blocks.browser.get_current_url      import GetCurrentUrlBlock
-from blocks.browser.mouse_action         import MouseActionBlock
-from blocks.browser.smart_wait           import SmartWaitBlock
-from blocks.browser.nav_controls         import (
-    NavigateToUrlBlock, GoBackBlock, GoForwardBlock,
-    RefreshPageBlock, OpenNewTabBlock, CloseTabBlock,
-    SwitchTabBlock, CloseBrowserBlock
-)
-from blocks.control.wait                 import WaitBlock
-from blocks.control.if_block             import IfBlock
-from blocks.control.loop_block           import LoopBlock
-from blocks.control.for_each_block       import ForEachBlock
-from blocks.control.show_message         import ShowMessageBlock
-from blocks.control.desktop_notification import DesktopNotificationBlock
-from blocks.control.text_manipulation    import TextManipulationBlock
-from blocks.control.set_variable         import SetVariableBlock
-from blocks.control.sequence_start_block import SequenceStartBlock
-from blocks.control.sequence_end_block   import SequenceEndBlock
-from blocks.control.end_loop_block       import EndLoopBlock
-from blocks.control.end_foreach_block    import EndForEachBlock
-from blocks.control.end_if_block         import EndIfBlock
-from blocks.control.else_block           import ElseBlock
-from blocks.control.try_block            import TryBlock
-from blocks.control.catch_block          import CatchBlock
-from blocks.control.end_try_block        import EndTryBlock
-from blocks.control.while_block          import WhileBlock
-from blocks.control.end_while_block      import EndWhileBlock
-from blocks.files.read_csv               import ReadCsvBlock
-from blocks.files.save_text              import SaveTextBlock
-from blocks.files.save_csv               import SaveCsvBlock
-from blocks.files.sqlite_block           import SQLiteBlock
-from blocks.integration.http_request     import HttpRequestBlock
-from blocks.integration.send_email       import SendEmailBlock
-from blocks.integration.send_webhook     import SendWebhookBlock
-from blocks.system.keyboard_action       import KeyboardActionBlock
-from blocks.system.clipboard_block       import ClipboardBlock
-from blocks.control.subflow_block        import SubfluxoBlock
-from blocks.browser.execute_script       import ExecuteScriptBlock
-
-AVAILABLE_BLOCKS = [
-    OpenBrowserBlock,
-    ClickElementBlock,
-    FillFieldBlock,
-    ExtractTextBlock,
-    ExtractListBlock,
-    PressKeyBlock,
-    ScrollPageBlock,
-    GetCurrentUrlBlock,
-    ScreenshotBlock,
-    MouseActionBlock,
-    SmartWaitBlock,
-    ExecuteScriptBlock,
-    NavigateToUrlBlock,
-    GoBackBlock,
-    GoForwardBlock,
-    RefreshPageBlock,
-    OpenNewTabBlock,
-    CloseTabBlock,
-    SwitchTabBlock,
-    CloseBrowserBlock,
-    WaitBlock,
-    IfBlock,
-    ElseBlock,
-    EndIfBlock,
-    LoopBlock,
-    EndLoopBlock,
-    ForEachBlock,
-    EndForEachBlock,
-    WhileBlock,
-    EndWhileBlock,
-    TryBlock,
-    CatchBlock,
-    EndTryBlock,
-    SetVariableBlock,
-    SequenceStartBlock,
-    SequenceEndBlock,
-    ShowMessageBlock,
-    DesktopNotificationBlock,
-    TextManipulationBlock,
-    SubfluxoBlock,
-    KeyboardActionBlock,
-    ClipboardBlock,
-    ReadCsvBlock,
-    SaveTextBlock,
-    SaveCsvBlock,
-    SQLiteBlock,
-    HttpRequestBlock,
-    SendEmailBlock,
-    SendWebhookBlock,
-]
->>>>>>> 23424c6 (commit)
 
 # Ícone e cor de destaque por categoria
 CATEGORY_META = {
@@ -118,6 +17,7 @@ CATEGORY_META = {
     "Arquivos":    {"icon": "📁", "color": "#a6e3a1"},
     "Integração":  {"icon": "🔌", "color": "#fab387"},
     "Sistema":     {"icon": "💻", "color": "#f38ba8"},
+    "Gatilhos":    {"icon": "⚡", "color": "#f9e2af"},
 }
 
 

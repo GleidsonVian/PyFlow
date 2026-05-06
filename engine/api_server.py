@@ -439,12 +439,13 @@ async def webhook_trigger(flow_name: str, request: Request):
     # Salva payload no inbox para ser lido pelo runner
     _webhook_inbox[flow_name] = payload
 
-    # Injeta no contexto de variáveis imediatamente
+    # Injeta no contexto de variáveis imediatamente (thread-safe: dict é mutável)
     try:
-        from blocks.browser.extract_text import ExtractTextBlock
-        ExtractTextBlock._context["webhook_payload"] = payload
+        import engine.execution_context as _ctx
+        store = _ctx.get()
+        store["webhook_payload"] = payload
         for k, v in payload.items():
-            ExtractTextBlock._context[f"webhook_{k}"] = str(v) if not isinstance(v, (list, dict)) else v
+            store[f"webhook_{k}"] = str(v) if not isinstance(v, (list, dict)) else v
     except Exception:
         pass
 

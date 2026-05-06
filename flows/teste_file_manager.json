@@ -1,0 +1,65 @@
+{
+  "flow_name": "Teste Gerenciador de Arquivos",
+  "steps": [
+    {
+      "block": "SaveTextBlock",
+      "params": {
+        "content": "Este é um arquivo de teste para o File Manager.",
+        "filepath": "temp_origem.txt",
+        "mode": "overwrite",
+        "nota": "Cria um arquivo inicial para os testes"
+      }
+    },
+    {
+      "block": "FileManagerBlock",
+      "params": {
+        "action": "copy",
+        "source": "temp_origem.txt",
+        "destination": "pasta_teste/temp_copia.txt",
+        "nota": "Copia o arquivo para uma nova pasta"
+      }
+    },
+    {
+      "block": "FileManagerBlock",
+      "params": {
+        "action": "rename",
+        "source": "temp_origem.txt",
+        "destination": "temp_renomeado.txt",
+        "nota": "Renomeia o arquivo original"
+      }
+    },
+    {
+      "block": "FileManagerBlock",
+      "params": {
+        "action": "exists",
+        "source": "pasta_teste/temp_copia.txt",
+        "variable_name": "copia_existe",
+        "nota": "Verifica se a cópia realmente foi criada"
+      }
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Status do Arquivo",
+        "message": "O arquivo de cópia existe na pasta_teste? {{copia_existe}}",
+        "kind": "info"
+      }
+    },
+    {
+      "block": "FileManagerBlock",
+      "params": {
+        "action": "delete",
+        "source": "pasta_teste",
+        "nota": "Deleta a pasta inteira de teste"
+      }
+    },
+    {
+      "block": "FileManagerBlock",
+      "params": {
+        "action": "delete",
+        "source": "temp_renomeado.txt",
+        "nota": "Deleta o arquivo renomeado para limpar o ambiente"
+      }
+    }
+  ]
+}

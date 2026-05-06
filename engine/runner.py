@@ -1,4 +1,6 @@
 import time
+import os
+from datetime import datetime
 from blocks.base_block import BaseBlock
 import engine.execution_context as ctx
 from engine.execution_context import resolve_params
@@ -74,16 +76,14 @@ def _should_retry(message: str, cfg) -> tuple:
     return True, "erro desconhecido (retry por precaução)"
 
 
-<<<<<<< HEAD
-=======
-# ── Resolve params (mantido igual ao seu) ─────────────────────────────────────
-
 def resolve_params(params: dict, context: dict) -> dict:
     """
     Substitui tokens dinâmicos pelo valor real.
     1. {{ASSET:nome}} → Busca no arquivo de credenciais/configurações.
     2. {{nome}}       → Busca nas variáveis de execução (contexto).
     """
+    import re
+    from engine.asset_manager import AssetManager
     resolved = {}
     for key, value in params.items():
         if key == "nota":          # campo de anotação do canvas — não passa para execute()
@@ -110,7 +110,6 @@ def resolve_params(params: dict, context: dict) -> dict:
     return resolved
 
 
->>>>>>> 23424c6 (commit)
 # ── RunnerConfig — agora com ConditionalRetry ─────────────────────────────────
 
 class RunnerConfig:
@@ -181,6 +180,37 @@ class Runner:
         self.on_step_error = on_step_error
         self.on_step_retry = on_step_retry
         self.config = config or _config
+        self._stopped = False
+
+    def stop(self):
+        """Solicita a parada segura da execução."""
+        self._stopped = True
+
+    def _take_error_screenshot(self, index: int, block: BaseBlock, result: dict):
+        """Captura screenshot se houver um navegador ativo."""
+        try:
+            from blocks.browser.open_browser import OpenBrowserBlock
+            driver = OpenBrowserBlock.get_driver()
+            if not driver:
+                return
+
+            if not os.path.exists("screenshots"):
+                os.makedirs("screenshots")
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            # Limpa o nome do bloco para o nome do arquivo
+            safe_name = "".join(c for c in block.name if c.isalnum() or c in (" ", "_")).strip().replace(" ", "_")
+            filename = f"ERRO_{index + 1}_{safe_name}_{timestamp}.png"
+            filepath = os.path.abspath(os.path.join("screenshots", filename))
+
+            driver.save_screenshot(filepath)
+            result["screenshot"] = filepath
+            print(f"  📸 Screenshot de erro salvo: {filepath}")
+        except Exception as e:
+            print(f"  ⚠ Falha ao capturar screenshot: {e}")
+
+    def _get_context(self):
+        return ctx.get()
 
     def _execute_with_retry(self, index: int, block: BaseBlock, params: dict) -> dict:
         """Executa um bloco com ConditionalRetry."""
@@ -214,7 +244,7 @@ class Runner:
                 time.sleep(cfg.retry_delay)
 
             # Re-resolve params (variáveis podem ter mudado entre tentativas)
-            resolved = resolve_params(params)
+            resolved = resolve_params(params, self._get_context())
             result = block.execute(resolved)
 
             if result.get("success"):
@@ -234,10 +264,6 @@ class Runner:
         result["retry_attempts"]    = max_attempts
         return result
 
-<<<<<<< HEAD
-    def run(self, steps: list, start_index: int = 0) -> list:
-        ctx.clear()
-=======
     # ── Helpers para blocos de controle ──────────────────────────────────
 
     @staticmethod
@@ -301,8 +327,33 @@ class Runner:
                 return j
         return -1
 
-    def run(self, steps: list) -> list:
->>>>>>> 23424c6 (commit)
+    def run(self, steps: list, start_index: int = 0) -> list:
+        if start_index == 0:
+            # Salva payload de webhook antes de limpar, para não perder os dados injetados pela API
+            _webhook_snapshot: dict = {}
+            try:
+                from engine.api_server import _webhook_inbox
+                if steps:
+                    first_cls = type(steps[0].get("block_instance")).__name__
+                    if first_cls == "WebhookTriggerBlock":
+                        path = steps[0].get("params", {}).get("path", "")
+                        if path in _webhook_inbox:
+                            payload = _webhook_inbox[path]
+                            _webhook_snapshot["webhook_payload"] = payload
+                            if isinstance(payload, dict):
+                                for k, v in payload.items():
+                                    _webhook_snapshot[f"webhook_{k}"] = (
+                                        str(v) if not isinstance(v, (list, dict)) else v
+                                    )
+            except Exception:
+                pass
+
+            ctx.clear()
+
+            # Restaura o payload no contexto após o clear
+            if _webhook_snapshot:
+                ctx.get().update(_webhook_snapshot)
+
         results = []
         total = len(steps)
         i = max(0, start_index)
@@ -314,21 +365,21 @@ class Runner:
         })
 
         while i < total:
+            if self._stopped:
+                print("  ⚠ Parada solicitada pelo usuário.")
+                break
+
             step  = steps[i]
             block: BaseBlock = step["block_instance"]
             btype = self._block_type(step)
             raw_params: dict = step.get("params", {})
 
-<<<<<<< HEAD
-            params = resolve_params(raw_params)
-=======
             # Marcadores de fim/else são consumidos pelo bloco de controle — não executar
             if btype in _SKIP_TYPES:
                 i += 1
                 continue
 
             params = resolve_params(raw_params, self._get_context())
->>>>>>> 23424c6 (commit)
 
             print(f"\n[{i + 1}/{total}] Executando: {block.name}")
 
@@ -342,6 +393,14 @@ class Runner:
 
             if not result.get("success"):
                 msg = result.get("message", "Erro desconhecido")
+                
+                # Screenshot automático para erros de navegador
+                if getattr(block, "category", "") == "Navegador":
+                    self._take_error_screenshot(i, block, result)
+                    if result.get("screenshot"):
+                        msg += f" (📸 {os.path.basename(result['screenshot'])})"
+                        result["message"] = msg
+
                 if result.get("exhausted_retries"):
                     print(f"  ✗ Falhou após {result.get('retry_attempts', '?')} retries: {msg}")
                 elif result.get("retry_skipped"):
@@ -395,14 +454,6 @@ class Runner:
 
             # ── FOR EACH ──────────────────────────────────────────────
             if data.get("foreach"):
-<<<<<<< HEAD
-                items        = data["items"]
-                var_name     = data["variable_name"]
-                blocks_count = data["blocks_count"]
-                delay        = data.get("delay_between", 0)
-                foreach_steps = steps[i + 1: i + 1 + blocks_count]
-=======
-                from blocks.browser.extract_text import ExtractTextBlock
                 end_idx = self._find_scope_end(steps, i + 1, "EndForEachBlock", "ForEachBlock")
                 if end_idx == -1:
                     print("  ⚠ Para Cada sem 'Fim do Para Cada' — pulando.")
@@ -414,10 +465,9 @@ class Runner:
                 delay      = data.get("delay_between", 0)
                 body_steps = steps[i + 1: end_idx]
                 print(f"  → Para Cada: {len(items)} item(s), variável '{var_name}'")
->>>>>>> 23424c6 (commit)
 
                 for idx, item in enumerate(items):
-                    ctx.get()[var_name] = item
+                    self._get_context()[var_name] = item
                     print(f"    Item {idx + 1}/{len(items)}: {item}")
                     sub = self._run_sub(body_steps, i + 1)
                     results.extend(sub)
@@ -487,8 +537,7 @@ class Runner:
                         catch_step = steps[catch_idx]
                         save_to = catch_step.get("params", {}).get("save_error_to", "").strip()
                         if save_to:
-                            from blocks.browser.extract_text import ExtractTextBlock
-                            ExtractTextBlock._context[save_to] = error_msg
+                            self._get_context()[save_to] = error_msg
                             print(f"  ↳ Erro salvo em '{save_to}'")
 
                         catch_steps = steps[catch_idx + 1: end_idx]
@@ -554,37 +603,9 @@ class Runner:
         return results
 
     def _run_sub(self, steps: list, base_index: int) -> list:
-<<<<<<< HEAD
-        """Executa sub-fluxos (usado por Loop e ForEach)."""
-        results = []
-        for j, step in enumerate(steps):
-            block: BaseBlock = step["block_instance"]
-            raw_params: dict = step.get("params", {})
-            real_index = base_index + j
-            params = resolve_params(raw_params)
-
-            if self.on_step_start:
-                self.on_step_start(real_index, block)
-
-            result = self._execute_with_retry(real_index, block, params)
-            result["step_index"] = real_index
-            result["block_name"] = block.name
-            results.append(result)
-
-            if result.get("success"):
-                if self.on_step_done:
-                    self.on_step_done(real_index, block, result)
-            else:
-                if self.on_step_error:
-                    self.on_step_error(real_index, block, result)
-                if self.config.stop_on_failure:
-                    break
-
-        return results
-=======
         """
         Executa sub-fluxos (Loop / ForEach / If).
         Delega ao run() principal para que If/Loop/ForEach aninhados funcionem corretamente.
         """
         return self.run(steps)
->>>>>>> 23424c6 (commit)
+

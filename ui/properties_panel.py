@@ -1,14 +1,11 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
-    QPushButton, QScrollArea, QLineEdit, QCheckBox, QTabWidget, QComboBox
+    QPushButton, QScrollArea, QLineEdit, QCheckBox, QTabWidget, QComboBox,
+    QTextEdit
 )
-<<<<<<< HEAD
-from PySide6.QtCore import Qt
-import engine.execution_context as ctx
-=======
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap
->>>>>>> 23424c6 (commit)
+import engine.execution_context as ctx
 
 
 def _get_available_variables() -> list[str]:
@@ -268,13 +265,25 @@ class PropertiesPanel(QWidget):
                 row.addWidget(btn_pick)
                 layout.addLayout(row)
             else:
-                edit = QLineEdit()
-                edit.setObjectName("field_input")
-                edit.setText(str(current))
-                if schema.get("placeholder"):
-                    edit.setPlaceholderText(schema["placeholder"])
-                self._fields[field_name] = edit
-                layout.addWidget(edit)
+                field_name = schema["name"]
+                if schema["type"] == "text":
+                    edit = QTextEdit()
+                    edit.setObjectName("field_text")
+                    edit.setMinimumHeight(120)
+                    edit.setAcceptRichText(False)
+                    edit.setPlaceholderText(schema.get("placeholder", ""))
+                    edit.setPlainText(str(current))
+                    edit.setStyleSheet("font-family: Consolas, monospace; font-size: 11px;")
+                    self._fields[field_name] = edit
+                    layout.addWidget(edit)
+                else:
+                    edit = QLineEdit()
+                    edit.setObjectName("field_input")
+                    edit.setText(str(current))
+                    if schema.get("placeholder"):
+                        edit.setPlaceholderText(schema["placeholder"])
+                    self._fields[field_name] = edit
+                    layout.addWidget(edit)
 
         return container
 
@@ -287,6 +296,8 @@ class PropertiesPanel(QWidget):
                 self._current_widget.params[name] = field.isChecked()
             elif isinstance(field, QComboBox):
                 self._current_widget.params[name] = field.currentData()
+            elif isinstance(field, QTextEdit):
+                self._current_widget.params[name] = field.toPlainText()
             elif isinstance(field, QLineEdit):
                 self._current_widget.params[name] = field.text().strip()
         self._current_widget.update_params_label()
@@ -582,6 +593,11 @@ class PropertiesPanel(QWidget):
                 border-radius: 6px; padding: 6px 10px; color: #cdd6f4; font-size: 12px;
             }
             #field_input:focus { border-color: #cba6f7; }
+            #field_text {
+                background-color: #1e1e2e; border: 1px solid #45475a;
+                border-radius: 6px; padding: 8px; color: #cdd6f4; font-size: 11px;
+            }
+            #field_text:focus { border-color: #cba6f7; }
             #field_select {
                 background-color: #313244; border: 1px solid #45475a;
                 border-radius: 6px; padding: 4px 8px; color: #cdd6f4; font-size: 12px;

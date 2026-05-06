@@ -1,0 +1,262 @@
+[
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-06T10:59:28.599090",
+    "finished_at": "2026-05-06T10:59:35.380006",
+    "duration_s": 6.8,
+    "total_steps": 1,
+    "ok_steps": 1,
+    "success": true
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-06T11:00:29.253828",
+    "finished_at": "2026-05-06T11:00:41.839074",
+    "duration_s": 12.6,
+    "total_steps": 2,
+    "ok_steps": 1,
+    "success": false
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-06T11:01:53.524729",
+    "finished_at": "2026-05-06T11:02:17.946193",
+    "duration_s": 24.4,
+    "total_steps": 2,
+    "ok_steps": 1,
+    "success": false
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-06T11:05:24.634055",
+    "finished_at": "2026-05-06T11:05:37.182374",
+    "duration_s": 12.5,
+    "total_steps": 2,
+    "ok_steps": 1,
+    "success": false
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-06T11:24:36.796478",
+    "finished_at": "2026-05-06T11:24:39.514408",
+    "duration_s": 2.7,
+    "total_steps": 1,
+    "ok_steps": 1,
+    "success": true
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-06T11:26:06.643638",
+    "finished_at": "2026-05-06T11:26:09.472351",
+    "duration_s": 2.8,
+    "total_steps": 1,
+    "ok_steps": 1,
+    "success": true
+  },
+  {
+    "flow_name": "Teste Script Python",
+    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\teste_python_script.json",
+    "started_at": "2026-05-06T11:44:30.327530",
+    "finished_at": "2026-05-06T11:44:30.369297",
+    "duration_s": 0.0,
+    "total_steps": 3,
+    "ok_steps": 3,
+    "success": true
+  },
+  {
+    "flow_name": "Teste Gerenciador de Arquivos",
+    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\teste_file_manager.json",
+    "started_at": "2026-05-06T11:48:01.133152",
+    "finished_at": "2026-05-06T11:48:01.189795",
+    "duration_s": 0.1,
+    "total_steps": 7,
+    "ok_steps": 7,
+    "success": true
+  },
+  {
+    "flow_name": "Automação Estilo n8n",
+    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\exemplo_estilo_n8n.json",
+    "started_at": "2026-05-06T12:02:35.394213",
+    "finished_at": "2026-05-06T12:02:35.433489",
+    "duration_s": 0.0,
+    "total_steps": 2,
+    "ok_steps": 1,
+    "success": false
+  },
+  {
+    "flow_name": "Automação Estilo n8n",
+    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\exemplo_estilo_n8n.json",
+    "started_at": "2026-05-06T12:03:14.953916",
+    "finished_at": "2026-05-06T12:03:14.970169",
+    "duration_s": 0.0,
+    "total_steps": 2,
+    "ok_steps": 1,
+    "success": false
+  },
+  {
+    "flow_name": "Automação Estilo n8n",
+    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\exemplo_estilo_n8n.json",
+    "started_at": "2026-05-06T12:05:05.136580",
+    "finished_at": "2026-05-06T12:05:05.153707",
+    "duration_s": 0.0,
+    "total_steps": 2,
+    "ok_steps": 1,
+    "success": false
+  },
+  {
+    "flow_name": "Automação Estilo n8n",
+    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\exemplo_estilo_n8n.json",
+    "started_at": "2026-05-06T12:05:42.279912",
+    "finished_at": "2026-05-06T12:05:42.321304",
+    "duration_s": 0.0,
+    "total_steps": 2,
+    "ok_steps": 1,
+    "success": false
+  },
+  {
+    "flow_name": "Automação Estilo n8n",
+    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\exemplo_estilo_n8n.json",
+    "started_at": "2026-05-06T12:06:49.751012",
+    "finished_at": "2026-05-06T12:06:50.046111",
+    "duration_s": 0.3,
+    "total_steps": 4,
+    "ok_steps": 4,
+    "success": true
+  },
+  {
+    "flow_name": "Automação Estilo n8n",
+    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\exemplo_estilo_n8n.json",
+    "started_at": "2026-05-06T12:13:30.522283",
+    "finished_at": "2026-05-06T12:13:30.842115",
+    "duration_s": 0.3,
+    "total_steps": 4,
+    "ok_steps": 4,
+    "success": true
+  },
+  {
+    "flow_name": "books",
+    "flow_path": "",
+    "started_at": "2026-05-06T12:16:23.709410",
+    "finished_at": "2026-05-06T12:16:29.654724",
+    "duration_s": 5.9,
+    "total_steps": 4,
+    "ok_steps": 4,
+    "success": true
+  },
+  {
+    "flow_name": "template_monitor_preco",
+    "flow_path": "",
+    "started_at": "2026-05-06T12:29:05.287489",
+    "finished_at": "2026-05-06T12:29:16.143018",
+    "duration_s": 10.9,
+    "total_steps": 8,
+    "ok_steps": 7,
+    "success": false
+  },
+  {
+    "flow_name": "teste_controle_fluxo",
+    "flow_path": "",
+    "started_at": "2026-05-06T12:29:47.097556",
+    "finished_at": "2026-05-06T12:29:47.268559",
+    "duration_s": 0.2,
+    "total_steps": 31,
+    "ok_steps": 30,
+    "success": false
+  },
+  {
+    "flow_name": "books",
+    "flow_path": "",
+    "started_at": "2026-05-06T12:29:55.024982",
+    "finished_at": "2026-05-06T12:29:58.207432",
+    "duration_s": 3.2,
+    "total_steps": 1,
+    "ok_steps": 1,
+    "success": true
+  },
+  {
+    "flow_name": "books",
+    "flow_path": "",
+    "started_at": "2026-05-06T12:31:52.563503",
+    "finished_at": "2026-05-06T12:31:57.887730",
+    "duration_s": 5.3,
+    "total_steps": 4,
+    "ok_steps": 4,
+    "success": true
+  },
+  {
+    "flow_name": "csv_para_txt",
+    "flow_path": "",
+    "started_at": "2026-05-06T12:32:00.064575",
+    "finished_at": "2026-05-06T12:32:00.108628",
+    "duration_s": 0.0,
+    "total_steps": 1,
+    "ok_steps": 0,
+    "success": false
+  },
+  {
+    "flow_name": "scraping_para_csv",
+    "flow_path": "",
+    "started_at": "2026-05-06T12:32:14.682538",
+    "finished_at": "2026-05-06T12:32:19.943867",
+    "duration_s": 5.3,
+    "total_steps": 6,
+    "ok_steps": 6,
+    "success": true
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-06T12:38:24.662251",
+    "finished_at": "2026-05-06T12:38:24.676572",
+    "duration_s": 0.0,
+    "total_steps": 1,
+    "ok_steps": 1,
+    "success": true
+  },
+  {
+    "flow_name": "teste",
+    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\teste.json",
+    "started_at": "2026-05-06T12:41:26.411906",
+    "finished_at": "2026-05-06T12:41:26.468543",
+    "duration_s": 0.1,
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true
+  },
+  {
+    "flow_name": "teste",
+    "flow_path": "",
+    "started_at": "2026-05-06T12:44:09.189711",
+    "finished_at": "2026-05-06T12:44:09.252264",
+    "duration_s": 0.1,
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true
+  },
+  {
+    "flow_name": "teste",
+    "flow_path": "",
+    "started_at": "2026-05-06T12:45:17.059691",
+    "finished_at": "2026-05-06T12:45:17.118783",
+    "duration_s": 0.1,
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true
+  },
+  {
+    "flow_name": "teste",
+    "flow_path": "",
+    "started_at": "2026-05-06T12:46:06.735206",
+    "finished_at": "2026-05-06T12:46:06.795072",
+    "duration_s": 0.1,
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true
+  }
+]

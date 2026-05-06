@@ -28,8 +28,17 @@ from blocks.browser.nav_controls         import (
 )
 from blocks.control.wait                 import WaitBlock
 from blocks.control.if_block             import IfBlock
+from blocks.control.else_block           import ElseBlock
+from blocks.control.end_if_block         import EndIfBlock
 from blocks.control.loop_block           import LoopBlock
+from blocks.control.end_loop_block       import EndLoopBlock
 from blocks.control.for_each_block       import ForEachBlock
+from blocks.control.end_foreach_block    import EndForEachBlock
+from blocks.control.while_block          import WhileBlock
+from blocks.control.end_while_block      import EndWhileBlock
+from blocks.control.try_block            import TryBlock
+from blocks.control.catch_block          import CatchBlock
+from blocks.control.end_try_block        import EndTryBlock
 from blocks.control.set_variable         import SetVariableBlock
 from blocks.control.sequence_start_block import SequenceStartBlock
 from blocks.control.sequence_end_block   import SequenceEndBlock
@@ -40,17 +49,22 @@ from blocks.control.subflow_block        import SubfluxoBlock
 from blocks.files.read_csv               import ReadCsvBlock
 from blocks.files.save_text              import SaveTextBlock
 from blocks.files.save_csv               import SaveCsvBlock
+from blocks.files.file_manager           import FileManagerBlock
 from blocks.files.sqlite_block           import SQLiteBlock
 from blocks.files.excel_block            import ExcelBlock
 from blocks.files.load_env_block          import LoadEnvBlock
 from blocks.files.zip_block              import ZipBlock
 from blocks.integration.http_request     import HttpRequestBlock
 from blocks.integration.send_email       import SendEmailBlock
+from blocks.integration.send_webhook     import SendWebhookBlock
 from blocks.integration.ftp_block        import FtpBlock
 from blocks.system.keyboard_action       import KeyboardActionBlock
 from blocks.system.clipboard_block       import ClipboardBlock
 from blocks.system.hash_block            import HashBlock
 from blocks.system.ocr_block             import OcrBlock
+from blocks.system.python_script         import PythonScriptBlock
+from blocks.trigger.timer_trigger        import TimerTriggerBlock
+from blocks.trigger.webhook_trigger      import WebhookTriggerBlock
 
 ALL_BLOCKS = [
     # Navegador
@@ -78,8 +92,17 @@ ALL_BLOCKS = [
     # Controle
     WaitBlock,
     IfBlock,
+    ElseBlock,
+    EndIfBlock,
     LoopBlock,
+    EndLoopBlock,
     ForEachBlock,
+    EndForEachBlock,
+    WhileBlock,
+    EndWhileBlock,
+    TryBlock,
+    CatchBlock,
+    EndTryBlock,
     SetVariableBlock,
     SequenceStartBlock,
     SequenceEndBlock,
@@ -92,18 +115,24 @@ ALL_BLOCKS = [
     ReadCsvBlock,
     SaveTextBlock,
     SaveCsvBlock,
+    FileManagerBlock,
     SQLiteBlock,
     ExcelBlock,
     ZipBlock,
     # Integração
     HttpRequestBlock,
     SendEmailBlock,
+    SendWebhookBlock,
     FtpBlock,
     # Sistema
     KeyboardActionBlock,
     ClipboardBlock,
     HashBlock,
     OcrBlock,
+    PythonScriptBlock,
+    # Gatilhos
+    TimerTriggerBlock,
+    WebhookTriggerBlock,
 ]
 
 BLOCK_BY_NAME: dict[str, type] = {cls.__name__: cls for cls in ALL_BLOCKS}
