@@ -391,5 +391,135 @@
     "failed_context": {
       "webhook_data": {}
     }
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-08T12:28:53.880277",
+    "finished_at": "2026-05-08T12:28:53.915140",
+    "duration_s": 0.0,
+    "total_steps": 3,
+    "ok_steps": 2,
+    "success": false,
+    "failed_idx": 1,
+    "failed_context": {
+      "webhook_data": {}
+    }
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-08T12:29:03.720558",
+    "finished_at": "2026-05-08T12:29:03.750766",
+    "duration_s": 0.0,
+    "total_steps": 3,
+    "ok_steps": 2,
+    "success": false,
+    "failed_idx": 1,
+    "failed_context": {
+      "webhook_data": {}
+    }
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-08T12:29:23.311192",
+    "finished_at": "2026-05-08T12:29:23.342181",
+    "duration_s": 0.0,
+    "total_steps": 3,
+    "ok_steps": 2,
+    "success": false,
+    "failed_idx": 1,
+    "failed_context": {
+      "webhook_data": {}
+    }
+  },
+  {
+    "flow_name": "Demo — Nós com múltiplas saídas",
+    "flow_path": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\demo_nos_multiplos.json",
+    "started_at": "2026-05-08T12:29:40.966901",
+    "finished_at": "2026-05-08T12:29:41.337494",
+    "duration_s": 0.4,
+    "total_steps": 5,
+    "ok_steps": 4,
+    "success": false,
+    "failed_idx": 2,
+    "failed_context": {
+      "log_execucao": "Executado em {'userId': 1, 'id': 1, 'title': 'delectus aut autem', 'completed': False}",
+      "resposta_api": {
+        "completed": false,
+        "id": 1,
+        "title": "delectus aut autem",
+        "userId": 1
+      },
+      "resposta_api_ok": "True",
+      "resposta_api_status": "200",
+      "titulo": "Resultado da API: {'userId': 1, 'id': 1, 'title': 'delectus aut autem', 'completed': False}",
+      "webhook_data": {}
+    }
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-08T12:33:09.917183",
+    "finished_at": "2026-05-08T12:33:10.247055",
+    "duration_s": 0.3,
+    "total_steps": 4,
+    "ok_steps": 2,
+    "success": false,
+    "failed_idx": 1,
+    "failed_context": {
+      "log_execucao": "Executado em {'userId': 1, 'id': 1, 'title': 'delectus aut autem', 'completed': False}",
+      "resposta_api": {
+        "completed": false,
+        "id": 1,
+        "title": "delectus aut autem",
+        "userId": 1
+      },
+      "resposta_api_ok": "True",
+      "resposta_api_status": "200"
+    }
+  },
+  {
+    "flow_name": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\extracao_wikipedia.json",
+    "flow_path": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\extracao_wikipedia.json",
+    "started_at": "2026-05-08T12:54:21.438986",
+    "finished_at": "2026-05-08T12:54:32.141062",
+    "duration_s": 10.7,
+    "total_steps": 7,
+    "ok_steps": 7,
+    "success": true,
+    "failed_idx": -1,
+    "failed_context": {
+      "resumo_rpa": "a enciclopédia livre que todos podem editar."
+    }
+  },
+  {
+    "flow_name": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\extracao_wikipedia.json",
+    "flow_path": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\extracao_wikipedia.json",
+    "started_at": "2026-05-08T12:55:42.043957",
+    "finished_at": "2026-05-08T12:55:49.922634",
+    "duration_s": 7.9,
+    "total_steps": 7,
+    "ok_steps": 7,
+    "success": true,
+    "failed_idx": -1,
+    "failed_context": {
+      "resumo_rpa": "a enciclopédia livre que todos podem editar."
+    }
+  },
+  {
+    "flow_name": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\gestao_arquivos_log.json",
+    "flow_path": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\gestao_arquivos_log.json",
+    "started_at": "2026-05-08T12:56:11.021115",
+    "finished_at": "2026-05-08T12:56:11.035250",
+    "duration_s": 0.0,
+    "total_steps": 2,
+    "ok_steps": 1,
+    "success": false,
+    "failed_idx": 1,
+    "failed_context": {
+      "projeto": "Relatório de Vendas"
+    }
   }
 ]

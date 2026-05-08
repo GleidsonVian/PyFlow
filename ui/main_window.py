@@ -1,3 +1,4 @@
+import time
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
     QSplitter, QPushButton, QLabel, QFileDialog,
@@ -35,7 +36,7 @@ from engine.api_server import get_api_server
 
 class RunnerThread(QThread):
     step_started = Signal(int, str, str)       # index, name, category
-    step_done    = Signal(int, str, str, bool, str)  # index, name, category, success, message
+    step_done    = Signal(int, str, str, bool, str, object)  # index, name, category, success, message, data
     step_retry   = Signal(int, str, int, int)
     run_finished = Signal(int, int, int, dict)  # ok, total, failed_idx, failed_context
 
@@ -48,8 +49,8 @@ class RunnerThread(QThread):
     def run(self):
         self.runner = Runner(
             on_step_start=lambda i, b: self.step_started.emit(i, b.name, getattr(b, "category", "")),
-            on_step_done= lambda i, b, r: self.step_done.emit(i, b.name, getattr(b, "category", ""), True,  r.get("message", "")),
-            on_step_error=lambda i, b, r: self.step_done.emit(i, b.name, getattr(b, "category", ""), False, r.get("message", "")),
+            on_step_done= lambda i, b, r: self.step_done.emit(i, b.name, getattr(b, "category", ""), True,  r.get("message", ""), r.get("data", {})),
+            on_step_error=lambda i, b, r: self.step_done.emit(i, b.name, getattr(b, "category", ""), False, r.get("message", ""), r.get("data", {})),
             on_step_retry=lambda i, b, a, m: self.step_retry.emit(i, b.name, a, m),
             config=get_runner_config(),
         )
@@ -91,8 +92,8 @@ class RunnerThread(QThread):
 
 class DebugSignals(QThread):
     sig_ready    = Signal(int, str)
-    sig_done     = Signal(int, str, str)
-    sig_error    = Signal(int, str, str)
+    sig_done     = Signal(int, str, str, object)
+    sig_error    = Signal(int, str, str, object)
     sig_finished = Signal(int, int)
 
     def __init__(self, steps):
@@ -100,8 +101,8 @@ class DebugSignals(QThread):
         self.steps = steps
         self.runner = DebugRunner(
             on_step_ready =lambda i, b, p: self.sig_ready.emit(i, b.name),
-            on_step_done  =lambda i, b, r: self.sig_done.emit(i, b.name, r.get("message", "")),
-            on_step_error =lambda i, b, r: self.sig_error.emit(i, b.name, r.get("message", "")),
+            on_step_done  =lambda i, b, r: self.sig_done.emit(i, b.name, r.get("message", ""), r.get("data", {})),
+            on_step_error =lambda i, b, r: self.sig_error.emit(i, b.name, r.get("message", ""), r.get("data", {})),
             on_finished   =lambda ok, t:   self.sig_finished.emit(ok, t),
         )
 
@@ -134,6 +135,7 @@ class MainWindow(QMainWindow):
             self.setWindowIcon(QIcon(str(_ICON_PATH)))
         self.flow_manager       = FlowManager()
         self.flow_exporter      = FlowExporter()
+        self._parent_flows      = [] # Pilha para navegação de sub-processos
         self._scheduler_dialog  = None
         self._api_dialog        = None
         self._palette           = None
@@ -307,6 +309,36 @@ class MainWindow(QMainWindow):
         self.btn_debug.setToolTip("Debug step-by-step  [Ctrl+D]")
         self.btn_debug.clicked.connect(self._on_debug)
 
+        # Breadcrumbs (Navegação de Sub-processos)
+        self.breadcrumb_bar = QWidget()
+        self.breadcrumb_bar.setObjectName("breadcrumb_bar")
+        self.breadcrumb_bar.setVisible(False)
+        self.breadcrumb_bar.setStyleSheet("""
+            #breadcrumb_bar { 
+                background-color: #1e1e2e; 
+                border-bottom: 1px solid #313244;
+                min-height: 40px;
+            }
+            QLabel { color: #cba6f7; font-weight: bold; font-size: 13px; }
+            QPushButton { 
+                background-color: #313244; 
+                color: #f38ba8; 
+                border-radius: 4px; 
+                padding: 4px 12px; 
+                font-weight: bold;
+            }
+            QPushButton:hover { background-color: #f38ba8; color: #11111b; }
+        """)
+        bb_layout = QHBoxLayout(self.breadcrumb_bar)
+        bb_layout.setContentsMargins(15, 0, 15, 0)
+        self.lbl_breadcrumb = QLabel("📍 Principal")
+        bb_layout.addWidget(self.lbl_breadcrumb)
+        bb_layout.addStretch()
+        self.btn_back = QPushButton("⬅ Voltar ao Principal")
+        self.btn_back.clicked.connect(self._on_exit_subflow)
+        bb_layout.addWidget(self.btn_back)
+        root.addWidget(self.breadcrumb_bar)
+
         # Inicializa a Palette mas não exibe ainda
         self.palette = CommandPalette(self)
         self.palette.sig_add_block.connect(self._on_palette_add_block)
@@ -389,10 +421,6 @@ class MainWindow(QMainWindow):
         self.lbl_retry.setObjectName("retry_badge")
         self.lbl_retry.hide()
 
-        tb.addWidget(title)
-        tb.addWidget(self.lbl_retry)
-        tb.addStretch()
-
         # Menu secundário "Mais"
         self.btn_more = QPushButton("⋯")
         self.btn_more.setObjectName("btn_more")
@@ -444,7 +472,14 @@ class MainWindow(QMainWindow):
 
         self.btn_more.setMenu(more_menu)
 
-        # Adiciona apenas os essenciais na toolbar
+        # Layout final da Toolbar
+        tb.addWidget(title)
+        tb.addWidget(self.lbl_retry)
+        tb.addStretch()
+        tb.addWidget(self.btn_run)
+        tb.addWidget(self.btn_debug)
+        tb.addWidget(self.btn_stop)
+        tb.addSpacing(10)
         tb.addWidget(self.btn_more)
         tb.addWidget(self.btn_save)
         
@@ -502,6 +537,7 @@ class MainWindow(QMainWindow):
         self.splitter.addWidget(self.block_panel)
         self.splitter.addWidget(self.canvas)
         self.canvas.scene.sig_quick_add.connect(self._on_quick_add)
+        self.canvas.request_enter_subflow.connect(self._on_enter_subflow)
         self.splitter.addWidget(self.right_tabs)
         self.splitter.setSizes([200, 780, 320])
         self.splitter.setCollapsible(0, False)
@@ -765,12 +801,14 @@ class MainWindow(QMainWindow):
         if self._debug_thread:
             self._debug_thread.stop()
 
-    def _on_debug_done(self, index, block_name, message):
+    def _on_debug_done(self, index, block_name, message, data=None):
         self.canvas.set_block_state(index, "success")
+        self.canvas.set_block_result(index, message, True, data=data)
         self.log_panel.log("success", f"✓ {block_name}: {message}")
 
-    def _on_debug_error(self, index, block_name, message):
+    def _on_debug_error(self, index, block_name, message, data=None):
         self.canvas.set_block_state(index, "error")
+        self.canvas.set_block_result(index, message, False, data=data)
         self.log_panel.log("error", f"✗ {block_name}: {message}")
 
     def _on_debug_finished(self, ok, total):
@@ -790,7 +828,7 @@ class MainWindow(QMainWindow):
     # ── Callbacks execução normal ─────────────────────────────────────
 
     def _on_step_started(self, index, name, category=""):
-        self._step_start_time = _time.time() # Registra o início do passo
+        self._step_start_time = time.time() # Registra o início do passo
         self.canvas.set_block_state(index, "running")
         self.status.showMessage(f"Passo {index + 1}: {name}...")
         self.log_panel.log("running", f"Passo {index + 1}: {name}", step=index + 1, block_name=name, category=category)
@@ -798,10 +836,10 @@ class MainWindow(QMainWindow):
     def _on_step_retry(self, index, name, attempt, max_attempts):
         self.log_panel.log("warning", f"↻ Retry {attempt}/{max_attempts}: {name}")
 
-    def _on_step_done(self, index, name, category, success, message):
-        duration = _time.time() - getattr(self, "_step_start_time", _time.time())
+    def _on_step_done(self, index, name, category, success, message, data=None):
+        duration = time.time() - getattr(self, "_step_start_time", time.time())
         self.canvas.set_block_state(index, "success" if success else "error")
-        self.canvas.set_block_result(index, message, success, duration=duration)
+        self.canvas.set_block_result(index, message, success, duration=duration, data=data)
         self.log_panel.log(
             "success" if success else "error",
             message or name,
@@ -811,7 +849,6 @@ class MainWindow(QMainWindow):
         )
 
     def _on_run_finished(self, ok, total, failed_idx=-1, failed_context=None):
-        import time as _time
         self._set_running(False)
         self.log_panel.log_run_end(ok, total)
         self.status.showMessage(f"Concluído: {ok}/{total} passos.")
@@ -820,12 +857,12 @@ class MainWindow(QMainWindow):
             self._current_flow_name, ok == total,
             f"{ok}/{total} passos com sucesso"
         )
-        duration = _time.time() - (self._run_start_time or _time.time())
+        duration = time.time() - (self._run_start_time or time.time())
         from datetime import datetime
         run_history.record(
             self._current_flow_name, self._current_flow_path,
             ok, total, duration,
-            datetime.fromtimestamp(self._run_start_time or _time.time()).isoformat(),
+            datetime.fromtimestamp(self._run_start_time or time.time()).isoformat(),
             failed_idx, failed_context or {}
         )
 
@@ -849,6 +886,57 @@ class MainWindow(QMainWindow):
         # Força reaplicação do estilo
         self.btn_headless.style().unpolish(self.btn_headless)
         self.btn_headless.style().polish(self.btn_headless)
+
+    # ── Navegação de Sub-processos ────────────────────────────────────
+
+    def _on_enter_subflow(self, node):
+        """Entra no sub-processo para edição inline."""
+        # Se não tiver dados internos, inicializa
+        internal = node.params.get("_internal_steps", [])
+        
+        # Salva o estado atual
+        current_state = self.canvas.get_serialized_steps()
+        self._parent_flows.append({
+            "state": current_state,
+            "node_id": node.node_id,
+            "name": node.params.get("flow_name", "Subfluxo")
+        })
+        
+        # Carrega o subfluxo
+        self.canvas.load_from_serialized_steps(internal)
+        
+        # Atualiza UI
+        self.breadcrumb_bar.setVisible(True)
+        path_str = " > ".join(["Principal"] + [f["name"] for f in self._parent_flows])
+        self.lbl_breadcrumb.setText(f"📍 {path_str}")
+        self.status.showMessage(f"Editando sub-processo: {node.params.get('flow_name', 'Sem nome')}")
+
+    def _on_exit_subflow(self):
+        """Volta para o nível superior."""
+        if not self._parent_flows:
+            return
+            
+        # Salva o que foi feito no subfluxo
+        sub_state = self.canvas.get_serialized_steps()
+        
+        # Recupera o pai
+        parent = self._parent_flows.pop()
+        self.canvas.load_from_serialized_steps(parent["state"])
+        
+        # Atualiza o nó do subfluxo no pai com os novos passos
+        # Nota: precisamos achar o nó novamente pois o canvas foi recarregado
+        target_node = next((n for n in self.canvas.scene._nodes if n.node_id == parent["node_id"]), None)
+        if target_node:
+            target_node.params["_internal_steps"] = sub_state
+        
+        # Atualiza UI
+        if not self._parent_flows:
+            self.breadcrumb_bar.setVisible(False)
+        else:
+            path_str = " > ".join(["Principal"] + [f["name"] for f in self._parent_flows])
+            self.lbl_breadcrumb.setText(f"📍 {path_str}")
+        
+        self.status.showMessage("De volta ao fluxo principal.")
 
     def _on_open_settings(self):
         if SettingsDialog(self).exec():

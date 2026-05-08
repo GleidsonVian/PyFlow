@@ -24,6 +24,7 @@ from ui.node_details_dialog import NodeDetailsDialog
 from ui.param_dialog import ParamDialog
 from ui.comment_item import CommentItem
 from ui.minimap import Minimap
+from ui.data_viewer import DataViewerDialog
 from ui.connection_style import (
     SNAP_DISTANCE, PORT_RADIUS_IDLE, PORT_RADIUS_HOVER,
     CONN_WIDTH_MAIN, CONN_WIDTH_GLOW, CONN_WIDTH_HOVER, COLORS
@@ -162,6 +163,19 @@ class ConnectionItem(QGraphicsPathItem):
         self.setZValue(-1)
         self._redraw()
         self._hov = False
+        self.setCursor(Qt.ArrowCursor)
+
+    def mousePressEvent(self, e):
+        # Se clicar no fio com o botão esquerdo e houver dados no nó de origem
+        if e.button() == Qt.LeftButton and self.src:
+            data = getattr(self.src.node, "_last_data", None)
+            if data:
+                parent = self.scene().views()[0].window() if self.scene().views() else None
+                dlg = DataViewerDialog(data, self.src.node.block_instance.name, parent)
+                dlg.exec()
+                e.accept()
+                return
+        super().mousePressEvent(e)
 
     def hoverEnterEvent(self, e):
         self._hov = True
@@ -238,6 +252,25 @@ class ConnectionItem(QGraphicsPathItem):
         painter.setBrush(Qt.NoBrush)
         painter.drawPath(self.path())
 
+        # Feedback visual de que há dados disponíveis para inspeção
+        if self.src and getattr(self.src.node, "_last_data", None):
+            # Desenha um pequeno brilho extra ou ícone no centro do cabo
+            path = self.path()
+            center_point = path.pointAtPercent(0.5)
+            
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor(base_hex))
+            painter.drawEllipse(center_point, 4, 4)
+            
+            # Halo de brilho pulsante (estático aqui, mas indica interatividade)
+            glow = QColor(glow_hex)
+            glow.setAlpha(150)
+            painter.setBrush(glow)
+            painter.drawEllipse(center_point, 7, 7)
+            
+            if self._hov:
+                self.setToolTip("Clique para ver dados de saída")
+
         if self.dst:
             p1   = self.dst.scene_center()
             p0   = self.src.scene_center()
@@ -279,9 +312,8 @@ class NodeItem(QGraphicsObject):
         self._last_result   = ""
         self._last_ok       = True
         self._last_duration = 0.0
+        self._last_data     = None
         self._pinned        = False
-        self._last_result = ""
-        self._last_ok     = True
 
         self.setFlag(QGraphicsItem.ItemIsMovable,            True)
         self.setFlag(QGraphicsItem.ItemIsSelectable,         True)
@@ -320,11 +352,15 @@ class NodeItem(QGraphicsObject):
         self.state = state
         self.update()
 
-    def set_result(self, message: str, ok: bool, duration: float = 0.0):
+    def set_result(self, message: str, ok: bool, duration: float = 0.0, data: object = None):
         self._last_result = message
         self._last_ok     = ok
         self._last_duration = duration
+        self._last_data = data
         self.update()
+        # Notifica conexões de saída para se atualizarem (mostra o ponto de dados)
+        for c in self.success_port.conns: c.update()
+        for c in self.error_port.conns: c.update()
 
     def toggle_pin(self):
         self.prepareGeometryChange()
@@ -531,8 +567,16 @@ class NodeItem(QGraphicsObject):
 
     def contextMenuEvent(self, e):
         sc = self.scene()
-        if not sc:
-            return
+        if not sc: return
+        
+        # Se este nó não estiver selecionado, seleciona apenas ele
+        if not self.isSelected():
+            sc.clearSelection()
+            self.setSelected(True)
+            
+        selected_nodes = [i for i in sc.selectedItems() if isinstance(i, NodeItem)]
+        multi = len(selected_nodes) > 1
+        
         menu = QMenu()
         menu.setStyleSheet("""
             QMenu { background:#1e1e2e; border:1px solid #313244;
@@ -541,27 +585,43 @@ class NodeItem(QGraphicsObject):
             QMenu::item:selected { background:#313244; color:#cba6f7; }
             QMenu::separator { background:#313244; height:1px; margin:4px 0; }
         """)
-        a_edit = menu.addAction("✏  Editar parâmetros")
-        a_run  = menu.addAction("▶  Executar a partir daqui")
+        
+        if not multi:
+            a_edit = menu.addAction("✏  Editar parâmetros")
+            a_run  = menu.addAction("▶  Executar a partir daqui")
+            menu.addSeparator()
+            pin_label = "📌  Desfixar output" if self._pinned else "📌  Fixar output"
+            a_pin  = menu.addAction(pin_label)
+            menu.addSeparator()
+        
+        a_dup = menu.addAction("📋  Duplicar selecionados" if multi else "📋  Duplicar nó")
+        
+        a_collapse = None
+        if multi:
+            menu.addSeparator()
+            a_collapse = menu.addAction("📦 Recolher para Sub-Processo")
+            
         menu.addSeparator()
-        pin_label = "📌  Desfixar output" if self._pinned else "📌  Fixar output"
-        a_pin  = menu.addAction(pin_label)
-        menu.addSeparator()
-        a_dup  = menu.addAction("📋  Duplicar nó")
-        menu.addSeparator()
-        a_del  = menu.addAction("✕  Remover nó")
-
+        a_del = menu.addAction("✕  Remover selecionados" if multi else "✕  Remover nó")
+        
         action = menu.exec(e.screenPos())
-        if action == a_edit:
+        if action == (a_edit if not multi else None):
             sc.sig_edit_node.emit(self)
-        elif action == a_run:
+        elif action == (a_run if not multi else None):
             sc.sig_run_from_node.emit(self)
-        elif action == a_pin:
+        elif action == (a_pin if not multi else None):
             self.toggle_pin()
         elif action == a_dup:
-            sc.duplicate_node(self)
+            if multi: sc.duplicate_selected()
+            else: sc.duplicate_node(self)
+        elif action == a_collapse:
+            if hasattr(sc, "_canvas"): sc._canvas.collapse_selected_to_subflow()
         elif action == a_del:
-            sc.remove_node(self)
+            if multi:
+                if hasattr(sc, "_canvas"): sc._canvas._push_history()
+                for n in selected_nodes: sc.remove_node(n, push_history=False)
+            else:
+                sc.remove_node(self)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -627,6 +687,76 @@ class NodeScene(QGraphicsScene):
         self.add_node(new_n, node.pos() + QPointF(48, 48))
         self.sig_nodes_changed.emit()
         return new_n
+
+    def duplicate_selected(self):
+        """Duplica todos os nós selecionados mantendo as conexões internas."""
+        selected = [i for i in self.selectedItems() if isinstance(i, NodeItem)]
+        if not selected: return
+        
+        if hasattr(self, "_canvas"):
+            self._canvas._push_history()
+            
+        # 1. Serializa os selecionados para facilitar a replicação com conexões
+        all_steps = self.get_serialized_steps()
+        sel_ids = {n.node_id for n in selected}
+        subset = [copy.deepcopy(s) for s in all_steps if s.get("_id") in sel_ids]
+        
+        # 2. Mapeia IDs antigos para novos
+        id_map = {}
+        for s in subset:
+            old_id = s["_id"]
+            new_id = uuid.uuid4().hex[:8]
+            id_map[old_id] = new_id
+            s["_id"] = new_id
+            s["_x"] += 60 # Offset visual
+            s["_y"] += 60
+            
+        # 3. Ajusta conexões internas do subset
+        for s in subset:
+            s_next = s.get("_next_success")
+            if s_next and s_next in id_map:
+                s["_next_success"] = id_map[s_next]
+            else:
+                s.pop("_next_success", None)
+                
+            e_next = s.get("_next_error")
+            if e_next and e_next in id_map:
+                s["_next_error"] = id_map[e_next]
+            else:
+                s.pop("_next_error", None)
+
+        # 4. Instancia e adiciona os novos nós
+        self.clearSelection()
+        node_map: dict[str, NodeItem] = {}
+        
+        for step in subset:
+            cls = BLOCK_REGISTRY.get(step.get("block"))
+            if not cls: continue
+            params = step.get("params", {})
+            node = NodeItem(cls(), params, step["_id"])
+            self.add_node(node, QPointF(step["_x"], step["_y"]))
+            node_map[step["_id"]] = node
+            node.setSelected(True)
+            
+        # 5. Restaura conexões internas
+        for step in subset:
+            src_node = node_map.get(step["_id"])
+            if not src_node: continue
+            
+            nxt_s = step.get("_next_success")
+            if nxt_s and nxt_s in node_map:
+                conn = ConnectionItem(src_node.success_port, node_map[nxt_s].in_port)
+                self._conns.append(conn)
+                self.addItem(conn)
+                
+            nxt_e = step.get("_next_error")
+            if nxt_e and nxt_e in node_map:
+                conn = ConnectionItem(src_node.error_port, node_map[nxt_e].in_port)
+                self._conns.append(conn)
+                self.addItem(conn)
+                
+        self._reindex()
+        self.sig_nodes_changed.emit()
 
     # ── conexão ───────────────────────────────────────────────────────────────
 
@@ -1143,20 +1273,32 @@ class _NodeView(QGraphicsView):
         super().mouseReleaseEvent(e)
 
     def contextMenuEvent(self, e):
+        sc = self.scene()
         item = self.itemAt(e.pos())
+        
+        # Se clicou em um item, deixa o item cuidar do menu
         if item:
             super().contextMenuEvent(e)
             return
-
+        
+        # Clique no fundo vazio
         menu = QMenu(self)
         menu.setStyleSheet("QMenu { background-color: #1e1e2e; color: #cdd6f4; border: 1px solid #313244; } QMenu::item:selected { background-color: #313244; }")
         
         act_comment = menu.addAction("📝 Adicionar Comentário")
         
+        selected_nodes = [i for i in sc.selectedItems() if isinstance(i, NodeItem)]
+        act_collapse = None
+        if selected_nodes:
+            menu.addSeparator()
+            act_collapse = menu.addAction("📦 Recolher para Sub-Processo")
+        
         action = menu.exec(e.globalPos())
         if action == act_comment:
             scene_pos = self.mapToScene(e.pos())
             self._canvas.add_comment_at(scene_pos)
+        elif action == act_collapse:
+            self._canvas.collapse_selected_to_subflow()
 
     def keyPressEvent(self, e):
         sc = self.scene()
@@ -1244,6 +1386,7 @@ class NodeCanvas(QWidget):
     block_updated  = Signal()
     run_from_index = Signal(int)
     request_save   = Signal()
+    request_enter_subflow = Signal(object) # (node)
 
     _MAX_HISTORY = 30
 
@@ -1326,10 +1469,10 @@ class NodeCanvas(QWidget):
             try: ordered[index].set_state(state)
             except RuntimeError: pass
 
-    def set_block_result(self, index: int, message: str, ok: bool = True, duration: float = 0.0):
+    def set_block_result(self, index: int, message: str, ok: bool = True, duration: float = 0.0, data: object = None):
         ordered = self.scene._ordered_nodes()
         if 0 <= index < len(ordered):
-            try: ordered[index].set_result(message, ok, duration)
+            try: ordered[index].set_result(message, ok, duration, data)
             except RuntimeError: pass
 
     def reset_block_states(self):
@@ -1346,6 +1489,9 @@ class NodeCanvas(QWidget):
 
     def get_serialized_steps(self) -> list:
         return self.scene.get_serialized_steps()
+
+    def load_from_serialized_steps(self, steps: list):
+        self.scene.load_from_steps(steps)
 
     def get_graph(self) -> list:
         """Retorna grafo completo para execução condicional (runner graph-aware)."""
@@ -1410,6 +1556,11 @@ class NodeCanvas(QWidget):
         self.block_selected.emit(node)
 
     def _on_edit_node(self, node: NodeItem):
+        # Se for um bloco de subfluxo, solicita entrada em vez de abrir detalhes
+        if type(node.block_instance).__name__ == "SubfluxoBlock":
+            self.request_enter_subflow.emit(node)
+            return
+
         dialog = NodeDetailsDialog(node, self)
         if dialog.exec():
             self._push_history()
@@ -1438,14 +1589,48 @@ class NodeCanvas(QWidget):
         if dialog.exec():
             self._push_history()
             # Encontra o centro da view atual no sistema de coordenadas da cena
-            rect = self.view.mapToScene(self.view.viewport().rect()).boundingRect()
-            center_pos = rect.center()
-            
+            rect = self.view.viewport().rect()
+            center_scene = self.view.mapToScene(rect.center())
             node = NodeItem(block_inst, dialog.get_params())
-            self.scene.add_node(node, center_pos)
-            self._auto_connect(node)
+            self.scene.add_node(node, center_scene - QPointF(NODE_W/2, NODE_H/2))
             self._select_node(node)
             self.block_updated.emit()
+
+    def collapse_selected_to_subflow(self):
+        """Transforma os nós selecionados em um único bloco de Subfluxo."""
+        selected = [i for i in self.scene.selectedItems() if isinstance(i, NodeItem)]
+        if not selected: return
+        
+        self._push_history()
+        
+        # 1. Calcula o centro da seleção para posicionar o novo bloco
+        rect = selected[0].sceneBoundingRect()
+        for n in selected[1:]:
+            rect = rect.united(n.sceneBoundingRect())
+        center = rect.center()
+        
+        # 2. Serializa os nós selecionados (apenas o sub-conjunto)
+        all_steps = self.scene.get_serialized_steps()
+        sel_ids = {n.node_id for n in selected}
+        internal_steps = [s for s in all_steps if s.get("_id") in sel_ids]
+        
+        # 3. Cria o bloco de Subfluxo
+        from blocks.control.subflow_block import SubfluxoBlock
+        sub_node = NodeItem(SubfluxoBlock(), {
+            "flow_name": "Sub-rotina Agrupada",
+            "_internal_steps": internal_steps
+        })
+        
+        # 4. Remove os nós originais (remove_node cuida das conexões)
+        for n in selected:
+            self.scene.remove_node(n, push_history=False)
+            
+        # 5. Adiciona o novo bloco de subfluxo
+        # Tenta centralizar
+        from ui.node_canvas import NODE_W, NODE_H
+        self.scene.add_node(sub_node, center - QPointF(NODE_W/2, NODE_H/2))
+        self._select_node(sub_node)
+        self.block_updated.emit()
 
     def add_comment_at(self, scene_pos: QPointF = None):
         self._push_history()

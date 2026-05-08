@@ -65,28 +65,31 @@ class SubfluxoBlock(BaseBlock):
         stop_on_fail = params.get("stop_on_failure",  True)
         flows_dir    = params.get("flows_dir", "flows").strip() or "flows"
 
-        # ── Localiza o arquivo ────────────────────────────────────────
-        flow_path = os.path.join(flows_dir, f"{flow_name}.json")
-        if not os.path.exists(flow_path):
-            flow_path = f"{flow_name}.json"
-        if not os.path.exists(flow_path):
-            available = self._list_available(flows_dir)
-            return {
-                "success": False,
-                "message": (
-                    f"Subfluxo '{flow_name}' não encontrado em '{flows_dir}/'.\n"
-                    f"Disponíveis: {', '.join(available) or 'nenhum'}"
-                )
-            }
+        # ── Localiza os dados (Memória ou Arquivo) ───────────────────
+        steps_data = params.get("_internal_steps")
+        
+        if not steps_data:
+            flow_path = os.path.join(flows_dir, f"{flow_name}.json")
+            if not os.path.exists(flow_path):
+                flow_path = f"{flow_name}.json"
+            if not os.path.exists(flow_path):
+                available = self._list_available(flows_dir)
+                return {
+                    "success": False,
+                    "message": (
+                        f"Subfluxo '{flow_name}' não encontrado em '{flows_dir}/'.\n"
+                        f"Disponíveis: {', '.join(available) or 'nenhum'}"
+                    )
+                }
 
-        # ── Carrega o JSON ────────────────────────────────────────────
-        try:
-            with open(flow_path, "r", encoding="utf-8") as f:
-                flow_data = json.load(f)
-        except Exception as e:
-            return {"success": False, "message": f"Erro ao ler '{flow_name}.json': {e}"}
+            # ── Carrega o JSON ────────────────────────────────────────────
+            try:
+                with open(flow_path, "r", encoding="utf-8") as f:
+                    flow_data = json.load(f)
+                    steps_data = flow_data.get("steps", [])
+            except Exception as e:
+                return {"success": False, "message": f"Erro ao ler '{flow_name}.json': {e}"}
 
-        steps_data = flow_data.get("steps", [])
         if not steps_data:
             return {"success": True, "message": f"Subfluxo '{flow_name}' executado (0 passos)."}
 
@@ -111,7 +114,7 @@ class SubfluxoBlock(BaseBlock):
                 on_step_start=lambda i, b: print(f"    [sub {i+1}/{len(steps)}] {b.name}"),
                 config=cfg,
             )
-            results = runner.run(steps)
+            results = runner.run_graph(steps)
         except Exception as e:
             if not share_vars:
                 ExtractTextBlock._context.clear()
@@ -157,14 +160,24 @@ class SubfluxoBlock(BaseBlock):
         }
 
     def _build_steps(self, steps_data: list) -> list:
-        from ui.canvas import BLOCK_REGISTRY
+        from engine.blocks_registry import BLOCK_BY_NAME as BLOCK_REGISTRY
+        import uuid
         steps = []
         for step in steps_data:
             block_name = step.get("block", "")
             block_cls  = BLOCK_REGISTRY.get(block_name)
             if block_cls is None:
-                raise ImportError(f"Bloco '{block_name}' não registrado no BLOCK_REGISTRY.")
-            steps.append({"block_instance": block_cls(), "params": step.get("params", {})})
+                continue
+            
+            s = {
+                "id":             step.get("_id", uuid.uuid4().hex[:8]),
+                "block_instance": block_cls(),
+                "params":         step.get("params", {}),
+                "next_success":   step.get("_next_success"),
+                "next_error":     step.get("_next_error"),
+                "_index":         step.get("_index", 0)
+            }
+            steps.append(s)
         return steps
 
     def _list_available(self, flows_dir: str) -> list:
