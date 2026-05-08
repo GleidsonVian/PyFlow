@@ -15,8 +15,9 @@ sem escrever código.
 - **Interface:** PySide6 (Qt)
 - **Automação web:** Selenium + ChromeDriver
 - **API local:** FastAPI + Uvicorn (servidor embutido, porta padrão 8080)
-- **Fluxos salvos como:** JSON na pasta `flows/`
-- **Tema:** Catppuccin Mocha (dark only — modo claro foi removido)
+- **Fluxos salvos como:** JSON na pasta `flows/` (suporta `_internal_steps` para sub-processos)
+- **Execução:** Motor Híbrido (Linear + Grafo via `run_graph`)
+- **Tema:** Catppuccin Mocha (dark only)
 - **Python:** 3.11+
 
 ---
@@ -185,6 +186,26 @@ valor = ExtractTextBlock._context.get("minha_variavel", "")
 - Roda em thread separada via `threading.Thread`
 - Porta padrão: `8080`. Se ocupada, `_find_free_port()` acha a próxima livre automaticamente
 - Endpoints existentes: `GET /flows`, `POST /run`, `GET /status`, `GET /history`, `POST /stop`, `GET /dashboard`, `GET /docs`
+
+---
+
+### 8. 📦 Sub-Processos e Navegação Hierárquica
+
+O PyFlow agora suporta "mergulho" em blocos. 
+- O bloco `SubfluxoBlock` pode conter um parâmetro chamado `_internal_steps` (uma lista de passos serializados).
+- `NodeCanvas` emite `request_enter_subflow` quando o usuário dá duplo-clique em um `SubfluxoBlock`.
+- `MainWindow` gerencia uma pilha (`_parent_flows`) para permitir a navegação de volta (Breadcrumbs).
+
+### 9. 🐜 Debugger Live Watch (Inspeção de Fios)
+
+Os dados de execução são propagados do `Runner` para a interface.
+- `ConnectionItem` (os fios) agora verifica se o nó de origem possui um `_last_result`.
+- Se houver dados, o fio exibe um indicador visual (glow).
+- Ao clicar no fio, a `MainWindow` abre o `DataViewer` para exibir o JSON/Texto formatado.
+
+### 10. 🗺 Motor de Grafo (`run_graph`)
+
+Diferente do `run()` linear, o `run_graph()` no `engine/runner.py` utiliza os IDs e as conexões (`next_success`/`next_error`) para decidir o próximo passo. Isso é essencial para sub-processos complexos que não são puramente sequenciais.
 
 ---
 
