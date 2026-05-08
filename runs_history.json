@@ -377,5 +377,19 @@
     "failed_context": {
       "webhook_data": {}
     }
+  },
+  {
+    "flow_name": "Teste Webhook Bitrix24",
+    "flow_path": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\teste_webhook_bitrix.json",
+    "started_at": "2026-05-08T11:59:50.244811",
+    "finished_at": "2026-05-08T11:59:50.284676",
+    "duration_s": 0.0,
+    "total_steps": 3,
+    "ok_steps": 2,
+    "success": false,
+    "failed_idx": 1,
+    "failed_context": {
+      "webhook_data": {}
+    }
   }
 ]

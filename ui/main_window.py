@@ -1,10 +1,10 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
     QSplitter, QPushButton, QLabel, QFileDialog,
-    QMessageBox, QStatusBar, QFrame, QSizePolicy, QMenu
+    QMessageBox, QStatusBar, QFrame, QSizePolicy, QMenu, QTabWidget
 )
 from PySide6.QtCore import Qt, QThread, Signal, QTimer
-from PySide6.QtGui import QAction, QIcon
+from PySide6.QtGui import QAction, QIcon, QShortcut, QKeySequence
 from pathlib import Path
 
 _ICON_PATH = Path(__file__).parent.parent / "assets" / "icon.png"
@@ -14,6 +14,7 @@ from ui.node_canvas import NodeCanvas as Canvas
 from ui.properties_panel import PropertiesPanel
 from ui.recorder_dialog import RecorderDialog
 from ui.log_panel import LogPanel
+from ui.help_panel import HelpPanel
 from ui.variables_panel import VariablesPanel
 from ui.command_palette import CommandPalette, Command
 from ui.debug_toolbar import DebugToolbar
@@ -142,6 +143,7 @@ class MainWindow(QMainWindow):
         self._current_flow_path = ""
         self._unsaved_changes   = False
         self._run_start_time    = None
+        self._pending_quick_add = None
         self._build_ui()
         self._build_menu()
         self._connect_block_signals()
@@ -468,28 +470,26 @@ class MainWindow(QMainWindow):
         self.splitter = QSplitter(Qt.Horizontal)
         self.splitter.setObjectName("main_splitter")
 
-        right_panel = QWidget()
-        right_panel.setObjectName("right_panel")
-        right_layout = QVBoxLayout(right_panel)
-        right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(0)
+        # Painel Inspetor Contextual (Tabs)
+        self.right_tabs = QTabWidget()
+        self.right_tabs.setObjectName("right_tabs")
+        self.right_tabs.setMinimumWidth(260)
 
         self.props_panel = PropertiesPanel()
         self.vars_panel  = VariablesPanel()
-        # painel de variáveis: altura mínima mas sem largura fixa (herda do splitter)
-        self.vars_panel.setMinimumHeight(160)
-        self.vars_panel.setMaximumHeight(320)
+        self.log_panel   = LogPanel()
+        self.help_panel  = HelpPanel()
 
-        sep_mid = QFrame()
-        sep_mid.setFrameShape(QFrame.HLine)
-        sep_mid.setObjectName("log_top_sep")
-
-        right_layout.addWidget(self.props_panel, 1)
-        right_layout.addWidget(sep_mid)
-        right_layout.addWidget(self.vars_panel)
+        self.right_tabs.addTab(self.props_panel, "⚙ Props")
+        self.right_tabs.addTab(self.vars_panel, "𝑥 Vars")
+        self.right_tabs.addTab(self.log_panel, "📜 Logs")
+        self.right_tabs.addTab(self.help_panel, "❓ Ajuda")
 
         self.canvas.block_selected.connect(self.props_panel.show_block)
+        self.canvas.block_selected.connect(self.help_panel.show_block)
         self.canvas.canvas_clicked.connect(self.props_panel.clear)
+        self.canvas.canvas_clicked.connect(self.help_panel.clear)
+        
         self.canvas.block_updated.connect(self._on_block_updated)
         self.canvas.block_updated.connect(self._mark_unsaved)
         self.canvas.run_from_index.connect(self._on_run_from)
@@ -499,25 +499,20 @@ class MainWindow(QMainWindow):
         # Undo/Redo: salva histórico antes de aplicar edição de parâmetros
         self.props_panel.params_about_to_change.connect(self.canvas._push_history)
 
-        # painel direito: largura mínima de 260px, sem fixação — redimensionável
-        right_panel.setMinimumWidth(260)
-
         self.splitter.addWidget(self.block_panel)
         self.splitter.addWidget(self.canvas)
-        self.splitter.addWidget(right_panel)
-        self.splitter.setSizes([200, 680, 360])
+        self.canvas.scene.sig_quick_add.connect(self._on_quick_add)
+        self.splitter.addWidget(self.right_tabs)
+        self.splitter.setSizes([200, 780, 320])
         self.splitter.setCollapsible(0, False)
-        self.splitter.setCollapsible(2, False)
+        # Permite colapsar o painel direito (agora feito via atalho)
+        self.splitter.setCollapsible(2, True)
 
-        self.log_panel = LogPanel()
+        root.addWidget(self.splitter, 1)
 
-        self.v_splitter = QSplitter(Qt.Vertical)
-        self.v_splitter.setObjectName("v_splitter")
-        self.v_splitter.addWidget(self.splitter)
-        self.v_splitter.addWidget(self.log_panel)
-        self.v_splitter.setSizes([620, 180])
-        self.v_splitter.setCollapsible(0, False)
-        root.addWidget(self.v_splitter, 1)
+        # Atalho para esconder/mostrar barra lateral (Ctrl+B)
+        self.shortcut_toggle_sidebar = QShortcut(QKeySequence("Ctrl+B"), self)
+        self.shortcut_toggle_sidebar.activated.connect(self._toggle_sidebar)
 
         self.status = QStatusBar()
         self.status.setObjectName("status_bar")
@@ -558,6 +553,23 @@ class MainWindow(QMainWindow):
         run_menu.addAction(QAction("Histórico de execuções",       self, triggered=self._on_open_history))
         run_menu.addSeparator()
         run_menu.addAction(QAction("Configurações",                self, triggered=self._on_open_settings))
+
+    def _toggle_sidebar(self):
+        """Alterna a visibilidade do painel direito (Inspetor)."""
+        sizes = self.splitter.sizes()
+        if sizes[2] > 0:
+            # Salva o tamanho atual antes de fechar
+            self._last_sidebar_size = sizes[2]
+            self.splitter.setSizes([sizes[0], sizes[1] + sizes[2], 0])
+        else:
+            # Restaura o tamanho (ou usa 320 como padrão se não existir)
+            restore_size = getattr(self, "_last_sidebar_size", 320)
+            if restore_size < 100:
+                restore_size = 320
+            # Reduz o canvas para dar espaço à sidebar
+            new_canvas_size = max(100, sizes[1] - restore_size)
+            self.splitter.setSizes([sizes[0], new_canvas_size, restore_size])
+
 
     # ── Assets ────────────────────────────────────────────────────────
 
@@ -778,6 +790,7 @@ class MainWindow(QMainWindow):
     # ── Callbacks execução normal ─────────────────────────────────────
 
     def _on_step_started(self, index, name, category=""):
+        self._step_start_time = _time.time() # Registra o início do passo
         self.canvas.set_block_state(index, "running")
         self.status.showMessage(f"Passo {index + 1}: {name}...")
         self.log_panel.log("running", f"Passo {index + 1}: {name}", step=index + 1, block_name=name, category=category)
@@ -786,8 +799,9 @@ class MainWindow(QMainWindow):
         self.log_panel.log("warning", f"↻ Retry {attempt}/{max_attempts}: {name}")
 
     def _on_step_done(self, index, name, category, success, message):
+        duration = _time.time() - getattr(self, "_step_start_time", _time.time())
         self.canvas.set_block_state(index, "success" if success else "error")
-        self.canvas.set_block_result(index, message, success)
+        self.canvas.set_block_result(index, message, success, duration=duration)
         self.log_panel.log(
             "success" if success else "error",
             message or name,
@@ -941,7 +955,23 @@ class MainWindow(QMainWindow):
             self.props_panel.show_block(selected)
 
     def _on_palette_add_block(self, block_cls):
-        self.canvas.add_block_at_center(block_cls)
+        if self._pending_quick_add:
+            src_port  = self._pending_quick_add["src_port"]
+            scene_pos = self._pending_quick_add["pos"]
+            new_node = self.canvas.add_block_at_pos(block_cls, scene_pos)
+            if new_node:
+                self.canvas.add_connection(src_port, new_node.in_port)
+            self._pending_quick_add = None
+        else:
+            self.canvas.add_block_at_center(block_cls)
+
+    def _on_quick_add(self, src_port, scene_pos):
+        """Abre a paleta salvando o contexto para conexão automática."""
+        self._pending_quick_add = {"src_port": src_port, "pos": scene_pos}
+        # Centraliza a paleta na tela (padrão) ou poderíamos mover para o mouse
+        self.palette.show()
+        self.palette.search.setFocus()
+        self.palette.search.setText("")
 
     def _setup_command_palette(self):
         cmds = [
@@ -957,6 +987,12 @@ class MainWindow(QMainWindow):
             Command("Organizar Canvas", "Navegação", self.canvas.auto_layout, icon="📐"),
             Command("Limpar Canvas", "Navegação", self._on_clear, icon="🗑"),
             Command("Adicionar Comentário", "Navegação", self.canvas.add_comment_at_center, icon="📝"),
+            Command("Alinhar ao Topo", "Alinhamento", lambda: self.canvas.scene.align_selected_nodes("top"), shortcut="Ctrl+Shift+Up"),
+            Command("Alinhar à Base", "Alinhamento", lambda: self.canvas.scene.align_selected_nodes("bottom"), shortcut="Ctrl+Shift+Down"),
+            Command("Alinhar à Esquerda", "Alinhamento", lambda: self.canvas.scene.align_selected_nodes("left"), shortcut="Ctrl+Shift+Left"),
+            Command("Alinhar à Direita", "Alinhamento", lambda: self.canvas.scene.align_selected_nodes("right"), shortcut="Ctrl+Shift+Right"),
+            Command("Centralizar H", "Alinhamento", lambda: self.canvas.scene.align_selected_nodes("center_h"), shortcut="Ctrl+Shift+C"),
+            Command("Centralizar V", "Alinhamento", lambda: self.canvas.scene.align_selected_nodes("center_v"), shortcut="Ctrl+Shift+V"),
 
             
             Command("Assets / Senhas", "Gestão", self._on_open_assets, shortcut="Ctrl+A"),

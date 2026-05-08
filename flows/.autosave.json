@@ -1,16 +1,15 @@
 {
   "flow_name": "__autosave__",
-  "saved_at": "2026-05-08T10:05:52.590633",
+  "saved_at": "2026-05-08T11:59:41.403527",
   "steps": [
     {
       "block": "WebhookTriggerBlock",
       "params": {
         "path": "gleidson-bonito-123",
-        "save_payload": "webhook_data",
-        "nota": ""
+        "save_payload": "webhook_data"
       },
-      "_x": 0.0,
-      "_y": 0.0,
+      "_x": -48.0,
+      "_y": 216.0,
       "_id": "8e0edf2c",
       "_next_success": "4d63b287"
     },
@@ -22,8 +21,8 @@
         "kind": "info",
         "nota": ""
       },
-      "_x": 336.0,
-      "_y": 0.0,
+      "_x": 240.0,
+      "_y": 216.0,
       "_id": "4d63b287",
       "_next_error": "7fdc5675"
     },
@@ -35,18 +34,19 @@
         "kind": "warning",
         "nota": ""
       },
-      "_x": 648.0,
-      "_y": 0.0,
+      "_x": 696.0,
+      "_y": 312.0,
       "_id": "7fdc5675"
     },
     {
-      "type": "comment",
-      "text": "lçbklçbkfb\n",
-      "color": "Azul",
-      "_x": -18.6,
-      "_y": -182.7,
-      "width": 1010.9512229999993,
-      "height": 427.92362345312495
+      "type": "group",
+      "title": "Grupo de Blocos",
+      "color": "Roxo",
+      "width": 630.0,
+      "height": 176.0,
+      "_id": "dab87759",
+      "_x": -54.0,
+      "_y": 79.0
     }
   ]
 }

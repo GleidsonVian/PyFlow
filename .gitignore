@@ -62,3 +62,13 @@ htmlcov/
 *.bak
 *.swp
 teste_notif.py
+
+# ── Estado e Histórico do PyFlow ──────────────────────────────────────
+runs_history.json
+flows/.autosave.json
+assets/assets.enc
+teste_*.json
+
+# ── Pastas de IA / Auxiliares ─────────────────────────────────────────
+.claude/
+.gemini/

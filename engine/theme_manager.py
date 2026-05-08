@@ -144,6 +144,32 @@ QSplitter::handle:hover {{ background-color: {c['accent']}; }}
     border-top: 1px solid {c['border']};
     font-size: 12px;
 }}
+
+QTabWidget::pane {{
+    border: none;
+    border-top: 1px solid {c['border']};
+    background-color: {c['surface']};
+}}
+QTabWidget::tab-bar {{
+    alignment: left;
+}}
+QTabBar::tab {{
+    background-color: {c['surface']};
+    color: {c['subtle']};
+    padding: 8px 16px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+}}
+QTabBar::tab:hover {{
+    color: {c['text']};
+    background-color: {c['overlay']};
+}}
+QTabBar::tab:selected {{
+    color: {c['accent']};
+    border-bottom: 2px solid {c['accent']};
+}}
+
 QScrollBar:vertical {{
     background: {c['bg']}; width: 8px; border-radius: 4px;
 }}

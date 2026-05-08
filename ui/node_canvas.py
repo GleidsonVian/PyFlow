@@ -23,6 +23,11 @@ from engine.blocks_registry import BLOCK_BY_NAME
 from ui.node_details_dialog import NodeDetailsDialog
 from ui.param_dialog import ParamDialog
 from ui.comment_item import CommentItem
+from ui.minimap import Minimap
+from ui.connection_style import (
+    SNAP_DISTANCE, PORT_RADIUS_IDLE, PORT_RADIUS_HOVER,
+    CONN_WIDTH_MAIN, CONN_WIDTH_GLOW, CONN_WIDTH_HOVER, COLORS
+)
 BLOCK_REGISTRY = BLOCK_BY_NAME
 
 CATEGORY_COLORS = {
@@ -64,24 +69,53 @@ class PortItem(QGraphicsItem):
         self.setAcceptHoverEvents(True)
         self.setZValue(3)
         self._hov = False
+        
+        # Novas propriedades para feedback visual premium
+        self.is_hover_target = False
+        self.is_valid_target = True
 
     @property
     def is_output(self):
         return self.port_type in ("success", "error")
 
     def boundingRect(self) -> QRectF:
-        return QRectF(-PORT_R, -PORT_R, PORT_R * 2, PORT_R * 2)
+        r = PORT_RADIUS_HOVER + 4 # Folga para o glow
+        return QRectF(-r, -r, r * 2, r * 2)
 
     def paint(self, painter: QPainter, option, widget=None):
         painter.setRenderHint(QPainter.Antialiasing)
-        col = QColor(PORT_COLORS.get(self.port_type, "#8b8fa8"))
-        if self._hov or self.conns:
-            painter.setPen(QPen(col, 1.5))
-            painter.setBrush(col)
+        
+        is_active = self._hov or self.conns
+        
+        # Cor base
+        base_color = QColor(COLORS.get(self.port_type, COLORS["default"]))
+        
+        if self.is_hover_target:
+            # Pinta o feedback magnético
+            radius = PORT_RADIUS_HOVER
+            color = base_color if self.is_valid_target else QColor(COLORS["invalid"])
+            glow_color = QColor(color)
+            glow_color.setAlpha(80)
+            
+            # Glow externo
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(glow_color)
+            painter.drawEllipse(QRectF(-radius-3, -radius-3, (radius+3)*2, (radius+3)*2))
+            
+            # Porta principal maior
+            painter.setPen(QPen(color, 2))
+            painter.setBrush(color.darker(120))
+            painter.drawEllipse(QRectF(-radius, -radius, radius*2, radius*2))
+            
         else:
-            painter.setPen(QPen(col.darker(130), 1.5))
-            painter.setBrush(QColor("#1e1e2e"))
-        painter.drawEllipse(self.boundingRect())
+            radius = PORT_RADIUS_IDLE
+            if is_active:
+                painter.setPen(QPen(base_color, 1.5))
+                painter.setBrush(base_color)
+            else:
+                painter.setPen(QPen(base_color.darker(130), 1.5))
+                painter.setBrush(QColor("#1e1e2e"))
+            painter.drawEllipse(QRectF(-radius, -radius, radius*2, radius*2))
 
     def scene_center(self) -> QPointF:
         return self.mapToScene(QPointF(0, 0))
@@ -116,6 +150,7 @@ class ConnectionItem(QGraphicsPathItem):
         self.src = src
         self.dst = dst
         self._tip: QPointF | None = None
+        self.fade_mode = False
 
         if src:
             src.conns.append(self)
@@ -123,13 +158,30 @@ class ConnectionItem(QGraphicsPathItem):
             dst.conns.append(self)
 
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setAcceptHoverEvents(True)
         self.setZValue(-1)
         self._redraw()
+        self._hov = False
+
+    def hoverEnterEvent(self, e):
+        self._hov = True
+        self.update()
+        super().hoverEnterEvent(e)
+
+    def hoverLeaveEvent(self, e):
+        self._hov = False
+        self.update()
+        super().hoverLeaveEvent(e)
 
     def _color(self) -> str:
         if self.src:
-            return CONN_COLORS.get(self.src.port_type, "#8b8fa8")
-        return "#8b8fa8"
+            return COLORS.get(self.src.port_type, COLORS["default"])
+        return COLORS["default"]
+
+    def _glow_color(self) -> str:
+        if self.src:
+            return COLORS.get(f"glow_{self.src.port_type}", COLORS["glow_default"])
+        return COLORS["glow_default"]
 
     def set_tip(self, pos: QPointF):
         self._tip = pos
@@ -144,7 +196,8 @@ class ConnectionItem(QGraphicsPathItem):
         p0 = self.src.scene_center()
         p1 = self.dst.scene_center() if self.dst else (self._tip or p0)
 
-        dx   = max(abs(p1.x() - p0.x()) * 0.55, 80.0)
+        # Bezier Curve suave
+        dx   = max(abs(p1.x() - p0.x()) * 0.55, 60.0)
         path = QPainterPath(p0)
         path.cubicTo(
             QPointF(p0.x() + dx, p0.y()),
@@ -155,19 +208,40 @@ class ConnectionItem(QGraphicsPathItem):
 
     def paint(self, painter: QPainter, option, widget=None):
         painter.setRenderHint(QPainter.Antialiasing)
-        base  = self._color()
-        col   = "#f38ba8" if self.isSelected() else base
-        width = 2.5 if self.isSelected() else 2.0
-        pen   = QPen(QColor(col), width)
-        pen.setCapStyle(Qt.RoundCap)
-        painter.setPen(pen)
+        
+        base_hex = self._color()
+        base_col = QColor(base_hex)
+        glow_hex = self._glow_color()
+        glow_col = QColor(glow_hex)
+        
+        # Ajuste de opacidade para Fade Mode (quando arrastando outra conexão)
+        if self.fade_mode:
+            base_col.setAlpha(70) # 30% opacidade aprox
+            glow_col.setAlpha(20)
+        
+        # Glow Effect (Linha larga com opacidade)
+        glow_width = CONN_WIDTH_GLOW if self._hov else CONN_WIDTH_GLOW * 0.7
+        if not self.fade_mode:
+            pen_glow = QPen(glow_col, glow_width)
+            pen_glow.setCapStyle(Qt.RoundCap)
+            painter.setPen(pen_glow)
+            painter.setBrush(Qt.NoBrush)
+            painter.drawPath(self.path())
+        
+        # Linha Principal (Fina)
+        col   = QColor("#f38ba8") if self.isSelected() else base_col
+        width = CONN_WIDTH_HOVER if self.isSelected() or self._hov else CONN_WIDTH_MAIN
+        
+        pen_main = QPen(col, width)
+        pen_main.setCapStyle(Qt.RoundCap)
+        painter.setPen(pen_main)
         painter.setBrush(Qt.NoBrush)
         painter.drawPath(self.path())
 
         if self.dst:
             p1   = self.dst.scene_center()
             p0   = self.src.scene_center()
-            dx   = max(abs(p1.x() - p0.x()) * 0.55, 80.0)
+            dx   = max(abs(p1.x() - p0.x()) * 0.55, 60.0)
             tang = QPointF(p1.x() - dx, p1.y())
             ang  = math.atan2(p1.y() - tang.y(), p1.x() - tang.x())
             sz   = 9
@@ -178,7 +252,7 @@ class ConnectionItem(QGraphicsPathItem):
             arr.lineTo(p1.x() + sz * math.cos(a2), p1.y() + sz * math.sin(a2))
             arr.closeSubpath()
             painter.setPen(Qt.NoPen)
-            painter.setBrush(QColor(col))
+            painter.setBrush(col)
             painter.drawPath(arr)
 
     def detach(self):
@@ -202,8 +276,10 @@ class NodeItem(QGraphicsObject):
         self.node_id        = node_id or uuid.uuid4().hex[:8]
         self.state          = "idle"
         self._idx           = 0
-
-        self._pinned      = False
+        self._last_result   = ""
+        self._last_ok       = True
+        self._last_duration = 0.0
+        self._pinned        = False
         self._last_result = ""
         self._last_ok     = True
 
@@ -244,9 +320,11 @@ class NodeItem(QGraphicsObject):
         self.state = state
         self.update()
 
-    def set_result(self, message: str, ok: bool):
+    def set_result(self, message: str, ok: bool, duration: float = 0.0):
         self._last_result = message
         self._last_ok     = ok
+        self._last_duration = duration
+        self.update()
 
     def toggle_pin(self):
         self.prepareGeometryChange()
@@ -337,6 +415,39 @@ class NodeItem(QGraphicsObject):
             painter.setFont(font_n)
             nota_e = QFontMetrics(font_n).elidedText(f"📝 {nota}", Qt.ElideRight, NODE_W - 30)
             painter.drawText(QRectF(12, 58, NODE_W - 24, 14), Qt.AlignVCenter | Qt.AlignLeft, nota_e)
+
+        # ── Status Badge ──────────────────────────────────────────────────────
+        if self.state in ("success", "error", "running"):
+            badge_color = "#a6e3a1" if self.state == "success" else "#f38ba8"
+            if self.state == "running": badge_color = "#89b4fa"
+            
+            # Círculo de fundo do badge (com sombra leve)
+            badge_r = 9
+            center = QPointF(NODE_W - 5, 5)
+            badge_rect = QRectF(center.x() - badge_r, center.y() - badge_r, badge_r*2, badge_r*2)
+            
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor(0, 0, 0, 80))
+            painter.drawEllipse(badge_rect.translated(1, 1))
+            
+            painter.setPen(QPen(QColor("#11111b"), 1.5))
+            painter.setBrush(QColor(badge_color))
+            painter.drawEllipse(badge_rect)
+            
+            # Ícone
+            painter.setPen(QColor("#11111b"))
+            font_emoji = QFont("Segoe UI Emoji", 8, QFont.Bold)
+            painter.setFont(font_emoji)
+            icon = "✓" if self.state == "success" else "✗"
+            if self.state == "running": icon = "⏳"
+            painter.drawText(badge_rect.adjusted(0, 1, 0, 1), Qt.AlignCenter, icon)
+            
+            # Label de Duração
+            if self.state != "running" and self._last_duration > 0:
+                painter.setPen(QColor(badge_color))
+                painter.setFont(QFont("Consolas", 8, QFont.Bold))
+                dur_text = f"{self._last_duration:.1f}s"
+                painter.drawText(QRectF(NODE_W - 60, -18, 60, 15), Qt.AlignRight | Qt.AlignVCenter, dur_text)
 
         # Labels das portas de saída (✓ e ✗) ou (V e F para condições)
         sy = int(NODE_H * 0.32)
@@ -462,6 +573,7 @@ class NodeScene(QGraphicsScene):
     sig_nodes_changed  = Signal()
     sig_edit_node      = Signal(object)
     sig_run_from_node  = Signal(object)
+    sig_quick_add      = Signal(object, QPointF) # (src_port, scene_pos)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -469,6 +581,7 @@ class NodeScene(QGraphicsScene):
         self._conns: list[ConnectionItem]  = []
         self._temp:  ConnectionItem | None = None
         self._src:   PortItem | None       = None
+        self._hover_port: PortItem | None  = None
         self.selectionChanged.connect(self._on_sel_changed)
 
     # ── nó ────────────────────────────────────────────────────────────────────
@@ -480,11 +593,27 @@ class NodeScene(QGraphicsScene):
         self._reindex()
         return node
 
-    def remove_node(self, node: NodeItem):
+    def remove_item(self, item):
+        """Remove qualquer item (nó, conexão, comentário, grupo) com suporte a Undo."""
+        if hasattr(self, "_canvas"):
+            self._canvas._push_history()
+            
+        if isinstance(item, NodeItem):
+            self.remove_node(item, push_history=False)
+        elif isinstance(item, ConnectionItem):
+            self._del_conn(item, push_history=False)
+            self.sig_nodes_changed.emit()
+        elif isinstance(item, CommentItem):
+            self.removeItem(item)
+            self.sig_nodes_changed.emit()
+
+    def remove_node(self, node: NodeItem, push_history=True):
+        if push_history and hasattr(self, "_canvas"):
+            self._canvas._push_history()
         all_ports = [node.in_port, node.success_port, node.error_port]
         for port in all_ports:
             for c in list(port.conns):
-                self._del_conn(c)
+                self._del_conn(c, push_history=False)
         if node in self._nodes:
             self._nodes.remove(node)
         if node.scene():
@@ -501,7 +630,9 @@ class NodeScene(QGraphicsScene):
 
     # ── conexão ───────────────────────────────────────────────────────────────
 
-    def _del_conn(self, conn: ConnectionItem):
+    def _del_conn(self, conn: ConnectionItem, push_history=True):
+        if push_history and hasattr(self, "_canvas"):
+            self._canvas._push_history()
         conn.detach()
         if conn in self._conns:
             self._conns.remove(conn)
@@ -518,6 +649,43 @@ class NodeScene(QGraphicsScene):
         self._reindex()
         return conn
 
+    # ── Alinhamento e Agrupamento ─────────────────────────────────────────────
+
+    def align_selected_nodes(self, mode: str):
+        """Alinha os nós selecionados conforme o modo: top, bottom, left, right, center_h, center_v."""
+        selected = [i for i in self.selectedItems() if isinstance(i, NodeItem)]
+        if len(selected) < 2: return
+        
+        xs = [n.pos().x() for n in selected]
+        ys = [n.pos().y() for n in selected]
+        
+        if mode == "top":
+            target_y = min(ys)
+            for n in selected: n.setY(target_y)
+        elif mode == "bottom":
+            target_y = max(ys)
+            for n in selected: n.setY(target_y)
+        elif mode == "left":
+            target_x = min(xs)
+            for n in selected: n.setX(target_x)
+        elif mode == "right":
+            target_x = max(xs)
+            for n in selected: n.setX(target_x)
+        elif mode == "center_h":
+            avg_y = sum(ys) / len(ys)
+            for n in selected: n.setY(avg_y)
+        elif mode == "center_v":
+            avg_x = sum(xs) / len(xs)
+            for n in selected: n.setX(avg_x)
+        
+        # Atualiza conexões
+        for n in selected:
+            n.itemChange(QGraphicsItem.ItemPositionHasChanged, n.pos())
+        self.sig_nodes_changed.emit()
+
+        # Finalização de conexão (atualmente no mouseRelease)
+        pass
+
     # ── eventos de mouse ──────────────────────────────────────────────────────
 
     def mousePressEvent(self, event):
@@ -528,32 +696,88 @@ class NodeScene(QGraphicsScene):
                 self._temp = ConnectionItem(item)
                 self.addItem(self._temp)
                 self._temp.set_tip(event.scenePos())
+                
+                # FADE MODE: Apaga visualmente as outras conexões
+                for c in self._conns:
+                    c.fade_mode = True
+                    c.update()
+                    
                 event.accept()
                 return
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         if self._temp:
-            self._temp.set_tip(event.scenePos())
+            pos = event.scenePos()
+            
+            # Reset do hover anterior
+            if self._hover_port:
+                self._hover_port.is_hover_target = False
+                self._hover_port.update()
+                self._hover_port = None
+
+            # MAGNETIC SNAP: Busca porta de input mais próxima
+            closest_port = None
+            min_dist = SNAP_DISTANCE
+            
+            for node in self._nodes:
+                p = node.in_port
+                if p.node is self._src.node:
+                    continue
+                
+                c = p.scene_center()
+                dist = math.hypot(c.x() - pos.x(), c.y() - pos.y())
+                if dist < min_dist:
+                    min_dist = dist
+                    closest_port = p
+            
+            if closest_port:
+                closest_port.is_hover_target = True
+                closest_port.is_valid_target = True
+                closest_port.update()
+                self._hover_port = closest_port
+                
+                # Snap magnético (puxa a linha)
+                self._temp.set_tip(closest_port.scene_center())
+            else:
+                self._temp.set_tip(pos)
+                
             event.accept()
             return
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         if self._temp:
-            item = self.itemAt(event.scenePos(), QTransform())
-            if (
-                isinstance(item, PortItem)
-                and not item.is_output
-                and item.node is not self._src.node
-            ):
+            # Desliga Fade Mode
+            for c in self._conns:
+                c.fade_mode = False
+                c.update()
+                
+            target_port = self._hover_port
+            
+            # Caso não haja snap magnético, verifica hit test exato (fallback)
+            if not target_port:
+                item = self.itemAt(event.scenePos(), QTransform())
+                if isinstance(item, PortItem) and not item.is_output and item.node is not self._src.node:
+                    target_port = item
+                    
+            if target_port:
+                target_port.is_hover_target = False
+                target_port.update()
+                self._hover_port = None
+                
                 self._temp.detach()
                 self.removeItem(self._temp)
-                self._make_conn(self._src, item)
+                self._make_conn(self._src, target_port)
                 self.sig_nodes_changed.emit()
             else:
+                # QUICK ADD: Emit signal if dropped in empty space
+                src_port = self._src
+                scene_pos = event.scenePos()
                 self._temp.detach()
                 self.removeItem(self._temp)
+                self.sig_quick_add.emit(src_port, scene_pos)
+                
             self._temp = None
             self._src  = None
             event.accept()
@@ -850,6 +1074,7 @@ class _NodeView(QGraphicsView):
     def __init__(self, scene: NodeScene, canvas: "NodeCanvas"):
         super().__init__(scene, canvas)
         self._canvas = canvas
+        scene._canvas = canvas # Essencial para o undo/redo funcionar na scene
         self.setObjectName("node_view")
         self.setRenderHint(QPainter.Antialiasing)
         self.setRenderHint(QPainter.SmoothPixmapTransform)
@@ -938,15 +1163,20 @@ class _NodeView(QGraphicsView):
 
         # Del / Backspace — apaga selecionados
         if e.key() in (Qt.Key_Delete, Qt.Key_Backspace):
-            for item in list(sc.selectedItems()):
-                if isinstance(item, NodeItem):
-                    sc.remove_node(item)
-                elif isinstance(item, ConnectionItem):
-                    sc._del_conn(item)
-                    sc.sig_nodes_changed.emit()
-                elif isinstance(item, CommentItem):
-                    sc.removeItem(item)
-                    sc.sig_nodes_changed.emit()
+            selected = list(sc.selectedItems())
+            if selected:
+                # Faz um único push history para a deleção múltipla
+                if hasattr(self._canvas, "_push_history"):
+                    self._canvas._push_history()
+                for item in selected:
+                    # Remove silenciosamente (sem push individual)
+                    if isinstance(item, NodeItem):
+                        sc.remove_node(item, push_history=False)
+                    elif isinstance(item, ConnectionItem):
+                        sc._del_conn(item, push_history=False)
+                    elif isinstance(item, CommentItem):
+                        sc.removeItem(item)
+                sc.sig_nodes_changed.emit()
             e.accept(); return
 
         # Ctrl+D — duplica nós selecionados
@@ -960,6 +1190,18 @@ class _NodeView(QGraphicsView):
                     if new_n:
                         new_n.setSelected(True)
             e.accept(); return
+
+        # G — (Removido)
+        pass
+            
+        # Atalhos de alinhamento (Shift + Setas / Teclas)
+        if e.modifiers() == (Qt.ControlModifier | Qt.ShiftModifier):
+            if e.key() == Qt.Key_Up:    sc.align_selected_nodes("top"); e.accept(); return
+            if e.key() == Qt.Key_Down:  sc.align_selected_nodes("bottom"); e.accept(); return
+            if e.key() == Qt.Key_Left:  sc.align_selected_nodes("left"); e.accept(); return
+            if e.key() == Qt.Key_Right: sc.align_selected_nodes("right"); e.accept(); return
+            if e.key() == Qt.Key_C:     sc.align_selected_nodes("center_h"); e.accept(); return
+            if e.key() == Qt.Key_V:     sc.align_selected_nodes("center_v"); e.accept(); return
 
         super().keyPressEvent(e)
 
@@ -1026,6 +1268,9 @@ class NodeCanvas(QWidget):
         self.scene.sig_edit_node.connect(self._on_edit_node)
         self.scene.sig_run_from_node.connect(self._on_run_from_node)
         layout.addWidget(self.view)
+        
+        # Minimap flutuante
+        self.minimap = Minimap(self.view, self)
 
     def _apply_styles(self):
         self.setStyleSheet("""
@@ -1064,6 +1309,15 @@ class NodeCanvas(QWidget):
             if e.key() == Qt.Key_Y: self.redo(); return
         super().keyPressEvent(e)
 
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        if hasattr(self, "minimap"):
+            margin = 20
+            # Posiciona no canto inferior direito
+            x = self.width() - self.minimap.width() - margin
+            y = self.height() - self.minimap.height() - margin
+            self.minimap.move(x, y)
+
     # ── API pública ───────────────────────────────────────────────────────────
 
     def set_block_state(self, index: int, state: str):
@@ -1072,10 +1326,10 @@ class NodeCanvas(QWidget):
             try: ordered[index].set_state(state)
             except RuntimeError: pass
 
-    def set_block_result(self, index: int, message: str, ok: bool = True):
+    def set_block_result(self, index: int, message: str, ok: bool = True, duration: float = 0.0):
         ordered = self.scene._ordered_nodes()
         if 0 <= index < len(ordered):
-            try: ordered[index].set_result(message, ok)
+            try: ordered[index].set_result(message, ok, duration)
             except RuntimeError: pass
 
     def reset_block_states(self):
@@ -1205,3 +1459,25 @@ class NodeCanvas(QWidget):
 
     def add_comment_at_center(self):
         self.add_comment_at(None)
+
+    def add_block_at_pos(self, block_cls, pos: QPointF) -> "NodeItem | None":
+        """Adiciona um bloco em uma posição específica e retorna o nó criado."""
+        from ui.param_dialog import ParamDialog
+        block_inst = block_cls()
+        default_params = {s["name"]: s.get("default", "") for s in block_cls.params_schema}
+        
+        dialog = ParamDialog(block_inst, default_params, self)
+        if dialog.exec():
+            self._push_history()
+            node = NodeItem(block_inst, dialog.get_params())
+            self.scene.add_node(node, pos)
+            self._select_node(node)
+            self.block_updated.emit()
+            return node
+        return None
+
+    def add_connection(self, src_port, dst_port):
+        """Cria uma conexão entre duas portas."""
+        if src_port and dst_port:
+            self.scene._make_conn(src_port, dst_port)
+            self.block_updated.emit()
