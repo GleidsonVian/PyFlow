@@ -102,7 +102,9 @@ def resolve_params(params: dict, context: dict) -> dict:
                 var_name = match.group(1).strip()
                 if var_name.startswith("ASSET:"):
                     return match.group(0)
-                return str(context.get(var_name, match.group(0)))
+                if var_name not in context:
+                    raise ValueError(f"Variável não encontrada no contexto: {var_name}")
+                return str(context[var_name])
 
             resolved[key] = re.sub(r"\{\{(.+?)\}\}", context_replacer, temp_value)
         else:
@@ -329,30 +331,10 @@ class Runner:
 
     def run(self, steps: list, start_index: int = 0) -> list:
         if start_index == 0:
-            # Salva payload de webhook antes de limpar, para não perder os dados injetados pela API
-            _webhook_snapshot: dict = {}
-            try:
-                from engine.api_server import _webhook_inbox
-                if steps:
-                    first_cls = type(steps[0].get("block_instance")).__name__
-                    if first_cls == "WebhookTriggerBlock":
-                        path = steps[0].get("params", {}).get("path", "")
-                        if path in _webhook_inbox:
-                            payload = _webhook_inbox[path]
-                            _webhook_snapshot["webhook_payload"] = payload
-                            if isinstance(payload, dict):
-                                for k, v in payload.items():
-                                    _webhook_snapshot[f"webhook_{k}"] = (
-                                        str(v) if not isinstance(v, (list, dict)) else v
-                                    )
-            except Exception:
-                pass
-
+            # Preserva variáveis de webhook injetadas pela API antes de limpar o contexto
+            _webhook_snapshot = {k: v for k, v in ctx.get().items() if k.startswith("webhook_")}
             ctx.clear()
-
-            # Restaura o payload no contexto após o clear
-            if _webhook_snapshot:
-                ctx.get().update(_webhook_snapshot)
+            ctx.get().update(_webhook_snapshot)
 
         results = []
         total = len(steps)
@@ -379,14 +361,17 @@ class Runner:
                 i += 1
                 continue
 
-            params = resolve_params(raw_params, self._get_context())
-
             print(f"\n[{i + 1}/{total}] Executando: {block.name}")
 
             if self.on_step_start:
                 self.on_step_start(i, block)
 
-            result = self._execute_with_retry(i, block, params)
+            try:
+                params = resolve_params(raw_params, self._get_context())
+                result = self._execute_with_retry(i, block, params)
+            except ValueError as e:
+                result = {"success": False, "message": str(e)}
+
             result["step_index"] = i
             result["block_name"] = block.name
             results.append(result)
@@ -618,20 +603,28 @@ class Runner:
         if not graph:
             return []
 
-        ctx.clear()
+        if start_index == 0:
+            # Preserva variáveis de webhook injetadas pela API antes de limpar o contexto
+            _webhook_snapshot = {k: v for k, v in ctx.get().items() if k.startswith("webhook_")}
+            ctx.clear()
+            ctx.get().update(_webhook_snapshot)
 
         node_map = {n["id"]: n for n in graph}
         results  = []
         visited  = set()   # evita loops infinitos
 
         # Raízes: nós não referenciados como destino de nenhuma conexão
-        all_targets = set()
-        for n in graph:
-            if n.get("next_success"): all_targets.add(n["next_success"])
-            if n.get("next_error"):   all_targets.add(n["next_error"])
-        roots = [n for n in graph if n["id"] not in all_targets]
-        if not roots:
-            roots = [graph[0]]
+        if start_index > 0:
+            target_node = next((n for n in graph if n.get("_index") == start_index), None)
+            roots = [target_node] if target_node else []
+        else:
+            all_targets = set()
+            for n in graph:
+                if n.get("next_success"): all_targets.add(n["next_success"])
+                if n.get("next_error"):   all_targets.add(n["next_error"])
+            roots = [n for n in graph if n["id"] not in all_targets]
+            if not roots and graph:
+                roots = [graph[0]]
 
         def _exec_node(node_id: str):
             if self._stopped or node_id not in node_map or node_id in visited:
@@ -643,13 +636,17 @@ class Runner:
 
             raw_params = {k: v for k, v in node.get("params", {}).items()
                           if not k.startswith("_")}
-            params = resolve_params(raw_params, self._get_context())
-
+            
             print(f"\n[{index + 1}] Executando: {block.name}")
             if self.on_step_start:
                 self.on_step_start(index, block)
 
-            result = self._execute_with_retry(index, block, params)
+            try:
+                params = resolve_params(raw_params, self._get_context())
+                result = self._execute_with_retry(index, block, params)
+            except ValueError as e:
+                result = {"success": False, "message": str(e)}
+
             result["step_index"] = index
             result["block_name"] = block.name
             results.append(result)

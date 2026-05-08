@@ -23,7 +23,8 @@ def _save(entries: list):
 
 
 def record(flow_name: str, flow_path: str, ok: int, total: int,
-           duration_s: float, start_iso: str):
+           duration_s: float, start_iso: str,
+           failed_idx: int = -1, failed_context: dict = None):
     entries = _load()
     entries.append({
         "flow_name":  flow_name or "(sem nome)",
@@ -34,6 +35,8 @@ def record(flow_name: str, flow_path: str, ok: int, total: int,
         "total_steps": total,
         "ok_steps":   ok,
         "success":    ok == total,
+        "failed_idx": failed_idx,
+        "failed_context": failed_context or {},
     })
     _save(entries)
 

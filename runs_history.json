@@ -1,362 +1,297 @@
 [
   {
-    "flow_name": "(sem nome)",
+    "flow_name": "__autosave__",
     "flow_path": "",
-    "started_at": "2026-05-06T10:59:28.599090",
-    "finished_at": "2026-05-06T10:59:35.380006",
-    "duration_s": 6.8,
-    "total_steps": 1,
-    "ok_steps": 1,
-    "success": true
-  },
-  {
-    "flow_name": "(sem nome)",
-    "flow_path": "",
-    "started_at": "2026-05-06T11:00:29.253828",
-    "finished_at": "2026-05-06T11:00:41.839074",
-    "duration_s": 12.6,
-    "total_steps": 2,
-    "ok_steps": 1,
-    "success": false
-  },
-  {
-    "flow_name": "(sem nome)",
-    "flow_path": "",
-    "started_at": "2026-05-06T11:01:53.524729",
-    "finished_at": "2026-05-06T11:02:17.946193",
-    "duration_s": 24.4,
-    "total_steps": 2,
-    "ok_steps": 1,
-    "success": false
-  },
-  {
-    "flow_name": "(sem nome)",
-    "flow_path": "",
-    "started_at": "2026-05-06T11:05:24.634055",
-    "finished_at": "2026-05-06T11:05:37.182374",
-    "duration_s": 12.5,
-    "total_steps": 2,
-    "ok_steps": 1,
-    "success": false
-  },
-  {
-    "flow_name": "(sem nome)",
-    "flow_path": "",
-    "started_at": "2026-05-06T11:24:36.796478",
-    "finished_at": "2026-05-06T11:24:39.514408",
-    "duration_s": 2.7,
-    "total_steps": 1,
-    "ok_steps": 1,
-    "success": true
-  },
-  {
-    "flow_name": "(sem nome)",
-    "flow_path": "",
-    "started_at": "2026-05-06T11:26:06.643638",
-    "finished_at": "2026-05-06T11:26:09.472351",
-    "duration_s": 2.8,
-    "total_steps": 1,
-    "ok_steps": 1,
-    "success": true
-  },
-  {
-    "flow_name": "Teste Script Python",
-    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\teste_python_script.json",
-    "started_at": "2026-05-06T11:44:30.327530",
-    "finished_at": "2026-05-06T11:44:30.369297",
-    "duration_s": 0.0,
-    "total_steps": 3,
-    "ok_steps": 3,
-    "success": true
-  },
-  {
-    "flow_name": "Teste Gerenciador de Arquivos",
-    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\teste_file_manager.json",
-    "started_at": "2026-05-06T11:48:01.133152",
-    "finished_at": "2026-05-06T11:48:01.189795",
-    "duration_s": 0.1,
-    "total_steps": 7,
-    "ok_steps": 7,
-    "success": true
-  },
-  {
-    "flow_name": "Automação Estilo n8n",
-    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\exemplo_estilo_n8n.json",
-    "started_at": "2026-05-06T12:02:35.394213",
-    "finished_at": "2026-05-06T12:02:35.433489",
-    "duration_s": 0.0,
-    "total_steps": 2,
-    "ok_steps": 1,
-    "success": false
-  },
-  {
-    "flow_name": "Automação Estilo n8n",
-    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\exemplo_estilo_n8n.json",
-    "started_at": "2026-05-06T12:03:14.953916",
-    "finished_at": "2026-05-06T12:03:14.970169",
-    "duration_s": 0.0,
-    "total_steps": 2,
-    "ok_steps": 1,
-    "success": false
-  },
-  {
-    "flow_name": "Automação Estilo n8n",
-    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\exemplo_estilo_n8n.json",
-    "started_at": "2026-05-06T12:05:05.136580",
-    "finished_at": "2026-05-06T12:05:05.153707",
-    "duration_s": 0.0,
-    "total_steps": 2,
-    "ok_steps": 1,
-    "success": false
-  },
-  {
-    "flow_name": "Automação Estilo n8n",
-    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\exemplo_estilo_n8n.json",
-    "started_at": "2026-05-06T12:05:42.279912",
-    "finished_at": "2026-05-06T12:05:42.321304",
-    "duration_s": 0.0,
-    "total_steps": 2,
-    "ok_steps": 1,
-    "success": false
-  },
-  {
-    "flow_name": "Automação Estilo n8n",
-    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\exemplo_estilo_n8n.json",
-    "started_at": "2026-05-06T12:06:49.751012",
-    "finished_at": "2026-05-06T12:06:50.046111",
-    "duration_s": 0.3,
-    "total_steps": 4,
-    "ok_steps": 4,
-    "success": true
-  },
-  {
-    "flow_name": "Automação Estilo n8n",
-    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\exemplo_estilo_n8n.json",
-    "started_at": "2026-05-06T12:13:30.522283",
-    "finished_at": "2026-05-06T12:13:30.842115",
-    "duration_s": 0.3,
-    "total_steps": 4,
-    "ok_steps": 4,
-    "success": true
-  },
-  {
-    "flow_name": "books",
-    "flow_path": "",
-    "started_at": "2026-05-06T12:16:23.709410",
-    "finished_at": "2026-05-06T12:16:29.654724",
-    "duration_s": 5.9,
-    "total_steps": 4,
-    "ok_steps": 4,
-    "success": true
-  },
-  {
-    "flow_name": "template_monitor_preco",
-    "flow_path": "",
-    "started_at": "2026-05-06T12:29:05.287489",
-    "finished_at": "2026-05-06T12:29:16.143018",
-    "duration_s": 10.9,
-    "total_steps": 8,
-    "ok_steps": 7,
-    "success": false
-  },
-  {
-    "flow_name": "teste_controle_fluxo",
-    "flow_path": "",
-    "started_at": "2026-05-06T12:29:47.097556",
-    "finished_at": "2026-05-06T12:29:47.268559",
+    "started_at": "2026-05-08T01:05:10.965530",
+    "finished_at": "2026-05-08T01:05:11.162315",
     "duration_s": 0.2,
-    "total_steps": 31,
-    "ok_steps": 30,
-    "success": false
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true
   },
   {
-    "flow_name": "books",
+    "flow_name": "__autosave__",
     "flow_path": "",
-    "started_at": "2026-05-06T12:29:55.024982",
-    "finished_at": "2026-05-06T12:29:58.207432",
-    "duration_s": 3.2,
-    "total_steps": 1,
+    "started_at": "2026-05-08T01:05:18.761046",
+    "finished_at": "2026-05-08T01:05:18.966037",
+    "duration_s": 0.2,
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true
+  },
+  {
+    "flow_name": "__autosave__",
+    "flow_path": "",
+    "started_at": "2026-05-08T01:07:25.372750",
+    "finished_at": "2026-05-08T01:07:25.556724",
+    "duration_s": 0.2,
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true
+  },
+  {
+    "flow_name": "__autosave__",
+    "flow_path": "",
+    "started_at": "2026-05-08T01:08:14.552195",
+    "finished_at": "2026-05-08T01:08:14.754619",
+    "duration_s": 0.2,
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true
+  },
+  {
+    "flow_name": "__autosave__",
+    "flow_path": "",
+    "started_at": "2026-05-08T01:09:47.909409",
+    "finished_at": "2026-05-08T01:09:48.065499",
+    "duration_s": 0.1,
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true
+  },
+  {
+    "flow_name": "__autosave__",
+    "flow_path": "",
+    "started_at": "2026-05-08T01:16:01.602787",
+    "finished_at": "2026-05-08T01:16:01.748046",
+    "duration_s": 0.1,
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-08T01:25:59.680575",
+    "finished_at": "2026-05-08T01:25:59.810139",
+    "duration_s": 0.1,
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true,
+    "failed_idx": -1,
+    "failed_context": {
+      "webhook_data": {}
+    }
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-08T01:32:10.791365",
+    "finished_at": "2026-05-08T01:32:10.852001",
+    "duration_s": 0.1,
+    "total_steps": 2,
     "ok_steps": 1,
-    "success": true
+    "success": false,
+    "failed_idx": 1,
+    "failed_context": {
+      "webhook_data": {}
+    }
   },
   {
-    "flow_name": "books",
+    "flow_name": "__autosave__",
     "flow_path": "",
-    "started_at": "2026-05-06T12:31:52.563503",
-    "finished_at": "2026-05-06T12:31:57.887730",
-    "duration_s": 5.3,
-    "total_steps": 4,
-    "ok_steps": 4,
-    "success": true
-  },
-  {
-    "flow_name": "csv_para_txt",
-    "flow_path": "",
-    "started_at": "2026-05-06T12:32:00.064575",
-    "finished_at": "2026-05-06T12:32:00.108628",
-    "duration_s": 0.0,
-    "total_steps": 1,
-    "ok_steps": 0,
-    "success": false
-  },
-  {
-    "flow_name": "scraping_para_csv",
-    "flow_path": "",
-    "started_at": "2026-05-06T12:32:14.682538",
-    "finished_at": "2026-05-06T12:32:19.943867",
-    "duration_s": 5.3,
-    "total_steps": 6,
-    "ok_steps": 6,
-    "success": true
-  },
-  {
-    "flow_name": "(sem nome)",
-    "flow_path": "",
-    "started_at": "2026-05-06T12:38:24.662251",
-    "finished_at": "2026-05-06T12:38:24.676572",
-    "duration_s": 0.0,
-    "total_steps": 1,
+    "started_at": "2026-05-08T01:49:53.987330",
+    "finished_at": "2026-05-08T01:49:54.049512",
+    "duration_s": 0.1,
+    "total_steps": 2,
     "ok_steps": 1,
-    "success": true
+    "success": false,
+    "failed_idx": 1,
+    "failed_context": {
+      "webhook_data": {
+        "idade": 24,
+        "nome": "Gleidson"
+      },
+      "webhook_idade": "24",
+      "webhook_nome": "Gleidson",
+      "webhook_payload": {
+        "idade": 24,
+        "nome": "Gleidson"
+      }
+    }
   },
   {
-    "flow_name": "teste",
-    "flow_path": "C:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\teste.json",
-    "started_at": "2026-05-06T12:41:26.411906",
-    "finished_at": "2026-05-06T12:41:26.468543",
+    "flow_name": "__autosave__",
+    "flow_path": "",
+    "started_at": "2026-05-08T01:50:07.273586",
+    "finished_at": "2026-05-08T01:50:07.350834",
     "duration_s": 0.1,
     "total_steps": 2,
-    "ok_steps": 2,
-    "success": true
-  },
-  {
-    "flow_name": "teste",
-    "flow_path": "",
-    "started_at": "2026-05-06T12:44:09.189711",
-    "finished_at": "2026-05-06T12:44:09.252264",
-    "duration_s": 0.1,
-    "total_steps": 2,
-    "ok_steps": 2,
-    "success": true
-  },
-  {
-    "flow_name": "teste",
-    "flow_path": "",
-    "started_at": "2026-05-06T12:45:17.059691",
-    "finished_at": "2026-05-06T12:45:17.118783",
-    "duration_s": 0.1,
-    "total_steps": 2,
-    "ok_steps": 2,
-    "success": true
-  },
-  {
-    "flow_name": "teste",
-    "flow_path": "",
-    "started_at": "2026-05-06T12:46:06.735206",
-    "finished_at": "2026-05-06T12:46:06.795072",
-    "duration_s": 0.1,
-    "total_steps": 2,
-    "ok_steps": 2,
-    "success": true
-  },
-  {
-    "flow_name": "(sem nome)",
-    "flow_path": "",
-    "started_at": "2026-05-07T18:15:00.962593",
-    "finished_at": "2026-05-07T18:15:10.892073",
-    "duration_s": 9.9,
-    "total_steps": 1,
     "ok_steps": 1,
-    "success": true
+    "success": false,
+    "failed_idx": 1,
+    "failed_context": {
+      "webhook_data": {
+        "idade": 24,
+        "nome": "Gleidson"
+      },
+      "webhook_idade": "24",
+      "webhook_nome": "Gleidson",
+      "webhook_payload": {
+        "idade": 24,
+        "nome": "Gleidson"
+      }
+    }
   },
   {
-    "flow_name": "Demo — Nós com múltiplas saídas",
-    "flow_path": "c:\\Users\\Gleidson\\pasta4\\Python\\pyflow\\pyflow\\flows\\demo_nos_multiplos.json",
-    "started_at": "2026-05-07T18:25:54.337924",
-    "finished_at": "2026-05-07T18:25:55.109487",
-    "duration_s": 0.8,
-    "total_steps": 4,
-    "ok_steps": 4,
-    "success": true
-  },
-  {
-    "flow_name": "Demo — Nós com múltiplas saídas",
-    "flow_path": "C:\\Users\\Gleidson\\pasta4\\Python\\pyflow\\pyflow\\flows\\demo_nos_multiplos.json",
-    "started_at": "2026-05-07T18:29:17.604103",
-    "finished_at": "2026-05-07T18:29:18.256167",
-    "duration_s": 0.6,
-    "total_steps": 4,
-    "ok_steps": 4,
-    "success": true
-  },
-  {
-    "flow_name": "Demo — Nós com múltiplas saídas",
-    "flow_path": "C:\\Users\\Gleidson\\pasta4\\Python\\pyflow\\pyflow\\flows\\demo_nos_multiplos.json",
-    "started_at": "2026-05-07T18:29:49.650127",
-    "finished_at": "2026-05-07T18:29:50.292964",
-    "duration_s": 0.6,
-    "total_steps": 4,
-    "ok_steps": 4,
-    "success": true
-  },
-  {
-    "flow_name": "Demo — Execução Condicional ✅❌",
-    "flow_path": "C:\\Users\\Gleidson\\pasta4\\Python\\pyflow\\pyflow\\flows\\demo_condicional.json",
-    "started_at": "2026-05-07T18:44:35.716483",
-    "finished_at": "2026-05-07T18:44:36.534048",
-    "duration_s": 0.8,
-    "total_steps": 3,
-    "ok_steps": 3,
-    "success": true
-  },
-  {
-    "flow_name": "Demo — Execução Condicional ✅❌",
-    "flow_path": "C:\\Users\\Gleidson\\pasta4\\Python\\pyflow\\pyflow\\flows\\demo_condicional.json",
-    "started_at": "2026-05-07T18:44:48.986326",
-    "finished_at": "2026-05-07T18:44:49.616878",
-    "duration_s": 0.6,
-    "total_steps": 3,
-    "ok_steps": 3,
-    "success": true
-  },
-  {
-    "flow_name": "Demo — Execução Condicional ✅❌",
-    "flow_path": "C:\\Users\\Gleidson\\pasta4\\Python\\pyflow\\pyflow\\flows\\demo_condicional.json",
-    "started_at": "2026-05-07T18:44:56.448460",
-    "finished_at": "2026-05-07T18:44:57.090148",
-    "duration_s": 0.6,
-    "total_steps": 3,
-    "ok_steps": 3,
-    "success": true
-  },
-  {
-    "flow_name": "(sem nome)",
+    "flow_name": "__autosave__",
     "flow_path": "",
-    "started_at": "2026-05-07T23:52:39.401343",
-    "finished_at": "2026-05-07T23:52:40.262543",
-    "duration_s": 0.8,
-    "total_steps": 3,
-    "ok_steps": 3,
-    "success": true
+    "started_at": "2026-05-08T01:50:19.837691",
+    "finished_at": "2026-05-08T01:50:19.919647",
+    "duration_s": 0.1,
+    "total_steps": 2,
+    "ok_steps": 1,
+    "success": false,
+    "failed_idx": 1,
+    "failed_context": {
+      "webhook_data": {
+        "idade": 24,
+        "nome": "Gleidson"
+      },
+      "webhook_idade": "24",
+      "webhook_nome": "Gleidson",
+      "webhook_payload": {
+        "idade": 24,
+        "nome": "Gleidson"
+      }
+    }
   },
   {
-    "flow_name": "(sem nome)",
-    "flow_path": "",
-    "started_at": "2026-05-07T23:53:20.623047",
-    "finished_at": "2026-05-07T23:53:21.325412",
-    "duration_s": 0.7,
-    "total_steps": 3,
-    "ok_steps": 3,
-    "success": true
+    "flow_name": "Teste Webhook Bitrix24",
+    "flow_path": "C:\\Users\\Gleidson\\pasta4\\Python\\pyflow\\pyflow\\flows\\teste_webhook_bitrix.json",
+    "started_at": "2026-05-08T01:50:32.571054",
+    "finished_at": "2026-05-08T01:50:32.692293",
+    "duration_s": 0.1,
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true,
+    "failed_idx": -1,
+    "failed_context": {
+      "webhook_data": {
+        "idade": 24,
+        "nome": "Gleidson"
+      },
+      "webhook_idade": "24",
+      "webhook_nome": "Gleidson",
+      "webhook_payload": {
+        "idade": 24,
+        "nome": "Gleidson"
+      }
+    }
   },
   {
-    "flow_name": "demo_condicional",
+    "flow_name": "Teste Webhook Bitrix24",
+    "flow_path": "C:\\Users\\Gleidson\\pasta4\\Python\\pyflow\\pyflow\\flows\\teste_webhook_bitrix.json",
+    "started_at": "2026-05-08T01:51:01.339611",
+    "finished_at": "2026-05-08T01:51:01.466194",
+    "duration_s": 0.1,
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true,
+    "failed_idx": -1,
+    "failed_context": {
+      "webhook_data": {
+        "idade": 24,
+        "nome": "Gleidson"
+      },
+      "webhook_idade": "24",
+      "webhook_nome": "Gleidson",
+      "webhook_payload": {
+        "idade": 24,
+        "nome": "Gleidson"
+      }
+    }
+  },
+  {
+    "flow_name": "Teste Webhook Bitrix24",
     "flow_path": "",
-    "started_at": "2026-05-07T23:57:50.648335",
-    "finished_at": "2026-05-07T23:57:51.413359",
-    "duration_s": 0.8,
-    "total_steps": 3,
-    "ok_steps": 3,
-    "success": true
+    "started_at": "2026-05-08T01:54:20.696100",
+    "finished_at": "2026-05-08T01:54:20.847662",
+    "duration_s": 0.1,
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true,
+    "failed_idx": -1,
+    "failed_context": {
+      "webhook_data": {
+        "idade": 24,
+        "nome": "Gleidson"
+      },
+      "webhook_idade": "24",
+      "webhook_nome": "Gleidson",
+      "webhook_payload": {
+        "idade": 24,
+        "nome": "Gleidson"
+      }
+    }
+  },
+  {
+    "flow_name": "__autosave__",
+    "flow_path": "",
+    "started_at": "2026-05-08T01:54:41.888768",
+    "finished_at": "2026-05-08T01:54:42.021011",
+    "duration_s": 0.1,
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true,
+    "failed_idx": -1,
+    "failed_context": {
+      "webhook_data": {
+        "idade": 24,
+        "nome": "Gleidson"
+      },
+      "webhook_idade": "24",
+      "webhook_nome": "Gleidson",
+      "webhook_payload": {
+        "idade": 24,
+        "nome": "Gleidson"
+      }
+    }
+  },
+  {
+    "flow_name": "__autosave__",
+    "flow_path": "",
+    "started_at": "2026-05-08T01:54:43.320798",
+    "finished_at": "2026-05-08T01:54:43.456645",
+    "duration_s": 0.1,
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true,
+    "failed_idx": -1,
+    "failed_context": {
+      "webhook_data": {
+        "idade": 24,
+        "nome": "Gleidson"
+      },
+      "webhook_idade": "24",
+      "webhook_nome": "Gleidson",
+      "webhook_payload": {
+        "idade": 24,
+        "nome": "Gleidson"
+      }
+    }
+  },
+  {
+    "flow_name": "Teste Webhook Bitrix24",
+    "flow_path": "C:\\Users\\Gleidson\\pasta4\\Python\\pyflow\\pyflow\\flows\\teste_webhook_bitrix.json",
+    "started_at": "2026-05-08T01:57:35.412752",
+    "finished_at": "2026-05-08T01:57:35.515808",
+    "duration_s": 0.1,
+    "total_steps": 2,
+    "ok_steps": 2,
+    "success": true,
+    "failed_idx": -1,
+    "failed_context": {
+      "webhook_data": {
+        "idade": 24,
+        "nome": "Gleidson"
+      },
+      "webhook_idade": "24",
+      "webhook_nome": "Gleidson",
+      "webhook_payload": {
+        "idade": 24,
+        "nome": "Gleidson"
+      }
+    }
   }
 ]

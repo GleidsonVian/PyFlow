@@ -20,8 +20,7 @@ from PySide6.QtGui import (
 )
 
 from engine.blocks_registry import BLOCK_BY_NAME
-from ui.param_dialog import ParamDialog
-
+from ui.node_details_dialog import NodeDetailsDialog
 BLOCK_REGISTRY = BLOCK_BY_NAME
 
 CATEGORY_COLORS = {
@@ -882,10 +881,11 @@ class _NodeView(QGraphicsView):
 class NodeCanvas(QWidget):
     block_selected  = Signal(object)
     canvas_clicked  = Signal()
-    block_updated   = Signal()
-    run_from_index  = Signal(int)
+    block_updated  = Signal()
+    run_from_index = Signal(int)
+    request_save   = Signal()
 
-    _MAX_HISTORY = 60
+    _MAX_HISTORY = 30
 
     def __init__(self):
         super().__init__()
@@ -1030,10 +1030,10 @@ class NodeCanvas(QWidget):
         self.block_selected.emit(node)
 
     def _on_edit_node(self, node: NodeItem):
-        dialog = ParamDialog(node.block_instance, node.params, self)
+        dialog = NodeDetailsDialog(node, self)
         if dialog.exec():
             self._push_history()
-            node.params = dialog.get_params()
+            # Os parâmetros já foram atualizados por referência no _apply_to_params da dialog
             node.update_params_label()
             self.block_updated.emit()
             self.block_selected.emit(node)

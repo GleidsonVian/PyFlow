@@ -8,6 +8,7 @@ Coloque em: engine/api_server.py
 import threading
 import json
 import os
+import uuid
 from datetime import datetime
 from typing import Optional
 
@@ -68,6 +69,26 @@ def _list_flows() -> list:
         except Exception:
             flows.append({"name": f, "file": f, "steps": 0, "created_at": ""})
     return flows
+
+
+def _find_flow_by_webhook_path(target_path: str) -> str | None:
+    """Busca em todos os fluxos se algum possui o WebhookTriggerBlock com o path especificado."""
+    if not os.path.exists(_flows_dir):
+        return None
+    for f in os.listdir(_flows_dir):
+        if not f.endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(_flows_dir, f), encoding="utf-8") as fh:
+                data = json.load(fh)
+            for step in data.get("steps", []):
+                if step.get("block") == "WebhookTriggerBlock":
+                    path_val = step.get("params", {}).get("path", "")
+                    if path_val.strip() == target_path.strip():
+                        return f
+        except Exception:
+            pass
+    return None
 
 
 def _add_history(flow_name: str, success: bool, message: str = ""):
@@ -416,17 +437,21 @@ def stop_flow():
 
 # ── Webhook Inbound ────────────────────────────────────────────────────
 
-@app.post("/webhook/{flow_name}")
-async def webhook_trigger(flow_name: str, request: Request):
+@app.post("/webhook/in/{webhook_path:path}")
+async def webhook_trigger(webhook_path: str, request: Request):
     """
-    Recebe um POST externo e dispara o fluxo indicado.
-    O payload JSON enviado fica disponível como variáveis no contexto:
-      - webhook_payload  → dict completo
-      - webhook_*        → cada campo de primeiro nível vira uma variável
-    Exemplo: POST /webhook/meu_fluxo  Body: {"nome": "Gleidson", "valor": 42}
-    Resulta em: webhook_nome="Gleidson", webhook_valor="42", webhook_payload={...}
+    Recebe um POST externo e dispara o fluxo indicado pelo path no bloco WebhookTriggerBlock.
+    Exemplo: POST /webhook/in/gleidson-bonito-123
     """
     global _run_callback, _webhook_inbox
+
+    flow_file = _find_flow_by_webhook_path(webhook_path)
+    if not flow_file:
+        return JSONResponse(
+            status_code=404,
+            content={"success": False, "message": f"Nenhum fluxo encontrado com o caminho de webhook '{webhook_path}'."}
+        )
+    flow_name = flow_file.replace(".json", "")
 
     # Lê o payload (aceita JSON ou body vazio)
     try:
@@ -488,10 +513,13 @@ async def webhook_trigger(flow_name: str, request: Request):
         daemon=True,
     ).start()
 
+    run_id = str(uuid.uuid4())
+
     return {
         "success":    True,
         "message":    f"Webhook recebido — fluxo '{display_name}' disparado.",
         "flow":       display_name,
+        "run_id":     run_id,
         "payload":    payload,
         "variables":  [f"webhook_{k}" for k in payload.keys()] + ["webhook_payload"],
         "started_at": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),

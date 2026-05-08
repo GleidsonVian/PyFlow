@@ -36,7 +36,7 @@ class RunnerThread(QThread):
     step_started = Signal(int, str, str)       # index, name, category
     step_done    = Signal(int, str, str, bool, str)  # index, name, category, success, message
     step_retry   = Signal(int, str, int, int)
-    run_finished = Signal(int, int)
+    run_finished = Signal(int, int, int, dict)  # ok, total, failed_idx, failed_context
 
     def __init__(self, steps, start_index: int = 0, graph: list = None):
         super().__init__()
@@ -56,8 +56,32 @@ class RunnerThread(QThread):
             results = self.runner.run_graph(self.graph, start_index=self.start_index)
         else:
             results = self.runner.run(self.steps, start_index=self.start_index)
+            
         ok = sum(1 for r in results if r.get("success"))
-        self.run_finished.emit(ok, len(results))
+        
+        failed_idx = -1
+        for r in results:
+            if not r.get("success"):
+                failed_idx = r.get("step_index", -1)
+                break
+                
+        import engine.execution_context as context_mod
+        try:
+            import copy
+            # Usa str() para valores complexos (como drivers ou elementos) para evitar TypeError no JSON 
+            ctx_snapshot = {}
+            for k, v in context_mod.get().items():
+                if isinstance(v, (dict, list, str, int, float, bool, type(None))):
+                    try:
+                        ctx_snapshot[k] = copy.deepcopy(v)
+                    except:
+                        ctx_snapshot[k] = str(v)
+                else:
+                    ctx_snapshot[k] = str(v)
+        except:
+            ctx_snapshot = {k: str(v) for k, v in context_mod.get().items()}
+            
+        self.run_finished.emit(ok, len(results), failed_idx, ctx_snapshot)
 
     def stop(self):
         if hasattr(self, "runner"):
@@ -411,6 +435,7 @@ class MainWindow(QMainWindow):
         self.canvas.block_updated.connect(self._on_block_updated)
         self.canvas.block_updated.connect(self._mark_unsaved)
         self.canvas.run_from_index.connect(self._on_run_from)
+        self.canvas.request_save.connect(self._on_save)
         
         # Undo/Redo: salva histórico antes de aplicar edição de parâmetros
         self.props_panel.params_about_to_change.connect(self.canvas._push_history)
@@ -469,6 +494,7 @@ class MainWindow(QMainWindow):
         run_menu.addAction(QAction("Executar  [Ctrl+Enter]",       self, triggered=self._on_run))
         run_menu.addAction(QAction("Debug  [Ctrl+D]",              self, triggered=self._on_debug))
         run_menu.addAction(QAction("Agendador",                    self, triggered=self._on_open_scheduler))
+        run_menu.addAction(QAction("Serviço PyFlow (Daemon)",      self, triggered=self._on_open_daemon))
         run_menu.addSeparator()
         run_menu.addAction(QAction("Histórico de execuções",       self, triggered=self._on_open_history))
         run_menu.addSeparator()
@@ -476,11 +502,40 @@ class MainWindow(QMainWindow):
 
     # ── Assets ────────────────────────────────────────────────────────
 
+    def _on_open_daemon(self):
+        from ui.daemon_dialog import DaemonDialog
+        dlg = DaemonDialog(self)
+        dlg.exec()
+
     def _on_open_history(self):
         from ui.run_history_dialog import RunHistoryDialog
         dlg = RunHistoryDialog(self)
         dlg.flow_open_requested.connect(self._load_flow_from_path)
+        dlg.resume_run_requested.connect(self._resume_run)
         dlg.exec()
+
+    def _resume_run(self, path: str, failed_idx: int, ctx_snapshot: dict):
+        try:
+            # Carrega o fluxo
+            data = self.flow_manager.load(path)
+            self.canvas.load_from_data(data.get("steps", []))
+            name = data.get("flow_name", path)
+            self._mark_saved(name, path)
+            
+            # Restaura o snapshot das variáveis para que a execução continue com o estado antigo
+            import engine.execution_context as context_mod
+            context_mod.clear()
+            if isinstance(ctx_snapshot, dict):
+                context_mod.get().update(ctx_snapshot)
+                
+            self.status.showMessage(f"Retomando {name} do passo {failed_idx + 1}")
+            self.log_panel.log("info", f"⏪ Retomando execução do fluxo {name} a partir do passo {failed_idx + 1}")
+            
+            # Inicia do ponto de falha
+            self._start_run(start_index=failed_idx, interactive=True)
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Erro ao retomar", f"Não foi possível retomar o fluxo:\n{str(e)}")
 
     def _on_open_assets(self):
         dialog = AssetsDialog(self)
@@ -695,7 +750,7 @@ class MainWindow(QMainWindow):
             category=category,
         )
 
-    def _on_run_finished(self, ok, total):
+    def _on_run_finished(self, ok, total, failed_idx=-1, failed_context=None):
         import time as _time
         self._set_running(False)
         self.log_panel.log_run_end(ok, total)
@@ -711,6 +766,7 @@ class MainWindow(QMainWindow):
             self._current_flow_name, self._current_flow_path,
             ok, total, duration,
             datetime.fromtimestamp(self._run_start_time or _time.time()).isoformat(),
+            failed_idx, failed_context or {}
         )
 
     # ── Outros handlers ───────────────────────────────────────────────

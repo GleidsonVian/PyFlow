@@ -63,6 +63,17 @@ def main():
     if icon_path.exists():
         app.setWindowIcon(QIcon(str(icon_path)))
 
+    if "--daemon" in sys.argv:
+        print("[PyFlow] Iniciando no modo Daemon (Background)...")
+        from engine.api_server import get_api_server
+        from ui.scheduler_dialog import get_engine
+        server = get_api_server()
+        server.start()
+        get_engine().start()
+        print(f"[PyFlow] Daemon rodando silenciosamente. API escutando em http://localhost:{server.port}")
+        sys.exit(app.exec())
+
+    from ui.main_window import MainWindow
     window = MainWindow()
     window.show()
 

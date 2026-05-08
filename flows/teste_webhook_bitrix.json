@@ -1,0 +1,19 @@
+{
+  "flow_name": "Teste Webhook Bitrix24",
+  "steps": [
+    {
+      "block": "WebhookTriggerBlock",
+      "params": {
+        "path": "gleidson-bonito-123",
+        "save_payload": "webhook_data"
+      }
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "message": "Dados recebidos do Bitrix24!\n\nNome: {{webhook_nome}}\nIdade: {{webhook_idade}}",
+        "title": "Novo Webhook Disparado!"
+      }
+    }
+  ]
+}

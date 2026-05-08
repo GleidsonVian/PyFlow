@@ -19,17 +19,19 @@ Os fluxos são salvos como **JSON** e podem ser **exportados como scripts Python
 
 ---
 
-## 🖥️ Interface
+## 🖥️ Interface & Recursos
 
 - **Canvas visual** com drag & drop de blocos
 - **Indentação visual automática** — blocos dentro de Se/Loop/Para Cada ficam recuados com borda colorida por escopo
+- **Gatilhos Dinâmicos (Webhooks)** — crie rotas de API personalizadas para disparar fluxos remotamente
+- **Histórico de Execuções e Retomada** — veja logs de falhas e clique em "Retomar" para voltar do bloco exato onde quebrou
+- **Tratamento de Variáveis Seguro** — falhas imediatas e logs limpos se uma variável `{{nome}}` não for encontrada
+- **Serviço Daemon (Background)** — rode o servidor de webhooks silenciosamente usando a inicialização do Windows
 - **Debug step-by-step** com destaque do bloco atual e painel de variáveis ao vivo
 - **Command Palette** `Ctrl+P` estilo VS Code para buscar e adicionar blocos rapidamente
 - **Galeria de templates** prontos para começar
 - **Log panel** com filtros por tipo, busca em tempo real, copiar e exportar como `.txt`
 - **Agendador** integrado para executar fluxos em horários específicos
-- **API REST local** com servidor FastAPI em `http://localhost:8080` (porta ajustada automaticamente se ocupada)
-- **Dashboard web** em `/dashboard` e documentação interativa Swagger em `/docs`
 - **Gerenciador de assets** para armazenar credenciais e variáveis reutilizáveis
 - **Tema escuro** Catppuccin Mocha
 
@@ -435,6 +437,14 @@ brew install tesseract
 | Blocos RPA | 49 |
 | Fluxos de exemplo | 30+ |
 | Tipos de condição (Se) | 10 |
+
+---
+
+## ⚠️ Problemas Conhecidos (Issues)
+
+Atualmente as seguintes funcionalidades estão mapeadas para melhorias futuras:
+- **PyFlow Daemon (Serviço de Background)**: O script `.vbs` de inicialização automática não possui feedback visual e pode ter problemas em lidar com múltiplas instâncias ou matar os processos do Chrome gerados pelo modo headless de forma limpa.
+- **Gravador de Macro**: A ferramenta que tenta transcrever as ações do navegador não é tão precisa. Uma solução nativa como Inspector de XPath para selecionar diretamente nas páginas web será abordada no futuro.
 
 ---
 

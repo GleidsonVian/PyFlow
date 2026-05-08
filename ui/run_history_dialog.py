@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QTableWidget, QTableWidgetItem,
-    QHeaderView, QAbstractItemView, QFrame, QMessageBox,
+    QHeaderView, QAbstractItemView, QFrame, QMessageBox, QWidget
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
@@ -10,6 +10,7 @@ import engine.run_history as history
 
 class RunHistoryDialog(QDialog):
     flow_open_requested = Signal(str)
+    resume_run_requested = Signal(str, int, dict)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -81,15 +82,33 @@ class RunHistoryDialog(QDialog):
                 self.table.setItem(row, col, item)
 
             if e.get("flow_path"):
-                btn = QPushButton("📂 Abrir")
-                btn.setObjectName("btn_hist_open")
-                btn.clicked.connect(lambda _, path=e["flow_path"]: self._on_open(path))
-                self.table.setCellWidget(row, 6, btn)
+                action_widget = QWidget()
+                action_layout = QHBoxLayout(action_widget)
+                action_layout.setContentsMargins(0, 0, 0, 0)
+                action_layout.setSpacing(4)
+                
+                btn_open = QPushButton("📂 Abrir")
+                btn_open.setObjectName("btn_hist_open")
+                btn_open.clicked.connect(lambda _, path=e["flow_path"]: self._on_open(path))
+                action_layout.addWidget(btn_open)
+                
+                if not success and e.get("failed_idx", -1) != -1:
+                    btn_resume = QPushButton("▶ Retomar")
+                    btn_resume.setObjectName("btn_hist_resume")
+                    btn_resume.clicked.connect(lambda _, path=e["flow_path"], idx=e["failed_idx"], ctx=e.get("failed_context", {}): self._on_resume(path, idx, ctx))
+                    action_layout.addWidget(btn_resume)
+                    
+                action_layout.addStretch()
+                self.table.setCellWidget(row, 6, action_widget)
 
         self.table.setRowCount(len(entries))
 
     def _on_open(self, path: str):
         self.flow_open_requested.emit(path)
+        self.accept()
+
+    def _on_resume(self, path: str, failed_idx: int, ctx_snapshot: dict):
+        self.resume_run_requested.emit(path, failed_idx, ctx_snapshot)
         self.accept()
 
     def _on_clear(self):
@@ -122,4 +141,6 @@ class RunHistoryDialog(QDialog):
             #btn_hist_clear:hover { background-color: #3a1c1c; }
             #btn_hist_open { background-color: #1e2a40; color: #89b4fa; font-size: 11px; padding: 2px 8px; }
             #btn_hist_open:hover { background-color: #2a3a50; }
+            #btn_hist_resume { background-color: #402a1e; color: #fab387; font-size: 11px; padding: 2px 8px; }
+            #btn_hist_resume:hover { background-color: #503a2a; }
         """)
