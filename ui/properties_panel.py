@@ -18,7 +18,7 @@ class PropertiesPanel(QWidget):
     def __init__(self):
         super().__init__()
         self.setObjectName("props_panel")
-        self.setFixedWidth(280)
+        self.setMinimumWidth(260)
         self._current_widget = None
         self._fields = {}
         self._build_ui()

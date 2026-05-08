@@ -1,0 +1,61 @@
+{
+  "flow_name": "__autosave__",
+  "saved_at": "2026-05-07T23:58:52.744539",
+  "steps": [
+    {
+      "block": "HttpRequestBlock",
+      "params": {
+        "url": "https://jsonplaceholder.typicode.com/todos/1",
+        "method": "GET",
+        "headers": "",
+        "body": "",
+        "variable_name": "api_result",
+        "timeout": "10",
+        "nota": "✅ sucesso → Definir Variável | ❌ erro → Exibir Mensagem de erro"
+      },
+      "_x": 72.0,
+      "_y": 192.0,
+      "_id": "n_http",
+      "_next_success": "n_ok",
+      "_next_error": "n_err"
+    },
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "status",
+        "value": "API respondeu com sucesso!",
+        "operation": "set",
+        "nota": "Executado APENAS se o HTTP teve sucesso"
+      },
+      "_x": 456.0,
+      "_y": 72.0,
+      "_id": "n_ok",
+      "_next_success": "n_final"
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Resultado do fluxo",
+        "message": "Status: {{status}}\n\nResposta API: {{api_result}}",
+        "type": "info",
+        "nota": "Sempre executado — recebe o status de qualquer ramo"
+      },
+      "_x": 816.0,
+      "_y": 192.0,
+      "_id": "n_final"
+    },
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "status",
+        "value": "ERRO ao chamar a API!",
+        "operation": "set",
+        "nota": "Executado APENAS se o HTTP falhou"
+      },
+      "_x": 456.0,
+      "_y": 336.0,
+      "_id": "n_err",
+      "_next_success": "n_final"
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "flow_name": "Demo — Nós com múltiplas saídas",
+  "steps": [
+    {
+      "block": "HttpRequestBlock",
+      "params": {
+        "url": "https://jsonplaceholder.typicode.com/todos/1",
+        "method": "GET",
+        "headers": "",
+        "body": "",
+        "variable_name": "resposta_api",
+        "timeout": "10",
+        "nota": "Faz GET numa API pública. Clique com direito → Fixar output para ver o resultado!"
+      },
+      "_x": 80,
+      "_y": 200,
+      "_id": "node_http",
+      "_next": "node_set1"
+    },
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "titulo",
+        "value": "Resultado da API: {{resposta_api}}",
+        "operation": "set",
+        "nota": "Salva o resultado em 'titulo'"
+      },
+      "_x": 440,
+      "_y": 80,
+      "_id": "node_set1"
+    },
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "log_execucao",
+        "value": "Executado em {{resposta_api}}",
+        "operation": "set",
+        "nota": "Outro branch — mesma origem, destino diferente"
+      },
+      "_x": 440,
+      "_y": 320,
+      "_id": "node_set2"
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Resultado",
+        "message": "Variável 'titulo': {{titulo}}\n\nVariável 'log': {{log_execucao}}",
+        "type": "info",
+        "nota": "Mostra o que foi capturado"
+      },
+      "_x": 800,
+      "_y": 200,
+      "_id": "node_msg"
+    }
+  ],
+  "connections_hint": "HTTP → SetVar1 (cima) e HTTP → SetVar2 (baixo) e SetVar1+SetVar2 → ShowMessage"
+}

@@ -258,5 +258,105 @@
     "total_steps": 2,
     "ok_steps": 2,
     "success": true
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-07T18:15:00.962593",
+    "finished_at": "2026-05-07T18:15:10.892073",
+    "duration_s": 9.9,
+    "total_steps": 1,
+    "ok_steps": 1,
+    "success": true
+  },
+  {
+    "flow_name": "Demo — Nós com múltiplas saídas",
+    "flow_path": "c:\\Users\\Gleidson\\pasta4\\Python\\pyflow\\pyflow\\flows\\demo_nos_multiplos.json",
+    "started_at": "2026-05-07T18:25:54.337924",
+    "finished_at": "2026-05-07T18:25:55.109487",
+    "duration_s": 0.8,
+    "total_steps": 4,
+    "ok_steps": 4,
+    "success": true
+  },
+  {
+    "flow_name": "Demo — Nós com múltiplas saídas",
+    "flow_path": "C:\\Users\\Gleidson\\pasta4\\Python\\pyflow\\pyflow\\flows\\demo_nos_multiplos.json",
+    "started_at": "2026-05-07T18:29:17.604103",
+    "finished_at": "2026-05-07T18:29:18.256167",
+    "duration_s": 0.6,
+    "total_steps": 4,
+    "ok_steps": 4,
+    "success": true
+  },
+  {
+    "flow_name": "Demo — Nós com múltiplas saídas",
+    "flow_path": "C:\\Users\\Gleidson\\pasta4\\Python\\pyflow\\pyflow\\flows\\demo_nos_multiplos.json",
+    "started_at": "2026-05-07T18:29:49.650127",
+    "finished_at": "2026-05-07T18:29:50.292964",
+    "duration_s": 0.6,
+    "total_steps": 4,
+    "ok_steps": 4,
+    "success": true
+  },
+  {
+    "flow_name": "Demo — Execução Condicional ✅❌",
+    "flow_path": "C:\\Users\\Gleidson\\pasta4\\Python\\pyflow\\pyflow\\flows\\demo_condicional.json",
+    "started_at": "2026-05-07T18:44:35.716483",
+    "finished_at": "2026-05-07T18:44:36.534048",
+    "duration_s": 0.8,
+    "total_steps": 3,
+    "ok_steps": 3,
+    "success": true
+  },
+  {
+    "flow_name": "Demo — Execução Condicional ✅❌",
+    "flow_path": "C:\\Users\\Gleidson\\pasta4\\Python\\pyflow\\pyflow\\flows\\demo_condicional.json",
+    "started_at": "2026-05-07T18:44:48.986326",
+    "finished_at": "2026-05-07T18:44:49.616878",
+    "duration_s": 0.6,
+    "total_steps": 3,
+    "ok_steps": 3,
+    "success": true
+  },
+  {
+    "flow_name": "Demo — Execução Condicional ✅❌",
+    "flow_path": "C:\\Users\\Gleidson\\pasta4\\Python\\pyflow\\pyflow\\flows\\demo_condicional.json",
+    "started_at": "2026-05-07T18:44:56.448460",
+    "finished_at": "2026-05-07T18:44:57.090148",
+    "duration_s": 0.6,
+    "total_steps": 3,
+    "ok_steps": 3,
+    "success": true
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-07T23:52:39.401343",
+    "finished_at": "2026-05-07T23:52:40.262543",
+    "duration_s": 0.8,
+    "total_steps": 3,
+    "ok_steps": 3,
+    "success": true
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-07T23:53:20.623047",
+    "finished_at": "2026-05-07T23:53:21.325412",
+    "duration_s": 0.7,
+    "total_steps": 3,
+    "ok_steps": 3,
+    "success": true
+  },
+  {
+    "flow_name": "demo_condicional",
+    "flow_path": "",
+    "started_at": "2026-05-07T23:57:50.648335",
+    "finished_at": "2026-05-07T23:57:51.413359",
+    "duration_s": 0.8,
+    "total_steps": 3,
+    "ok_steps": 3,
+    "success": true
   }
 ]

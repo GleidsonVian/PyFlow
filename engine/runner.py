@@ -609,3 +609,77 @@ class Runner:
         """
         return self.run(steps)
 
+    def run_graph(self, graph: list, start_index: int = 0) -> list:
+        """
+        Execução condicional baseada em grafo.
+        graph: lista de {id, block_instance, params, next_success, next_error, _index}
+        Cada nó decide o próximo baseado no resultado real (success → next_success, error → next_error).
+        """
+        if not graph:
+            return []
+
+        ctx.clear()
+
+        node_map = {n["id"]: n for n in graph}
+        results  = []
+        visited  = set()   # evita loops infinitos
+
+        # Raízes: nós não referenciados como destino de nenhuma conexão
+        all_targets = set()
+        for n in graph:
+            if n.get("next_success"): all_targets.add(n["next_success"])
+            if n.get("next_error"):   all_targets.add(n["next_error"])
+        roots = [n for n in graph if n["id"] not in all_targets]
+        if not roots:
+            roots = [graph[0]]
+
+        def _exec_node(node_id: str):
+            if self._stopped or node_id not in node_map or node_id in visited:
+                return
+            visited.add(node_id)
+            node  = node_map[node_id]
+            block = node["block_instance"]
+            index = node["_index"]
+
+            raw_params = {k: v for k, v in node.get("params", {}).items()
+                          if not k.startswith("_")}
+            params = resolve_params(raw_params, self._get_context())
+
+            print(f"\n[{index + 1}] Executando: {block.name}")
+            if self.on_step_start:
+                self.on_step_start(index, block)
+
+            result = self._execute_with_retry(index, block, params)
+            result["step_index"] = index
+            result["block_name"] = block.name
+            results.append(result)
+
+            if result.get("success"):
+                suffix = f" (após {result['retried']} retry)" if result.get("retried") else ""
+                print(f"  ✓ {result.get('message', 'OK')}{suffix}")
+                if self.on_step_done:
+                    self.on_step_done(index, block, result)
+                next_id = node.get("next_success")
+            else:
+                msg = result.get("message", "Erro desconhecido")
+                print(f"  ✗ {msg}")
+                if self.on_step_error:
+                    self.on_step_error(index, block, result)
+                next_id = node.get("next_error")
+                if not next_id:
+                    # Sem rota de erro configurada: para ou continua conforme config
+                    if self.config.stop_on_failure:
+                        print(f"\n  Execução interrompida — sem rota de erro para '{block.name}'.")
+                        return
+                    # Sem rota e sem stop: encerra esse branch silenciosamente
+                    return
+
+            if next_id:
+                _exec_node(next_id)
+
+        for root in roots:
+            if not self._stopped:
+                _exec_node(root["id"])
+
+        return results
+

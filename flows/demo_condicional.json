@@ -1,0 +1,60 @@
+{
+  "flow_name": "demo_condicional",
+  "steps": [
+    {
+      "block": "HttpRequestBlock",
+      "params": {
+        "url": "https://jsonplaceholder.typicode.com/todos/1",
+        "method": "GET",
+        "headers": "",
+        "body": "",
+        "variable_name": "api_result",
+        "timeout": "10",
+        "nota": "✅ sucesso → Definir Variável | ❌ erro → Exibir Mensagem de erro"
+      },
+      "_x": 80,
+      "_y": 200,
+      "_id": "n_http",
+      "_next_success": "n_ok",
+      "_next_error": "n_err"
+    },
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "status",
+        "value": "API respondeu com sucesso!",
+        "operation": "set",
+        "nota": "Executado APENAS se o HTTP teve sucesso"
+      },
+      "_x": 460,
+      "_y": 80,
+      "_id": "n_ok",
+      "_next_success": "n_final"
+    },
+    {
+      "block": "SetVariableBlock",
+      "params": {
+        "variable_name": "status",
+        "value": "ERRO ao chamar a API!",
+        "operation": "set",
+        "nota": "Executado APENAS se o HTTP falhou"
+      },
+      "_x": 460,
+      "_y": 340,
+      "_id": "n_err",
+      "_next_success": "n_final"
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Resultado do fluxo",
+        "message": "Status: {{status}}\n\nResposta API: {{api_result}}",
+        "type": "info",
+        "nota": "Sempre executado — recebe o status de qualquer ramo"
+      },
+      "_x": 820,
+      "_y": 200,
+      "_id": "n_final"
+    }
+  ]
+}

@@ -4,10 +4,13 @@ from PySide6.QtWidgets import (
     QMessageBox, QStatusBar, QFrame, QSizePolicy
 )
 from PySide6.QtCore import Qt, QThread, Signal, QTimer
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QIcon
+from pathlib import Path
+
+_ICON_PATH = Path(__file__).parent.parent / "assets" / "icon.png"
 
 from ui.block_panel import BlockPanel
-from ui.canvas import Canvas
+from ui.node_canvas import NodeCanvas as Canvas
 from ui.properties_panel import PropertiesPanel
 from ui.recorder_dialog import RecorderDialog
 from ui.log_panel import LogPanel
@@ -35,10 +38,11 @@ class RunnerThread(QThread):
     step_retry   = Signal(int, str, int, int)
     run_finished = Signal(int, int)
 
-    def __init__(self, steps, start_index: int = 0):
+    def __init__(self, steps, start_index: int = 0, graph: list = None):
         super().__init__()
         self.steps       = steps
         self.start_index = start_index
+        self.graph       = graph or []
 
     def run(self):
         self.runner = Runner(
@@ -48,7 +52,10 @@ class RunnerThread(QThread):
             on_step_retry=lambda i, b, a, m: self.step_retry.emit(i, b.name, a, m),
             config=get_runner_config(),
         )
-        results = self.runner.run(self.steps, start_index=self.start_index)
+        if self.graph:
+            results = self.runner.run_graph(self.graph, start_index=self.start_index)
+        else:
+            results = self.runner.run(self.steps, start_index=self.start_index)
         ok = sum(1 for r in results if r.get("success"))
         self.run_finished.emit(ok, len(results))
 
@@ -98,6 +105,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("PyFlow RPA")
         self.setMinimumSize(1280, 720)
+        if _ICON_PATH.exists():
+            self.setWindowIcon(QIcon(str(_ICON_PATH)))
         self.flow_manager       = FlowManager()
         self.flow_exporter      = FlowExporter()
         self._scheduler_dialog  = None
@@ -588,7 +597,8 @@ class MainWindow(QMainWindow):
         if cfg.retry_enabled:
             self.log_panel.log("info", f"↻ Retry: {cfg.retry_attempts}x / {cfg.retry_delay}s")
         self.vars_panel.start_live()
-        self.runner_thread = RunnerThread(steps, start_index=start_index)
+        graph = self.canvas.get_graph()
+        self.runner_thread = RunnerThread(steps, start_index=start_index, graph=graph)
         self.runner_thread.step_started.connect(self._on_step_started)
         self.runner_thread.step_done.connect(self._on_step_done)
         self.runner_thread.step_retry.connect(self._on_step_retry)
@@ -676,6 +686,7 @@ class MainWindow(QMainWindow):
 
     def _on_step_done(self, index, name, category, success, message):
         self.canvas.set_block_state(index, "success" if success else "error")
+        self.canvas.set_block_result(index, message, success)
         self.log_panel.log(
             "success" if success else "error",
             message or name,

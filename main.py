@@ -42,8 +42,8 @@ def _ensure_requirements():
             print(f"[PyFlow] Aviso ao instalar dependencias:\n{result.stderr[:500]}")
     except subprocess.TimeoutExpired:
         print("[PyFlow] Timeout ao verificar dependencias — continuando.")
-    except Exception as e:
-        print(f"[PyFlow] Erro ao verificar dependencias: {e} — continuando.")
+    except BaseException as e:
+        print(f"[PyFlow] Aviso ao verificar dependencias: {e} — continuando.")
 
 
 def main():
@@ -51,11 +51,17 @@ def main():
 
     # Importa a UI só depois de garantir as dependências
     from PySide6.QtWidgets import QApplication
+    from PySide6.QtGui import QIcon
     from ui.main_window import MainWindow
 
     app = QApplication(sys.argv)
     app.setApplicationName("PyFlow RPA")
     app.setApplicationVersion("1.0.0")
+
+    # Ícone da aplicação (janela + taskbar)
+    icon_path = Path(__file__).parent / "assets" / "icon.png"
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
 
     window = MainWindow()
     window.show()
