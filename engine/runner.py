@@ -76,40 +76,6 @@ def _should_retry(message: str, cfg) -> tuple:
     return True, "erro desconhecido (retry por precaução)"
 
 
-def resolve_params(params: dict, context: dict) -> dict:
-    """
-    Substitui tokens dinâmicos pelo valor real.
-    1. {{ASSET:nome}} → Busca no arquivo de credenciais/configurações.
-    2. {{nome}}       → Busca nas variáveis de execução (contexto).
-    """
-    import re
-    from engine.asset_manager import AssetManager
-    resolved = {}
-    for key, value in params.items():
-        if key == "nota":          # campo de anotação do canvas — não passa para execute()
-            continue
-        if isinstance(value, str):
-            def asset_replacer(match):
-                asset_key = match.group(1).strip()
-                val = AssetManager.get_asset(asset_key)
-                if val is not None:
-                    return str(val)
-                return match.group(0)
-
-            temp_value = re.sub(r"\{\{ASSET:(.+?)\}\}", asset_replacer, value)
-
-            def context_replacer(match):
-                var_name = match.group(1).strip()
-                if var_name.startswith("ASSET:"):
-                    return match.group(0)
-                if var_name not in context:
-                    raise ValueError(f"Variável não encontrada no contexto: {var_name}")
-                return str(context[var_name])
-
-            resolved[key] = re.sub(r"\{\{(.+?)\}\}", context_replacer, temp_value)
-        else:
-            resolved[key] = value
-    return resolved
 
 
 # ── RunnerConfig — agora com ConditionalRetry ─────────────────────────────────

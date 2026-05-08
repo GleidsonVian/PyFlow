@@ -31,14 +31,19 @@ def clear():
     _store.clear()
 
 
-def resolve_params(params: dict) -> dict:
+def resolve_params(params: dict, context: dict = None) -> dict:
     """
     Substitui tokens dinâmicos nos valores de parâmetros.
       {{ASSET:nome}}  → busca no arquivo de credenciais/configurações
       {{nome}}        → busca nas variáveis de execução
     """
+    if context is None:
+        context = _store
+
     resolved = {}
     for key, value in params.items():
+        if key == "nota": # Ignora anotações
+            continue
         if not isinstance(value, str):
             resolved[key] = value
             continue
@@ -54,7 +59,24 @@ def resolve_params(params: dict) -> dict:
             var_name = match.group(1).strip()
             if var_name.startswith("ASSET:"):
                 return match.group(0)
-            return str(_store.get(var_name, match.group(0)))
+            
+            # Suporte a dot notation (ex: {{posicao.x}})
+            parts = var_name.split(".")
+            val = context.get(parts[0])
+            
+            if val is not None:
+                if len(parts) == 1:
+                    return str(val)
+                
+                curr = val
+                for p in parts[1:]:
+                    if isinstance(curr, dict) and p in curr:
+                        curr = curr[p]
+                    else:
+                        return match.group(0)
+                return str(curr)
+
+            return match.group(0)
 
         resolved[key] = re.sub(r"\{\{(.+?)\}\}", context_replacer, temp)
 

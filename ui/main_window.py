@@ -105,6 +105,8 @@ class DebugSignals(QThread):
             on_step_error =lambda i, b, r: self.sig_error.emit(i, b.name, r.get("message", ""), r.get("data", {})),
             on_finished   =lambda ok, t:   self.sig_finished.emit(ok, t),
         )
+        # IMPORTANTE: Removido parent do signaller para evitar erro de threads
+        # O DebugSignals vai rodar solto na sua thread
 
     def run(self):
         self.runner.load(self.steps)
@@ -154,6 +156,54 @@ class MainWindow(QMainWindow):
         self._apply_styles()
         self._setup_autosave()
         self._check_autosave_recovery()
+
+    def _on_compile_exe(self):
+        """Chama o script de build para gerar o executável standalone."""
+        from PySide6.QtWidgets import QMessageBox
+        import subprocess
+        import threading
+        
+        reply = QMessageBox.question(
+            self, "Compilar Executável",
+            "Deseja gerar o executável (.EXE) do PyFlow agora?\n\n"
+            "Este processo pode levar de 2 a 5 minutos dependendo do seu PC.\n"
+            "O PyFlow continuará funcionando, mas pode ficar lento durante o processo.",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        
+        if reply == QMessageBox.No:
+            return
+
+        def run_build():
+            self.log_panel.log("info", "🔨 Iniciando compilação do executável... Aguarde.")
+            try:
+                # Chama o build.py usando o mesmo interpretador atual
+                process = subprocess.Popen(
+                    [sys.executable, "build.py"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+                )
+                
+                # Opcional: Ler saída do processo e jogar no log
+                for line in process.stdout:
+                    if "✅" in line or "❌" in line:
+                        self.log_panel.log("info", f"Build: {line.strip()}")
+                
+                process.wait()
+                
+                if process.returncode == 0:
+                    self.log_panel.log("info", "✅ Executável gerado com sucesso na pasta 'dist/PyFlowRPA'!")
+                    # Abre a pasta dist no Windows Explorer
+                    os.startfile(os.path.abspath("dist"))
+                else:
+                    self.log_panel.log("error", "❌ Falha ao compilar o executável. Verifique o console para detalhes.")
+            except Exception as e:
+                self.log_panel.log("error", f"❌ Erro ao disparar build: {e}")
+
+        # Roda em uma thread separada para não travar a UI
+        threading.Thread(target=run_build, daemon=True).start()
 
     def keyPressEvent(self, event):
         key   = event.key()
@@ -319,7 +369,7 @@ class MainWindow(QMainWindow):
                 border-bottom: 1px solid #313244;
                 min-height: 40px;
             }
-            QLabel { color: #cba6f7; font-weight: bold; font-size: 13px; }
+            QLabel { color: #cba6f7; font-weight: bold; font-size: 13px; min-height: 14px; }
             QPushButton { 
                 background-color: #313244; 
                 color: #f38ba8; 
@@ -473,6 +523,13 @@ class MainWindow(QMainWindow):
         self.btn_more.setMenu(more_menu)
 
         # Layout final da Toolbar
+        self.btn_toggle_blocks = QPushButton("≡")
+        self.btn_toggle_blocks.setObjectName("btn_toggle_sidebar")
+        self.btn_toggle_blocks.setToolTip("Mostrar/Esconder Blocos [Ctrl+B]")
+        self.btn_toggle_blocks.setFixedWidth(40)
+        self.btn_toggle_blocks.clicked.connect(self._toggle_block_panel)
+        
+        tb.addWidget(self.btn_toggle_blocks)
         tb.addWidget(title)
         tb.addWidget(self.lbl_retry)
         tb.addStretch()
@@ -539,16 +596,19 @@ class MainWindow(QMainWindow):
         self.canvas.scene.sig_quick_add.connect(self._on_quick_add)
         self.canvas.request_enter_subflow.connect(self._on_enter_subflow)
         self.splitter.addWidget(self.right_tabs)
-        self.splitter.setSizes([200, 780, 320])
-        self.splitter.setCollapsible(0, False)
+        self.splitter.setSizes([220, 780, 320])
+        self.splitter.setCollapsible(0, True)
         # Permite colapsar o painel direito (agora feito via atalho)
         self.splitter.setCollapsible(2, True)
 
         root.addWidget(self.splitter, 1)
 
-        # Atalho para esconder/mostrar barra lateral (Ctrl+B)
-        self.shortcut_toggle_sidebar = QShortcut(QKeySequence("Ctrl+B"), self)
-        self.shortcut_toggle_sidebar.activated.connect(self._toggle_sidebar)
+        # Atalhos para esconder/mostrar barras laterais
+        self.shortcut_toggle_blocks = QShortcut(QKeySequence("Ctrl+B"), self)
+        self.shortcut_toggle_blocks.activated.connect(self._toggle_block_panel)
+        
+        self.shortcut_toggle_inspector = QShortcut(QKeySequence("Ctrl+I"), self)
+        self.shortcut_toggle_inspector.activated.connect(self._toggle_right_panel)
 
         self.status = QStatusBar()
         self.status.setObjectName("status_bar")
@@ -567,6 +627,8 @@ class MainWindow(QMainWindow):
         file_menu.addAction(QAction("Salvar como  [Ctrl+Shift+S]", self, triggered=self._on_save_as))
         file_menu.addAction(QAction("Gerenciar fluxos",            self, triggered=self._on_open_flow_manager))
         file_menu.addAction(QAction("Exportar como .py",           self, triggered=self._on_export))
+        file_menu.addSeparator()
+        file_menu.addAction(QAction("📦 Compilar para .EXE",       self, triggered=self._on_compile_exe))
         file_menu.addSeparator()
         file_menu.addAction(QAction("Sair",                        self, triggered=self.close))
 
@@ -590,21 +652,25 @@ class MainWindow(QMainWindow):
         run_menu.addSeparator()
         run_menu.addAction(QAction("Configurações",                self, triggered=self._on_open_settings))
 
-    def _toggle_sidebar(self):
+    def _toggle_block_panel(self):
+        """Alterna a visibilidade do painel esquerdo (Blocos)."""
+        sizes = self.splitter.sizes()
+        if sizes[0] > 0:
+            self._last_block_size = sizes[0]
+            self.splitter.setSizes([0, sizes[1] + sizes[0], sizes[2]])
+        else:
+            size = getattr(self, "_last_block_size", 220)
+            self.splitter.setSizes([size, sizes[1] - size, sizes[2]])
+
+    def _toggle_right_panel(self):
         """Alterna a visibilidade do painel direito (Inspetor)."""
         sizes = self.splitter.sizes()
         if sizes[2] > 0:
-            # Salva o tamanho atual antes de fechar
-            self._last_sidebar_size = sizes[2]
+            self._last_right_size = sizes[2]
             self.splitter.setSizes([sizes[0], sizes[1] + sizes[2], 0])
         else:
-            # Restaura o tamanho (ou usa 320 como padrão se não existir)
-            restore_size = getattr(self, "_last_sidebar_size", 320)
-            if restore_size < 100:
-                restore_size = 320
-            # Reduz o canvas para dar espaço à sidebar
-            new_canvas_size = max(100, sizes[1] - restore_size)
-            self.splitter.setSizes([sizes[0], new_canvas_size, restore_size])
+            size = getattr(self, "_last_right_size", 320)
+            self.splitter.setSizes([sizes[0], sizes[1] - size, size])
 
 
     # ── Assets ────────────────────────────────────────────────────────

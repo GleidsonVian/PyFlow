@@ -521,5 +521,91 @@
     "failed_context": {
       "projeto": "Relatório de Vendas"
     }
+  },
+  {
+    "flow_name": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\capturar_coordenada.json",
+    "flow_path": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\capturar_coordenada.json",
+    "started_at": "2026-05-08T15:03:23.494555",
+    "finished_at": "2026-05-08T15:03:29.522963",
+    "duration_s": 6.0,
+    "total_steps": 3,
+    "ok_steps": 2,
+    "success": false,
+    "failed_idx": 2,
+    "failed_context": {
+      "posicao_alvo": {
+        "string": "1805,501",
+        "x": 1805,
+        "y": 501
+      }
+    }
+  },
+  {
+    "flow_name": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\capturar_coordenada.json",
+    "flow_path": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\capturar_coordenada.json",
+    "started_at": "2026-05-08T15:04:07.870098",
+    "finished_at": "2026-05-08T15:04:13.881411",
+    "duration_s": 6.0,
+    "total_steps": 3,
+    "ok_steps": 2,
+    "success": false,
+    "failed_idx": 2,
+    "failed_context": {
+      "posicao_alvo": {
+        "string": "1051,255",
+        "x": 1051,
+        "y": 255
+      }
+    }
+  },
+  {
+    "flow_name": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\capturar_coordenada.json",
+    "flow_path": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\capturar_coordenada.json",
+    "started_at": "2026-05-08T15:05:51.163870",
+    "finished_at": "2026-05-08T15:05:57.177147",
+    "duration_s": 6.0,
+    "total_steps": 3,
+    "ok_steps": 2,
+    "success": false,
+    "failed_idx": 2,
+    "failed_context": {
+      "posicao_alvo": {
+        "string": "1859,503",
+        "x": 1859,
+        "y": 503
+      }
+    }
+  },
+  {
+    "flow_name": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\capturar_coordenada.json",
+    "flow_path": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\capturar_coordenada.json",
+    "started_at": "2026-05-08T15:08:55.570967",
+    "finished_at": "2026-05-08T15:09:01.607462",
+    "duration_s": 6.0,
+    "total_steps": 3,
+    "ok_steps": 3,
+    "success": true,
+    "failed_idx": -1,
+    "failed_context": {
+      "posicao_alvo": {
+        "string": "1974,504",
+        "x": 1974,
+        "y": 504
+      }
+    }
+  },
+  {
+    "flow_name": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\bot_stealth_exemplo.json",
+    "flow_path": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\bot_stealth_exemplo.json",
+    "started_at": "2026-05-08T15:17:27.781044",
+    "finished_at": "2026-05-08T15:17:29.086072",
+    "duration_s": 1.3,
+    "total_steps": 9,
+    "ok_steps": 9,
+    "success": true,
+    "failed_idx": -1,
+    "failed_context": {
+      "cor_hp": "#181825"
+    }
   }
 ]

@@ -1,0 +1,42 @@
+{
+  "flow_name": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\capturar_coordenada.json",
+  "saved_at": "2026-05-08T15:04:05.740164",
+  "steps": [
+    {
+      "block": "WaitBlock",
+      "params": {
+        "seconds": "3",
+        "nota": ""
+      },
+      "_x": -120.0,
+      "_y": 96.0,
+      "_id": "bbdc09ef",
+      "_next_success": "get_pos1"
+    },
+    {
+      "block": "GetMousePositionBlock",
+      "params": {
+        "variable_name": "posicao_alvo",
+        "delay": "3.0",
+        "nota": ""
+      },
+      "_x": 192.0,
+      "_y": 96.0,
+      "_id": "get_pos1",
+      "_next_success": "msg2"
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Coordenada Capturada",
+        "message": "Sucesso! O mouse estava em:\nX: {{posicao_alvo.x}}\nY: {{posicao_alvo.y}}\n\nValor completo: {{posicao_alvo.string}}",
+        "type": "info",
+        "kind": "info",
+        "nota": ""
+      },
+      "_x": 504.0,
+      "_y": 96.0,
+      "_id": "msg2"
+    }
+  ]
+}

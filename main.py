@@ -2,7 +2,21 @@
 PyFlow RPA — Entry point.
 Instala dependências ausentes automaticamente antes de iniciar a interface.
 """
+import os
 import sys
+
+# Força o DPI Awareness e silencia avisos do Qt antes de importar qualquer coisa da UI
+os.environ["QT_LOGGING_RULES"] = "*.debug=false;qt.qpa.window=false"
+os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+
+# No Windows, tenta setar a consciência de DPI via ctypes se falhar via Qt
+if sys.platform == "win32":
+    try:
+        import ctypes
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    except Exception:
+        pass
+
 import subprocess
 import importlib
 from pathlib import Path

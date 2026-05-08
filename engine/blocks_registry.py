@@ -63,8 +63,11 @@ from blocks.system.clipboard_block       import ClipboardBlock
 from blocks.system.hash_block            import HashBlock
 from blocks.system.ocr_block             import OcrBlock
 from blocks.system.python_script         import PythonScriptBlock
+from blocks.system.mouse_system          import GetMousePositionBlock
+from blocks.system.stealth_actions       import ClickCoordinateBlock, KeyboardActionBlock
 from blocks.trigger.timer_trigger        import TimerTriggerBlock
 from blocks.trigger.webhook_trigger      import WebhookTriggerBlock
+from blocks.system.vision_blocks         import LocateImageBlock, GetPixelColorBlock, WaitPixelColorBlock
 
 ALL_BLOCKS = [
     # Navegador
@@ -133,6 +136,12 @@ ALL_BLOCKS = [
     # Gatilhos
     TimerTriggerBlock,
     WebhookTriggerBlock,
+    LocateImageBlock,
+    GetPixelColorBlock,
+    WaitPixelColorBlock,
+    GetMousePositionBlock,
+    ClickCoordinateBlock,
+    KeyboardActionBlock,
 ]
 
 BLOCK_BY_NAME: dict[str, type] = {cls.__name__: cls for cls in ALL_BLOCKS}

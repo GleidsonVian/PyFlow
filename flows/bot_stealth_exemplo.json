@@ -1,0 +1,62 @@
+{
+  "steps": [
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Configuração do Bot",
+        "message": "Este é um exemplo de bot humanoide.\nEle vai procurar um ponto de HP (fictício) e usar uma poção (F1) se a cor mudar.\n\nAtive o Modo Stealth nos blocos para máxima segurança.",
+        "type": "info"
+      },
+      "_id": "start",
+      "_x": 50, "_y": 100,
+      "_next_success": "loop"
+    },
+    {
+      "block": "LoopBlock",
+      "params": { "iterations": 0 },
+      "_id": "loop",
+      "_x": 280, "_y": 100,
+      "_next_success": "check_hp"
+    },
+    {
+      "block": "GetPixelColorBlock",
+      "params": {
+        "x": 100,
+        "y": 100,
+        "variable_name": "cor_hp"
+      },
+      "_id": "check_hp",
+      "_x": 510, "_y": 100,
+      "_next_success": "condition"
+    },
+    {
+      "block": "ConditionBlock",
+      "params": {
+        "condition": "'{{cor_hp}}' == '#FF0000'"
+      },
+      "_id": "condition",
+      "_x": 740, "_y": 100,
+      "_next_success": "wait_bit",
+      "_next_error": "press_f1"
+    },
+    {
+      "block": "WaitBlock",
+      "params": { "seconds": 1.0 },
+      "_id": "wait_bit",
+      "_x": 970, "_y": 20,
+      "_next_success": "loop"
+    },
+    {
+      "block": "KeyboardActionBlock",
+      "params": {
+        "action": "press",
+        "value": "f1",
+        "humanize": true,
+        "interval": 0.15
+      },
+      "_id": "press_f1",
+      "_x": 970, "_y": 180,
+      "_next_success": "loop"
+    }
+  ]
+}

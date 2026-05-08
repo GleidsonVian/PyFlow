@@ -34,6 +34,7 @@ CATEGORY_ICONS = {
     "Integração": "🔌",
     "Sistema":    "💻",
     "Gatilhos":   "⚡",
+    "Visão Computacional": "👁",
 }
 
 CATEGORY_COLORS = {
@@ -45,6 +46,7 @@ CATEGORY_COLORS = {
     "Arquivos":   "#a6e3a1",
     "Integração": "#fab387",
     "Sistema":    "#f38ba8",
+    "Visão Computacional": "#cba6f7",
 }
 
 
