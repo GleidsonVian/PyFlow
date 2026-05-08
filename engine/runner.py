@@ -611,7 +611,7 @@ class Runner:
 
         node_map = {n["id"]: n for n in graph}
         results  = []
-        visited  = set()   # evita loops infinitos
+        # visited  = set()   # REMOVIDO: permite loops manuais no grafo (estilo n8n/node-red)
 
         # Raízes: nós não referenciados como destino de nenhuma conexão
         if start_index > 0:
@@ -627,9 +627,9 @@ class Runner:
                 roots = [graph[0]]
 
         def _exec_node(node_id: str):
-            if self._stopped or node_id not in node_map or node_id in visited:
+            if self._stopped or node_id not in node_map:
                 return
-            visited.add(node_id)
+            
             node  = node_map[node_id]
             block = node["block_instance"]
             index = node["_index"]
@@ -651,27 +651,42 @@ class Runner:
             result["block_name"] = block.name
             results.append(result)
 
+            data = result.get("data", {})
+            next_id = None
+
             if result.get("success"):
                 suffix = f" (após {result['retried']} retry)" if result.get("retried") else ""
                 print(f"  ✓ {result.get('message', 'OK')}{suffix}")
                 if self.on_step_done:
                     self.on_step_done(index, block, result)
-                next_id = node.get("next_success")
+                
+                # Suporte a desvio condicional via portas no grafo
+                if "if_result" in data:
+                    if data["if_result"]:
+                        print("  → Caminho: VERDADEIRO")
+                        next_id = node.get("next_success")
+                    else:
+                        print("  → Caminho: FALSO")
+                        next_id = node.get("next_error")
+                else:
+                    next_id = node.get("next_success")
             else:
                 msg = result.get("message", "Erro desconhecido")
                 print(f"  ✗ {msg}")
                 if self.on_step_error:
                     self.on_step_error(index, block, result)
+                
+                # Se for um erro real (não um 'if_result' falso), segue a porta de erro
                 next_id = node.get("next_error")
+                
                 if not next_id:
-                    # Sem rota de erro configurada: para ou continua conforme config
                     if self.config.stop_on_failure:
                         print(f"\n  Execução interrompida — sem rota de erro para '{block.name}'.")
                         return
-                    # Sem rota e sem stop: encerra esse branch silenciosamente
                     return
 
             if next_id:
+                # Usa recursion limit para segurança ou um pequeno delay se necessário
                 _exec_node(next_id)
 
         for root in roots:

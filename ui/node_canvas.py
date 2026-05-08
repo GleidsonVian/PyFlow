@@ -21,6 +21,8 @@ from PySide6.QtGui import (
 
 from engine.blocks_registry import BLOCK_BY_NAME
 from ui.node_details_dialog import NodeDetailsDialog
+from ui.param_dialog import ParamDialog
+from ui.comment_item import CommentItem
 BLOCK_REGISTRY = BLOCK_BY_NAME
 
 CATEGORY_COLORS = {
@@ -336,14 +338,21 @@ class NodeItem(QGraphicsObject):
             nota_e = QFontMetrics(font_n).elidedText(f"📝 {nota}", Qt.ElideRight, NODE_W - 30)
             painter.drawText(QRectF(12, 58, NODE_W - 24, 14), Qt.AlignVCenter | Qt.AlignLeft, nota_e)
 
-        # Labels das portas de saída (✓ e ✗)
+        # Labels das portas de saída (✓ e ✗) ou (V e F para condições)
         sy = int(NODE_H * 0.32)
         ey = int(NODE_H * 0.72)
         painter.setFont(QFont("Segoe UI", 7, QFont.Bold))
+        
+        btype = type(self.block_instance).__name__
+        is_cond = btype in ("IfBlock", "WhileBlock")
+        
+        label_ok  = "V" if is_cond else "✓"
+        label_err = "F" if is_cond else "✗"
+
         painter.setPen(QColor("#a6e3a1"))
-        painter.drawText(QRectF(NODE_W - 18, sy - 7, 14, 14), Qt.AlignCenter, "✓")
+        painter.drawText(QRectF(NODE_W - 18, sy - 7, 14, 14), Qt.AlignCenter, label_ok)
         painter.setPen(QColor("#f38ba8"))
-        painter.drawText(QRectF(NODE_W - 18, ey - 7, 14, 14), Qt.AlignCenter, "✗")
+        painter.drawText(QRectF(NODE_W - 18, ey - 7, 14, 14), Qt.AlignCenter, label_err)
 
         # Painel de output fixado
         if self._pinned:
@@ -603,6 +612,76 @@ class NodeScene(QGraphicsScene):
             n._idx = i
             n.update()
 
+    def auto_layout(self):
+        """Organiza os nós em camadas usando um algoritmo de BFS simples."""
+        if not self._nodes:
+            return
+
+        # 1. Mapeia adjacência e graus de entrada
+        adj = {}
+        in_degree = {n: 0 for n in self._nodes}
+        for c in self._conns:
+            if c.src and c.dst:
+                adj.setdefault(c.src.node, []).append(c.dst.node)
+                in_degree[c.dst.node] += 1
+
+        # 2. Identifica raízes (nós sem entrada)
+        roots = [n for n in self._nodes if in_degree[n] == 0]
+        if not roots:
+            # Caso haja ciclos e ninguém tenha grau 0, pega o primeiro
+            roots = [self._nodes[0]]
+
+        # 3. Distribui em camadas (BFS)
+        node_layers = {}
+        queue = []
+        for r in roots:
+            node_layers[r] = 0
+            queue.append(r)
+
+        while queue:
+            u = queue.pop(0)
+            layer = node_layers[u]
+            for v in adj.get(u, []):
+                if v not in node_layers or node_layers[v] < layer + 1:
+                    node_layers[v] = layer + 1
+                    queue.append(v)
+
+        # 4. Agrupa por camada
+        layers = {}
+        for n, l in node_layers.items():
+            layers.setdefault(l, []).append(n)
+            
+        # Garante que nós órfãos ou não alcançados também fiquem na camada 0 ou em uma nova
+        for n in self._nodes:
+            if n not in node_layers:
+                node_layers[n] = 0
+                layers.setdefault(0, []).append(n)
+
+        # 5. Posiciona
+        X_GAP = NODE_W + 100
+        Y_GAP = NODE_H + 40
+        
+        # Centraliza verticalmente cada camada
+        max_nodes_in_layer = max(len(ns) for ns in layers.values())
+        total_max_h = max_nodes_in_layer * Y_GAP
+
+        for l in sorted(layers.keys()):
+            nodes = layers[l]
+            # Ordena por Y original para preservar um pouco a intenção do usuário
+            nodes.sort(key=lambda n: n.pos().y())
+            
+            x = l * X_GAP
+            layer_h = len(nodes) * Y_GAP
+            offset_y = (total_max_h - layer_h) / 2
+            
+            for i, n in enumerate(nodes):
+                n.setPos(x, offset_y + i * Y_GAP)
+
+        # Atualiza todas as conexões
+        for c in self._conns:
+            c.refresh()
+        self.update()
+
     # ── serialização ──────────────────────────────────────────────────────────
 
     def get_serialized_steps(self) -> list:
@@ -635,6 +714,12 @@ class NodeScene(QGraphicsScene):
             if r.get("error"):
                 step["_next_error"] = r["error"]
             result.append(step)
+
+        # Adiciona comentários ao final dos steps
+        for item in self.items():
+            if isinstance(item, CommentItem):
+                result.append(item.get_data())
+
         return result
 
     def load_from_steps(self, steps: list):
@@ -657,6 +742,20 @@ class NodeScene(QGraphicsScene):
         node_map: dict[str, NodeItem] = {}
 
         for i, step in enumerate(steps):
+            if step.get("type") == "comment":
+                c = CommentItem(
+                    text=step.get("text", ""),
+                    color_name=step.get("color", "Amarelo"),
+                    width=step.get("width", 200),
+                    height=step.get("height", 100),
+                    cid=step.get("_id")
+                )
+                x = float(step.get("_x", 0))
+                y = float(step.get("_y", 0))
+                self.addItem(c)
+                c.setPos(QPointF(x, y))
+                continue
+
             cls = BLOCK_REGISTRY.get(step.get("block"))
             if not cls:
                 continue
@@ -818,6 +917,22 @@ class _NodeView(QGraphicsView):
             self._panning = False; self.setCursor(Qt.ArrowCursor); e.accept(); return
         super().mouseReleaseEvent(e)
 
+    def contextMenuEvent(self, e):
+        item = self.itemAt(e.pos())
+        if item:
+            super().contextMenuEvent(e)
+            return
+
+        menu = QMenu(self)
+        menu.setStyleSheet("QMenu { background-color: #1e1e2e; color: #cdd6f4; border: 1px solid #313244; } QMenu::item:selected { background-color: #313244; }")
+        
+        act_comment = menu.addAction("📝 Adicionar Comentário")
+        
+        action = menu.exec(e.globalPos())
+        if action == act_comment:
+            scene_pos = self.mapToScene(e.pos())
+            self._canvas.add_comment_at(scene_pos)
+
     def keyPressEvent(self, e):
         sc = self.scene()
 
@@ -828,6 +943,9 @@ class _NodeView(QGraphicsView):
                     sc.remove_node(item)
                 elif isinstance(item, ConnectionItem):
                     sc._del_conn(item)
+                    sc.sig_nodes_changed.emit()
+                elif isinstance(item, CommentItem):
+                    sc.removeItem(item)
                     sc.sig_nodes_changed.emit()
             e.accept(); return
 
@@ -989,6 +1107,14 @@ class NodeCanvas(QWidget):
         self.scene.load_from_steps([])
         self._selected = None; self.canvas_clicked.emit(); self.block_updated.emit()
 
+    def auto_layout(self):
+        """Organiza visualmente o grafo e ajusta o zoom."""
+        if not self.scene._nodes: return
+        self._push_history()
+        self.scene.auto_layout()
+        self.fit_all()
+        self.block_updated.emit()
+
     def _add_block(self, block_instance, params, **_kwargs):
         self._push_history()
         node  = NodeItem(block_instance, params)
@@ -1048,3 +1174,34 @@ class NodeCanvas(QWidget):
             self.view.fitInView(
                 self.scene.itemsBoundingRect().adjusted(-60, -60, 60, 60),
                 Qt.KeepAspectRatio)
+    def add_block_at_center(self, block_cls):
+        """Adiciona um bloco no centro da visualização atual (usado pela Command Palette)."""
+        from ui.param_dialog import ParamDialog
+        block_inst = block_cls()
+        default_params = {s["name"]: s.get("default", "") for s in block_cls.params_schema}
+        
+        dialog = ParamDialog(block_inst, default_params, self)
+        if dialog.exec():
+            self._push_history()
+            # Encontra o centro da view atual no sistema de coordenadas da cena
+            rect = self.view.mapToScene(self.view.viewport().rect()).boundingRect()
+            center_pos = rect.center()
+            
+            node = NodeItem(block_inst, dialog.get_params())
+            self.scene.add_node(node, center_pos)
+            self._auto_connect(node)
+            self._select_node(node)
+            self.block_updated.emit()
+
+    def add_comment_at(self, scene_pos: QPointF = None):
+        self._push_history()
+        comment = CommentItem()
+        if not scene_pos:
+            rect = self.view.mapToScene(self.view.viewport().rect()).boundingRect()
+            scene_pos = rect.center()
+        self.scene.addItem(comment)
+        comment.setPos(scene_pos)
+        self.block_updated.emit()
+
+    def add_comment_at_center(self):
+        self.add_comment_at(None)

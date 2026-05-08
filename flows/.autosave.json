@@ -1,15 +1,16 @@
 {
-  "flow_name": "Teste Webhook Bitrix24",
-  "saved_at": "2026-05-08T09:21:12.808898",
+  "flow_name": "__autosave__",
+  "saved_at": "2026-05-08T10:05:52.590633",
   "steps": [
     {
       "block": "WebhookTriggerBlock",
       "params": {
         "path": "gleidson-bonito-123",
-        "save_payload": "webhook_data"
+        "save_payload": "webhook_data",
+        "nota": ""
       },
-      "_x": 72.0,
-      "_y": 192.0,
+      "_x": 0.0,
+      "_y": 0.0,
       "_id": "8e0edf2c",
       "_next_success": "4d63b287"
     },
@@ -21,8 +22,8 @@
         "kind": "info",
         "nota": ""
       },
-      "_x": 384.0,
-      "_y": 192.0,
+      "_x": 336.0,
+      "_y": 0.0,
       "_id": "4d63b287",
       "_next_error": "7fdc5675"
     },
@@ -34,9 +35,18 @@
         "kind": "warning",
         "nota": ""
       },
-      "_x": 696.0,
-      "_y": 312.0,
+      "_x": 648.0,
+      "_y": 0.0,
       "_id": "7fdc5675"
+    },
+    {
+      "type": "comment",
+      "text": "lçbklçbkfb\n",
+      "color": "Azul",
+      "_x": -18.6,
+      "_y": -182.7,
+      "width": 1010.9512229999993,
+      "height": 427.92362345312495
     }
   ]
 }

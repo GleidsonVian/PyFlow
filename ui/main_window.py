@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
     QSplitter, QPushButton, QLabel, QFileDialog,
-    QMessageBox, QStatusBar, QFrame, QSizePolicy
+    QMessageBox, QStatusBar, QFrame, QSizePolicy, QMenu
 )
 from PySide6.QtCore import Qt, QThread, Signal, QTimer
 from PySide6.QtGui import QAction, QIcon
@@ -15,7 +15,7 @@ from ui.properties_panel import PropertiesPanel
 from ui.recorder_dialog import RecorderDialog
 from ui.log_panel import LogPanel
 from ui.variables_panel import VariablesPanel
-from ui.command_palette import CommandPalette
+from ui.command_palette import CommandPalette, Command
 from ui.debug_toolbar import DebugToolbar
 from ui.templates_dialog import TemplatesDialog
 from ui.api_status_dialog import ApiStatusDialog
@@ -289,6 +289,9 @@ class MainWindow(QMainWindow):
         tb.setContentsMargins(12, 8, 12, 8)
         tb.setSpacing(8)
 
+        self.block_panel = BlockPanel()
+        self.canvas      = Canvas()
+
         title = QLabel("⚡ PyFlow RPA")
         title.setObjectName("app_title")
 
@@ -301,6 +304,11 @@ class MainWindow(QMainWindow):
         self.btn_debug.setObjectName("btn_debug")
         self.btn_debug.setToolTip("Debug step-by-step  [Ctrl+D]")
         self.btn_debug.clicked.connect(self._on_debug)
+
+        # Inicializa a Palette mas não exibe ainda
+        self.palette = CommandPalette(self)
+        self.palette.sig_add_block.connect(self._on_palette_add_block)
+        self._setup_command_palette()
 
         self.btn_stop = QPushButton("■  Parar")
         self.btn_stop.setObjectName("btn_stop")
@@ -361,6 +369,10 @@ class MainWindow(QMainWindow):
         self.btn_export.setObjectName("btn_export")
         self.btn_export.clicked.connect(self._on_export)
 
+        self.btn_layout = QPushButton("📐  Organizar")
+        self.btn_layout.setObjectName("btn_secondary")
+        self.btn_layout.setToolTip("Organizar nós automaticamente")
+
         self.btn_record = QPushButton("⏺  Gravar")
         self.btn_record.setObjectName("btn_record")
         self.btn_record.setToolTip("Gravar ações do navegador e gerar blocos automaticamente  [Ctrl+R]")
@@ -378,22 +390,71 @@ class MainWindow(QMainWindow):
         tb.addWidget(title)
         tb.addWidget(self.lbl_retry)
         tb.addStretch()
-        tb.addWidget(self.btn_api)
-        tb.addWidget(self.btn_assets)
-        tb.addWidget(self.btn_templates)
-        tb.addWidget(self.btn_palette)
-        tb.addWidget(self.btn_record)
-        tb.addWidget(self.btn_clear)
-        tb.addWidget(self.btn_flows)
+
+        # Menu secundário "Mais"
+        self.btn_more = QPushButton("⋯")
+        self.btn_more.setObjectName("btn_more")
+        self.btn_more.setFixedWidth(38)
+        self.btn_more.setToolTip("Mais ferramentas")
+
+        more_menu = QMenu(self)
+        more_menu.setStyleSheet("""
+            QMenu { background-color: #1e1e2e; border: 1px solid #313244; border-radius: 6px; padding: 4px; }
+            QMenu::item { padding: 8px 32px; color: #cdd6f4; font-size: 13px; border-radius: 4px; }
+            QMenu::item:selected { background-color: #313244; color: #cba6f7; }
+            QMenu::separator { height: 1px; background: #313244; margin: 5px 0; }
+        """)
+
+        # Adiciona ações ao menu mapeando para os botões existentes
+        def _add_to_menu(label, icon_text, slot):
+            act = more_menu.addAction(f"{icon_text}  {label}")
+            act.triggered.connect(slot)
+            return act
+
+        _add_to_menu("Busca / Paleta", "⚡", self._on_open_palette)
+        _add_to_menu("Organizar Fluxo", "📐", self.canvas.auto_layout)
+        _add_to_menu("Gravar Ações", "⏺", self._on_open_recorder)
+        _add_to_menu("Limpar Canvas", "🗑", self._on_clear)
+        more_menu.addSeparator()
+        _add_to_menu("Gerenciar Fluxos", "📁", self._on_open_flow_manager)
+        _add_to_menu("Exportar Python", "🐍", self._on_export)
+        more_menu.addSeparator()
+        _add_to_menu("Assets / Senhas", "🔑", self._on_open_assets)
+        _add_to_menu("Templates", "📋", self._on_open_templates)
+        _add_to_menu("Agendador", "⏰", self._on_open_scheduler)
+        more_menu.addSeparator()
+        
+        # Checkboxes no menu para Headless e Variáveis
+        act_vars = more_menu.addAction("📊 Ver Variáveis")
+        act_vars.setCheckable(True)
+        act_vars.setChecked(True)
+        act_vars.triggered.connect(self._on_toggle_vars)
+        self._act_vars = act_vars # Guarda ref se precisar sincronizar
+
+        act_head = more_menu.addAction("🖥 Ver Navegador")
+        act_head.setCheckable(True)
+        act_head.setChecked(True)
+        act_head.triggered.connect(self._on_toggle_headless)
+        
+        more_menu.addSeparator()
+        _add_to_menu("Status da API", "🌐", self._on_open_api)
+        _add_to_menu("Configurações", "⚙", self._on_open_settings)
+
+        self.btn_more.setMenu(more_menu)
+
+        # Adiciona apenas os essenciais na toolbar
+        tb.addWidget(self.btn_more)
         tb.addWidget(self.btn_save)
-        tb.addWidget(self.btn_export)
-        tb.addWidget(self.btn_vars)
-        tb.addWidget(self.btn_scheduler)
-        tb.addWidget(self.btn_headless)
-        tb.addWidget(self.btn_settings)
+        
+        sep_v = QFrame()
+        sep_v.setFrameShape(QFrame.VLine)
+        sep_v.setObjectName("toolbar_sep")
+        tb.addWidget(sep_v)
+
         tb.addWidget(self.btn_stop)
         tb.addWidget(self.btn_debug)
         tb.addWidget(self.btn_run)
+        
         root.addWidget(toolbar)
 
         # Debug toolbar
@@ -406,9 +467,6 @@ class MainWindow(QMainWindow):
         # Área principal
         self.splitter = QSplitter(Qt.Horizontal)
         self.splitter.setObjectName("main_splitter")
-
-        self.block_panel = BlockPanel()
-        self.canvas      = Canvas()
 
         right_panel = QWidget()
         right_panel.setObjectName("right_panel")
@@ -436,6 +494,7 @@ class MainWindow(QMainWindow):
         self.canvas.block_updated.connect(self._mark_unsaved)
         self.canvas.run_from_index.connect(self._on_run_from)
         self.canvas.request_save.connect(self._on_save)
+        self.btn_layout.clicked.connect(self.canvas.auto_layout)
         
         # Undo/Redo: salva histórico antes de aplicar edição de parâmetros
         self.props_panel.params_about_to_change.connect(self.canvas._push_history)
@@ -590,20 +649,7 @@ class MainWindow(QMainWindow):
     # ── Command Palette ───────────────────────────────────────────────
 
     def _on_open_palette(self):
-        if self._palette and self._palette.isVisible():
-            self._palette.close(); return
-        self._palette = CommandPalette(self)
-        self._palette.block_selected.connect(self._on_palette_block_selected)
-        self._palette.show()
-
-    def _on_palette_block_selected(self, block_cls):
-        from ui.param_dialog import ParamDialog
-        block_instance = block_cls()
-        default_params = {s["name"]: s.get("default", "") for s in block_cls.params_schema}
-        dialog = ParamDialog(block_instance, default_params, self)
-        if dialog.exec():
-            self.canvas._add_block(block_instance, dialog.get_params())
-            self.log_panel.log("info", f"✚ Adicionado via Ctrl+P: {block_cls.name}")
+        self.palette.show()
 
     # ── Execução normal ───────────────────────────────────────────────
 
@@ -893,6 +939,36 @@ class MainWindow(QMainWindow):
         selected = self.canvas.get_selected_block()
         if selected:
             self.props_panel.show_block(selected)
+
+    def _on_palette_add_block(self, block_cls):
+        self.canvas.add_block_at_center(block_cls)
+
+    def _setup_command_palette(self):
+        cmds = [
+            Command("Executar Fluxo", "Ações", self._on_run, shortcut="F5"),
+            Command("Debug Passo a Passo", "Ações", self._on_debug, shortcut="Ctrl+D"),
+            Command("Parar Execução", "Ações", self._on_stop, icon="■"),
+            
+            Command("Salvar Fluxo", "Projeto", self._on_save, shortcut="Ctrl+S"),
+            Command("Salvar Como...", "Projeto", self._on_save_as, shortcut="Ctrl+Shift+S"),
+            Command("Gerenciar Fluxos", "Projeto", self._on_open_flow_manager, icon="📁"),
+            Command("Exportar Python", "Projeto", self._on_export, icon="🐍"),
+            
+            Command("Organizar Canvas", "Navegação", self.canvas.auto_layout, icon="📐"),
+            Command("Limpar Canvas", "Navegação", self._on_clear, icon="🗑"),
+            Command("Adicionar Comentário", "Navegação", self.canvas.add_comment_at_center, icon="📝"),
+
+            
+            Command("Assets / Senhas", "Gestão", self._on_open_assets, shortcut="Ctrl+A"),
+            Command("Templates", "Gestão", self._on_open_templates, shortcut="Ctrl+T"),
+            Command("Agendador / Cron", "Gestão", self._on_open_scheduler, icon="⏰"),
+            Command("Status da API", "Gestão", self._on_open_api, icon="🌐"),
+            Command("Configurações", "Gestão", self._on_open_settings, icon="⚙"),
+
+            Command("Ver Variáveis", "Visual", self._on_toggle_vars, icon="📊"),
+            Command("Ver Navegador", "Visual", self._on_toggle_headless, icon="🖥"),
+        ]
+        self.palette.register_commands(cmds)
 
     def _apply_styles(self):
         import engine.theme_manager as tm

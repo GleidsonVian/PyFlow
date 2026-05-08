@@ -1,26 +1,45 @@
 """
 Command Palette do PyFlow RPA.
-Abre com Ctrl+P — busca e adiciona blocos rapidamente sem usar o painel lateral.
-Coloque em: ui/command_palette.py
+Centro operacional centralizado para ações, busca de blocos e navegação.
+Abre com Ctrl+P.
 """
+from dataclasses import dataclass
+from typing import Callable, Any
+
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QLineEdit, QListWidget,
     QListWidgetItem, QLabel, QHBoxLayout, QWidget, QFrame
 )
 from PySide6.QtCore import Qt, Signal, QSize
-from PySide6.QtGui import QKeyEvent, QColor
+from PySide6.QtGui import QKeyEvent, QColor, QFont
 
 from engine.blocks_registry import ALL_BLOCKS
 
+@dataclass
+class Command:
+    title: str
+    category: str
+    callback: Callable
+    icon: str = "⚡"
+    shortcut: str = ""
+    data: Any = None  # Dados extras (ex: classe do bloco)
+
 CATEGORY_ICONS = {
+    "Ações":      "▶",
+    "Projeto":    "📂",
+    "Navegação":  "🔍",
     "Navegador":  "🌐",
     "Controle":   "🔧",
     "Arquivos":   "📁",
     "Integração": "🔌",
     "Sistema":    "💻",
+    "Gatilhos":   "⚡",
 }
 
 CATEGORY_COLORS = {
+    "Ações":      "#a6e3a1",
+    "Projeto":    "#89b4fa",
+    "Navegação":  "#f9e2af",
     "Navegador":  "#89b4fa",
     "Controle":   "#cba6f7",
     "Arquivos":   "#a6e3a1",
@@ -30,42 +49,62 @@ CATEGORY_COLORS = {
 
 
 class PaletteItem(QListWidgetItem):
-    def __init__(self, block_cls):
+    def __init__(self, cmd: Command):
         super().__init__()
-        self.block_cls = block_cls
-        cat = block_cls.category
-        icon = CATEGORY_ICONS.get(cat, "▪")
-        self.setText(f"{icon}  {block_cls.name}")
-        self.setToolTip(block_cls.description)
-        self.setSizeHint(QSize(0, 52))
-        color = CATEGORY_COLORS.get(cat, "#cdd6f4")
-        self.setForeground(QColor(color))
+        self.cmd = cmd
+        self.setSizeHint(QSize(0, 48))
+
+    def set_custom_widget(self, list_widget: QListWidget):
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        layout.setContentsMargins(16, 0, 16, 0)
+        layout.setSpacing(12)
+
+        icon_lbl = QLabel(CATEGORY_ICONS.get(self.cmd.category, self.cmd.icon))
+        icon_lbl.setFixedWidth(20)
+        icon_lbl.setStyleSheet(f"color: {CATEGORY_COLORS.get(self.cmd.category, '#cdd6f4')}; font-size: 16px;")
+        
+        title_lbl = QLabel(self.cmd.title)
+        title_lbl.setStyleSheet("color: #cdd6f4; font-size: 13px; font-weight: 500;")
+        
+        shortcut_lbl = QLabel(self.cmd.shortcut)
+        shortcut_lbl.setStyleSheet("color: #45475a; font-size: 11px; font-family: monospace;")
+        shortcut_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+        layout.addWidget(icon_lbl)
+        layout.addWidget(title_lbl, 1)
+        layout.addWidget(shortcut_lbl)
+        
+        list_widget.setItemWidget(self, widget)
 
 
 class CommandPalette(QDialog):
     """
-    Popup de busca global de blocos.
-    Abre com Ctrl+P, fecha com Escape.
-    Enter ou duplo clique adiciona o bloco ao canvas.
+    Overlay central para busca global de comandos e blocos.
     """
-    block_selected = Signal(object)   # emite a classe do bloco escolhido
+    sig_add_block = Signal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._global_commands: list[Command] = []
+        
         self.setWindowTitle("")
         self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setFixedWidth(520)
+        self.setFixedWidth(640)
+        
         self._build_ui()
         self._apply_styles()
+
+    def register_commands(self, commands: list[Command]):
+        """Registra ações globais (ex: Salvar, Executar) vindas da MainWindow."""
+        self._global_commands = commands
         self._populate("")
 
     def _build_ui(self):
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(0)
-
-        # Container com borda arredondada
+        
         container = QWidget()
         container.setObjectName("palette_container")
         c_layout = QVBoxLayout(container)
@@ -76,71 +115,48 @@ class CommandPalette(QDialog):
         search_row = QWidget()
         search_row.setObjectName("palette_search_row")
         s_layout = QHBoxLayout(search_row)
-        s_layout.setContentsMargins(14, 12, 14, 12)
-        s_layout.setSpacing(10)
+        s_layout.setContentsMargins(18, 14, 18, 14)
+        s_layout.setSpacing(12)
 
-        lbl_icon = QLabel("⚡")
-        lbl_icon.setObjectName("palette_icon")
+        lbl_icon = QLabel("🔍")
+        lbl_icon.setStyleSheet("font-size: 18px; color: #cba6f7;")
 
         self.search = QLineEdit()
         self.search.setObjectName("palette_search")
-        self.search.setPlaceholderText("Buscar bloco... (Ex: extrair, http, csv)")
+        self.search.setPlaceholderText("O que você deseja fazer? (Ações ou Blocos)")
         self.search.textChanged.connect(self._on_search)
         self.search.installEventFilter(self)
 
-        lbl_esc = QLabel("ESC para fechar")
-        lbl_esc.setObjectName("palette_esc_hint")
-
         s_layout.addWidget(lbl_icon)
         s_layout.addWidget(self.search, 1)
-        s_layout.addWidget(lbl_esc)
         c_layout.addWidget(search_row)
 
         sep = QFrame()
-        sep.setFrameShape(QFrame.HLine)
-        sep.setObjectName("palette_sep")
+        sep.setFixedHeight(1)
+        sep.setStyleSheet("background-color: #313244;")
         c_layout.addWidget(sep)
 
         # ── Lista de resultados ───────────────────────────────────────
         self.list = QListWidget()
         self.list.setObjectName("palette_list")
-        self.list.setMaximumHeight(360)
+        self.list.setMaximumHeight(400)
         self.list.itemActivated.connect(self._on_select)
-        self.list.itemDoubleClicked.connect(self._on_select)
+        self.list.itemClicked.connect(self._on_select)
         c_layout.addWidget(self.list)
 
-        sep2 = QFrame()
-        sep2.setFrameShape(QFrame.HLine)
-        sep2.setObjectName("palette_sep")
-        c_layout.addWidget(sep2)
-
-        # ── Footer com dicas ──────────────────────────────────────────
+        # ── Footer ───────────────────────────────────────────────────
         footer = QWidget()
         footer.setObjectName("palette_footer")
         f = QHBoxLayout(footer)
-        f.setContentsMargins(14, 8, 14, 8)
-        f.setSpacing(16)
-
-        hints = [
-            ("↑↓", "navegar"),
-            ("Enter", "adicionar bloco"),
-            ("Ctrl+P", "abrir/fechar"),
-        ]
-        for key, desc in hints:
-            row = QHBoxLayout()
-            row.setSpacing(6)
-            lbl_key = QLabel(key)
-            lbl_key.setObjectName("palette_key")
-            lbl_desc = QLabel(desc)
-            lbl_desc.setObjectName("palette_hint_desc")
-            row.addWidget(lbl_key)
-            row.addWidget(lbl_desc)
-            f.addLayout(row)
-
+        f.setContentsMargins(18, 8, 18, 8)
+        
+        lbl_hint = QLabel("↑↓ para navegar  •  ENTER para executar  •  ESC para fechar")
+        lbl_hint.setStyleSheet("font-size: 10px; color: #45475a;")
+        f.addWidget(lbl_hint)
         f.addStretch()
-
+        
         self.lbl_count = QLabel("")
-        self.lbl_count.setObjectName("palette_count")
+        self.lbl_count.setStyleSheet("font-size: 10px; color: #45475a;")
         f.addWidget(self.lbl_count)
 
         c_layout.addWidget(footer)
@@ -150,160 +166,110 @@ class CommandPalette(QDialog):
         self.list.clear()
         q = query.lower().strip()
 
-        # Agrupa por categoria
-        grouped: dict[str, list] = {}
+        # 1. Filtra Comandos Globais
+        matches: list[Command] = []
+        for cmd in self._global_commands:
+            if not q or q in cmd.title.lower() or q in cmd.category.lower():
+                matches.append(cmd)
+
+        # 2. Filtra Blocos
         for cls in ALL_BLOCKS:
-            if q == "" or q in cls.name.lower() or q in cls.category.lower() or q in cls.description.lower():
-                grouped.setdefault(cls.category, []).append(cls)
+            if q and (q in cls.name.lower() or q in cls.category.lower()):
+                matches.append(Command(
+                    title=f"Adicionar: {cls.name}",
+                    category=cls.category,
+                    callback=None, # será tratado no _on_select
+                    icon="➕",
+                    data=cls
+                ))
+
+        # Agrupa por categoria para exibição
+        grouped: dict[str, list[Command]] = {}
+        for m in matches:
+            grouped.setdefault(m.category, []).append(m)
 
         total = 0
-        for cat, blocks in grouped.items():
-            # Cabeçalho da categoria
-            icon = CATEGORY_ICONS.get(cat, "▪")
-            color = CATEGORY_COLORS.get(cat, "#cdd6f4")
-            cat_item = QListWidgetItem(f"  {icon}  {cat.upper()}")
+        for cat in sorted(grouped.keys()):
+            # Label de categoria
+            cat_item = QListWidgetItem(f"   {cat.upper()}")
             cat_item.setFlags(Qt.NoItemFlags)
-            cat_item.setForeground(QColor(color))
-            cat_item.setSizeHint(QSize(0, 26))
+            cat_item.setForeground(QColor("#45475a"))
+            cat_item.setFont(QFont("Segoe UI", 9, QFont.Bold))
+            cat_item.setSizeHint(QSize(0, 24))
             self.list.addItem(cat_item)
 
-            for cls in blocks:
-                item = PaletteItem(cls)
+            for cmd in grouped[cat]:
+                item = PaletteItem(cmd)
                 self.list.addItem(item)
+                item.set_custom_widget(self.list)
                 total += 1
 
-        self.lbl_count.setText(f"{total} bloco(s)")
-
-        # Seleciona o primeiro item válido
+        self.lbl_count.setText(f"{total} resultado(s)")
+        
+        # Seleciona o primeiro comando
         for i in range(self.list.count()):
             item = self.list.item(i)
             if isinstance(item, PaletteItem):
-                self.list.setCurrentItem(item)
+                self.list.setCurrentRow(i)
                 break
 
     def _on_search(self, text: str):
         self._populate(text)
 
     def _on_select(self, item):
-        if isinstance(item, PaletteItem):
-            self.block_selected.emit(item.block_cls)
-            self.close()
+        if not isinstance(item, PaletteItem):
+            return
+        
+        cmd = item.cmd
+        self.close()
+        
+        if cmd.callback:
+            cmd.callback()
+        elif cmd.data: # É um bloco
+            self.sig_add_block.emit(cmd.data)
 
     def eventFilter(self, obj, event):
-        """Intercepta teclas no campo de busca."""
         if obj is self.search and isinstance(event, QKeyEvent):
-            if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
-                current = self.list.currentItem()
-                if isinstance(current, PaletteItem):
-                    self._on_select(current)
+            if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+                self._on_select(self.list.currentItem())
                 return True
-
             elif event.key() == Qt.Key_Down:
-                self._move_selection(1)
-                return True
-
+                self._move_selection(1); return True
             elif event.key() == Qt.Key_Up:
-                self._move_selection(-1)
-                return True
-
+                self._move_selection(-1); return True
             elif event.key() == Qt.Key_Escape:
-                self.close()
-                return True
-
+                self.close(); return True
         return super().eventFilter(obj, event)
 
     def _move_selection(self, direction: int):
-        """Move a seleção ignorando itens de categoria (não selecionáveis)."""
-        current = self.list.currentRow()
-        count   = self.list.count()
-        next_row = current + direction
-
-        while 0 <= next_row < count:
-            item = self.list.item(next_row)
-            if isinstance(item, PaletteItem):
-                self.list.setCurrentRow(next_row)
-                self.list.scrollToItem(item)
-                return
-            next_row += direction
+        row = self.list.currentRow()
+        while 0 <= (row + direction) < self.list.count():
+            row += direction
+            if isinstance(self.list.item(row), PaletteItem):
+                self.list.setCurrentRow(row)
+                break
 
     def showEvent(self, event):
-        """Centraliza o dialog na janela pai e foca no campo de busca."""
         super().showEvent(event)
         if self.parent():
-            parent_geo = self.parent().geometry()
-            x = parent_geo.x() + (parent_geo.width() - self.width()) // 2
-            y = parent_geo.y() + int(parent_geo.height() * 0.15)
-            self.move(x, y)
+            p = self.parent().geometry()
+            self.move(p.x() + (p.width() - self.width()) // 2, p.y() + 80)
         self.search.clear()
         self.search.setFocus()
-        self._populate("")
 
     def _apply_styles(self):
         self.setStyleSheet("""
-            QDialog { background: transparent; }
-
             #palette_container {
                 background-color: #1e1e2e;
-                border: 1px solid #45475a;
+                border: 1px solid #313244;
                 border-radius: 12px;
             }
-
-            #palette_search_row {
-                background-color: #1e1e2e;
-                border-radius: 12px 12px 0 0;
-            }
-
-            #palette_icon { font-size: 18px; color: #cba6f7; }
-
+            #palette_search_row { border-radius: 12px 12px 0 0; }
             #palette_search {
-                background: transparent;
-                border: none;
-                color: #cdd6f4;
-                font-size: 15px;
-                font-family: 'Segoe UI', sans-serif;
+                background: transparent; border: none; color: #cdd6f4;
+                font-size: 16px; font-family: 'Segoe UI';
             }
-            #palette_search:focus { outline: none; }
-
-            #palette_esc_hint {
-                font-size: 11px; color: #45475a;
-                background-color: #313244;
-                border-radius: 4px; padding: 2px 6px;
-            }
-
-            #palette_sep { color: #313244; }
-
-            #palette_list {
-                background-color: #1e1e2e;
-                border: none;
-                font-size: 13px;
-                outline: none;
-            }
-            #palette_list::item {
-                padding: 10px 16px;
-                border-radius: 0;
-                color: #cdd6f4;
-            }
-            #palette_list::item:selected {
-                background-color: #313244;
-                color: #cba6f7;
-            }
-            #palette_list::item:hover {
-                background-color: #252535;
-            }
-
-            #palette_footer {
-                background-color: #181825;
-                border-radius: 0 0 12px 12px;
-            }
-
-            #palette_key {
-                background-color: #313244;
-                color: #a6adc8;
-                font-size: 11px;
-                font-family: monospace;
-                border-radius: 4px;
-                padding: 1px 6px;
-            }
-            #palette_hint_desc { font-size: 11px; color: #45475a; }
-            #palette_count { font-size: 11px; color: #45475a; }
+            #palette_list { background: transparent; border: none; outline: none; }
+            #palette_list::item:selected { background-color: #313244; border-radius: 6px; }
+            #palette_footer { background-color: #181825; border-radius: 0 0 12px 12px; }
         """)

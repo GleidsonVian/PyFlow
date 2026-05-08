@@ -89,6 +89,7 @@ QComboBox QAbstractItemView {{
     background-color: {c['surface']}; border: 1px solid {c['orange']};
     border-radius: 4px; padding: 2px 8px;
 }}
+#toolbar_sep {{ background-color: {c['border']}; width: 1px; margin: 4px 2px; }}
 
 QPushButton {{
     border: none; border-radius: 6px;
@@ -98,8 +99,16 @@ QPushButton {{
 #btn_run:hover {{ background-color: {c['green']}; }}
 #btn_run:disabled {{ background-color: {c['muted']}; color: {c['subtle']}; }}
 #btn_debug {{ background-color: {c['surface']}; color: {c['green']}; border: 1px solid {c['green']}; font-weight: 600; }}
-#btn_debug:hover {{ background-color: {c['overlay']}; }}
+#btn_debug:hover {{ background-color: {c['green']}; color: {c['bg']}; }}
 #btn_debug:disabled {{ background-color: {c['muted']}; color: {c['subtle']}; border-color: {c['muted']}; }}
+
+#btn_save {{ background-color: {c['surface']}; color: {c['blue']}; border: 1px solid {c['blue']}; font-weight: 600; }}
+#btn_save:hover {{ background-color: {c['blue']}; color: {c['bg']}; }}
+
+#btn_more {{ background-color: {c['surface']}; color: {c['text2']}; font-size: 16px; border: 1px solid {c['border']}; }}
+#btn_more:hover {{ background-color: {c['overlay']}; color: {c['text']}; }}
+#btn_more::menu-indicator {{ image: none; }}
+
 #btn_stop {{ background-color: {c['red']}; color: {c['run_btn_text']}; font-weight: 600; }}
 #btn_stop:disabled {{ background-color: {c['muted']}; color: {c['subtle']}; }}
 #btn_secondary {{ background-color: {c['btn_sec']}; color: {c['text']}; }}
