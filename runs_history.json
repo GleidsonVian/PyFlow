@@ -607,5 +607,79 @@
     "failed_context": {
       "cor_hp": "#181825"
     }
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-10T15:47:36.382819",
+    "finished_at": "2026-05-10T15:47:47.756995",
+    "duration_s": 11.3,
+    "total_steps": 1,
+    "ok_steps": 1,
+    "success": true,
+    "failed_idx": -1,
+    "failed_context": {}
+  },
+  {
+    "flow_name": "books",
+    "flow_path": "",
+    "started_at": "2026-05-10T15:49:45.999228",
+    "finished_at": "2026-05-10T15:49:53.850168",
+    "duration_s": 7.8,
+    "total_steps": 4,
+    "ok_steps": 4,
+    "success": true,
+    "failed_idx": -1,
+    "failed_context": {
+      "texto_extraido": "All products"
+    }
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-10T15:55:53.090590",
+    "finished_at": "2026-05-10T15:56:10.098721",
+    "duration_s": 17.0,
+    "total_steps": 2,
+    "ok_steps": 1,
+    "success": false,
+    "failed_idx": 1,
+    "failed_context": {}
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-10T15:57:09.672867",
+    "finished_at": "2026-05-10T15:57:26.433045",
+    "duration_s": 16.7,
+    "total_steps": 2,
+    "ok_steps": 1,
+    "success": false,
+    "failed_idx": 1,
+    "failed_context": {}
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-10T15:57:41.405395",
+    "finished_at": "2026-05-10T15:57:48.251319",
+    "duration_s": 6.8,
+    "total_steps": 3,
+    "ok_steps": 3,
+    "success": true,
+    "failed_idx": -1,
+    "failed_context": {}
+  },
+  {
+    "flow_name": "(sem nome)",
+    "flow_path": "",
+    "started_at": "2026-05-10T15:58:24.363212",
+    "finished_at": "2026-05-10T15:58:30.743948",
+    "duration_s": 6.4,
+    "total_steps": 4,
+    "ok_steps": 4,
+    "success": true,
+    "failed_idx": -1,
+    "failed_context": {}
   }
 ]

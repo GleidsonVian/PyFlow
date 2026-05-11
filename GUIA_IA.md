@@ -159,22 +159,31 @@ _CLOSE_TYPES = frozenset({..., "FimDoMeuBloco"})
 
 ---
 
-### 5. `blocks/browser/extract_text.py` — Armazena o contexto de variáveis
+### 5. `engine/execution_context.py` — Fonte da Verdade para Variáveis
 
-**Nunca delete esta classe.** Ela tem um atributo de classe estático que funciona como
-o "estado global" de variáveis entre blocos:
+**Toda a manipulação de dados em tempo de execução passa por aqui.**
+O PyFlow centraliza o dicionário de variáveis e a lógica de resolução de tokens (`{{var}}`).
+
+**Comportamento de Erro:**
+Diferente de versões antigas, o PyFlow agora dispara um `ValueError` fatal se:
+1. Uma variável `{{nome}}` não existir no contexto.
+2. Um caminho de dot-notation `{{obj.campo}}` estiver quebrado.
+O `Runner` captura esse erro, marca o passo como falha e interrompe a execução (se configurado).
+
+**Acesso nos blocos:**
+Embora `ExtractTextBlock._context` ainda exista para compatibilidade (apontando para o mesmo dict), a recomendação é usar o módulo diretamente:
 
 ```python
-class ExtractTextBlock(BaseBlock):
-    _context: dict = {}   # ← aqui ficam TODAS as variáveis do fluxo em execução
+import engine.execution_context as ctx
+
+# Escrita
+ctx.get()["minha_var"] = "valor"
+
+# Leitura
+valor = ctx.get().get("minha_var")
 ```
 
-Para ler ou escrever variáveis no contexto de qualquer bloco:
-```python
-from blocks.browser.extract_text import ExtractTextBlock
-ExtractTextBlock._context["minha_variavel"] = "valor"
-valor = ExtractTextBlock._context.get("minha_variavel", "")
-```
+O `ctx.clear()` é chamado automaticamente pelo Runner no início de cada fluxo (exceto em retentativas/resume).
 
 ---
 
@@ -281,9 +290,9 @@ O painel direito tem `QSplitter` vertical com propriedades e variáveis.
 - Fluxos de teste: `flows/teste_<funcionalidade>.json`
 
 ### Variáveis no fluxo
-- Sintaxe de referência: `{{nome_da_variavel}}`
+- Sintaxe de referência: `{{nome_da_variavel}}` ou `{{objeto.campo}}`
 - Assets/credenciais: `{{ASSET:chave_do_asset}}`
-- Contexto global: `ExtractTextBlock._context` (dict estático)
+- Erro de contexto: Se uma variável for referenciada mas não existir no dicionário de contexto, o motor dispara um `ValueError` e interrompe a execução (Fail-Fast).
 
 ### Retorno de execute()
 ```python

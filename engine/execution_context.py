@@ -62,21 +62,25 @@ def resolve_params(params: dict, context: dict = None) -> dict:
             
             # Suporte a dot notation (ex: {{posicao.x}})
             parts = var_name.split(".")
+            
+            if parts[0] not in context:
+                raise ValueError(f"Variável não encontrada no contexto: {parts[0]}")
+            
             val = context.get(parts[0])
             
-            if val is not None:
-                if len(parts) == 1:
-                    return str(val)
-                
-                curr = val
-                for p in parts[1:]:
-                    if isinstance(curr, dict) and p in curr:
-                        curr = curr[p]
-                    else:
-                        return match.group(0)
-                return str(curr)
-
-            return match.group(0)
+            if len(parts) == 1:
+                return str(val)
+            
+            curr = val
+            for i in range(1, len(parts)):
+                p = parts[i]
+                if isinstance(curr, dict) and p in curr:
+                    curr = curr[p]
+                else:
+                    path_so_far = ".".join(parts[:i+1])
+                    raise ValueError(f"Atributo '{p}' não encontrado no caminho '{path_so_far}'")
+            
+            return str(curr)
 
         resolved[key] = re.sub(r"\{\{(.+?)\}\}", context_replacer, temp)
 
