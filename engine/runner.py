@@ -295,8 +295,8 @@ class Runner:
                 return j
         return -1
 
-    def run(self, steps: list, start_index: int = 0) -> list:
-        if start_index == 0:
+    def run(self, steps: list, start_index: int = 0, is_sub_run: bool = False) -> list:
+        if start_index == 0 and not is_sub_run:
             # Preserva variáveis de webhook injetadas pela API antes de limpar o contexto
             _webhook_snapshot = {k: v for k, v in ctx.get().items() if k.startswith("webhook_")}
             ctx.clear()
@@ -558,54 +558,37 @@ class Runner:
         Executa sub-fluxos (Loop / ForEach / If).
         Delega ao run() principal para que If/Loop/ForEach aninhados funcionem corretamente.
         """
-        return self.run(steps)
+        return self.run(steps, is_sub_run=True)
 
-    def run_graph(self, graph: list, start_index: int = 0) -> list:
+    def run_graph(self, graph: list, start_index: int = 0, is_sub_run: bool = False) -> list:
         """
         Execução condicional baseada em grafo.
-        graph: lista de {id, block_instance, params, next_success, next_error, _index}
-        Cada nó decide o próximo baseado no resultado real (success → next_success, error → next_error).
+        Sinaliza o próximo bloco via next_success/next_error.
+        Suporta loops (LoopBlock/ForEachBlock) identificando o bloco de fim correspondente.
         """
         if not graph:
             return []
 
-        if start_index == 0:
-            # Preserva variáveis de webhook injetadas pela API antes de limpar o contexto
+        if start_index == 0 and not is_sub_run:
             _webhook_snapshot = {k: v for k, v in ctx.get().items() if k.startswith("webhook_")}
             ctx.clear()
             ctx.get().update(_webhook_snapshot)
 
         node_map = {n["id"]: n for n in graph}
         results  = []
-        # visited  = set()   # REMOVIDO: permite loops manuais no grafo (estilo n8n/node-red)
 
-        # Raízes: nós não referenciados como destino de nenhuma conexão
-        if start_index > 0:
-            target_node = next((n for n in graph if n.get("_index") == start_index), None)
-            roots = [target_node] if target_node else []
-        else:
-            all_targets = set()
-            for n in graph:
-                if n.get("next_success"): all_targets.add(n["next_success"])
-                if n.get("next_error"):   all_targets.add(n["next_error"])
-            roots = [n for n in graph if n["id"] not in all_targets]
-            if not roots and graph:
-                roots = [graph[0]]
-
-        def _exec_node(node_id: str):
-            if self._stopped or node_id not in node_map:
+        def _execute_subgraph(node_id: str, stop_at_id: str = None):
+            """Executa recursivamente o grafo até o fim ou até atingir stop_at_id."""
+            if self._stopped or not node_id or node_id not in node_map or node_id == stop_at_id:
                 return
-            
+
             node  = node_map[node_id]
             block = node["block_instance"]
             index = node["_index"]
+            raw_params = {k: v for k, v in node.get("params", {}).items() if not k.startswith("_")}
 
-            raw_params = {k: v for k, v in node.get("params", {}).items()
-                          if not k.startswith("_")}
-            
             print(f"\n[{index + 1}] Executando: {block.name}")
-            if self.on_step_start:
-                self.on_step_start(index, block)
+            if self.on_step_start: self.on_step_start(index, block)
 
             try:
                 params = resolve_params(raw_params, self._get_context())
@@ -616,48 +599,60 @@ class Runner:
             result["step_index"] = index
             result["block_name"] = block.name
             results.append(result)
-
             data = result.get("data", {})
-            next_id = None
 
+            next_id = None
             if result.get("success"):
-                suffix = f" (após {result['retried']} retry)" if result.get("retried") else ""
-                print(f"  ✓ {result.get('message', 'OK')}{suffix}")
-                if self.on_step_done:
-                    self.on_step_done(index, block, result)
-                
-                # Suporte a desvio condicional via portas no grafo
+                if self.on_step_done: self.on_step_done(index, block, result)
                 if "if_result" in data:
-                    if data["if_result"]:
-                        print("  → Caminho: VERDADEIRO")
-                        next_id = node.get("next_success")
-                    else:
-                        print("  → Caminho: FALSO")
-                        next_id = node.get("next_error")
+                    next_id = node.get("next_success") if data["if_result"] else node.get("next_error")
                 else:
                     next_id = node.get("next_success")
             else:
-                msg = result.get("message", "Erro desconhecido")
-                print(f"  ✗ {msg}")
-                if self.on_step_error:
-                    self.on_step_error(index, block, result)
-                
-                # Se for um erro real (não um 'if_result' falso), segue a porta de erro
+                if self.on_step_error: self.on_step_error(index, block, result)
                 next_id = node.get("next_error")
-                
-                if not next_id:
-                    if self.config.stop_on_failure:
-                        print(f"\n  Execução interrompida — sem rota de erro para '{block.name}'.")
-                        return
-                    return
 
-            if next_id:
-                # Usa recursion limit para segurança ou um pequeno delay se necessário
-                _exec_node(next_id)
+            # ── Lógica de Loop/ForEach no Grafo ──────────────────────────────
+            if (data.get("loop") or data.get("foreach")) and next_id and next_id != stop_at_id:
+                items = data.get("items", range(data.get("times", 0)))
+                var_name = data.get("variable_name", "_loop_idx")
+                delay = data.get("delay_between", 0)
+                
+                # Busca o bloco de fim (EndLoopBlock / EndForEachBlock) linearmente à frente
+                end_type = "EndLoopBlock" if data.get("loop") else "EndForEachBlock"
+                end_node = next((n for n in graph if type(n["block_instance"]).__name__ == end_type and n["_index"] > index), None)
+                
+                if end_node:
+                    print(f"  → Iniciando loop no grafo ({len(items)} iterações)")
+                    for idx, item in enumerate(items):
+                        if self._stopped: break
+                        self._get_context()[var_name] = item
+                        print(f"    Item {idx+1}/{len(items)}")
+                        # Executa o corpo do loop até o bloco de fim
+                        _execute_subgraph(next_id, stop_at_id=end_node["id"])
+                        if delay > 0: time.sleep(delay)
+                    
+                    # Após o loop, continua a partir do sucesso do bloco de fim
+                    next_id = end_node.get("next_success")
+
+            # Continua a execução
+            if next_id and next_id != stop_at_id:
+                _execute_subgraph(next_id, stop_at_id=stop_at_id)
+
+        # Determina os pontos de entrada
+        if start_index > 0:
+            target = next((n for n in graph if n.get("_index") == start_index), None)
+            roots  = [target] if target else []
+        else:
+            targets = set()
+            for n in graph:
+                if n.get("next_success"): targets.add(n["next_success"])
+                if n.get("next_error"):   targets.add(n["next_error"])
+            roots = [n for n in graph if n["id"] not in targets]
+            if not roots and graph: roots = [graph[0]]
 
         for root in roots:
             if not self._stopped:
-                _exec_node(root["id"])
+                _execute_subgraph(root["id"])
 
         return results
-

@@ -1,0 +1,67 @@
+{
+  "flow_name": "Organizador de Downloads",
+  "steps": [
+    {
+      "block": "PythonScriptBlock",
+      "params": {
+        "code": "import os\n# Localiza a pasta de downloads do usuario atual\ndownloads = os.path.join(os.path.expanduser(\"~\"), \"Downloads\")\n\n# Lista apenas arquivos (pula pastas)\nfiles = [os.path.join(downloads, f) for f in os.listdir(downloads) \n         if os.path.isfile(os.path.join(downloads, f))]\n\n# Salva no contexto para o loop\nvar['files_to_organize'] = files\nvar['downloads_path'] = downloads\n\nprint(f\"Encontrados {len(files)} arquivos na pasta Downloads.\")",
+        "nota": "Obtém a lista de arquivos do Downloads"
+      },
+      "_id": "list_files",
+      "_x": 100, "_y": 100,
+      "_next_success": "for_each"
+    },
+    {
+      "block": "ForEachBlock",
+      "params": {
+        "items": "files_to_organize",
+        "variable_name": "file_path",
+        "nota": "Itera sobre cada arquivo encontrado"
+      },
+      "_id": "for_each",
+      "_x": 350, "_y": 100,
+      "_next_success": "calc_dest"
+    },
+    {
+      "block": "PythonScriptBlock",
+      "params": {
+        "code": "import os\npath = var['file_path']\nfilename = os.path.basename(path)\next_with_dot = os.path.splitext(filename)[1].lower()\next = ext_with_dot.replace('.', '')\n\nif not ext:\n    folder = 'sem_extensao'\nelif ext in ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg']:\n    folder = 'imagens'\nelse:\n    folder = ext\n\n# Define o caminho de destino\nvar['dest_path'] = os.path.join(var['downloads_path'], folder, filename)\nprint(f\"Organizando: {filename} -> pasta {folder}\")",
+        "nota": "Decide para qual pasta o arquivo deve ir"
+      },
+      "_id": "calc_dest",
+      "_x": 600, "_y": 100,
+      "_next_success": "move_file"
+    },
+    {
+      "block": "FileManagerBlock",
+      "params": {
+        "action": "move",
+        "source": "{{file_path}}",
+        "destination": "{{dest_path}}",
+        "nota": "Move o arquivo para a pasta correspondente"
+      },
+      "_id": "move_file",
+      "_x": 850, "_y": 100,
+      "_next_success": "end_for"
+    },
+    {
+      "block": "EndForEachBlock",
+      "params": {
+        "nota": "Fim do loop de organização"
+      },
+      "_id": "end_for",
+      "_x": 1100, "_y": 100,
+      "_next_success": "finish_msg"
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Organização Concluída",
+        "message": "A pasta de Downloads foi organizada com sucesso!",
+        "kind": "info"
+      },
+      "_id": "finish_msg",
+      "_x": 1350, "_y": 100
+    }
+  ]
+}
