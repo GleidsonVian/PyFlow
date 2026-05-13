@@ -874,5 +874,31 @@
         "C:\\Users\\ClikSofthouseTI\\Downloads\\xampp-windows-x64-8.0.30-0-VS16-installer.exe"
       ]
     }
+  },
+  {
+    "flow_name": "Gerador de Audiobook",
+    "flow_path": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\gerador_audiobook.json",
+    "started_at": "2026-05-13T15:04:53.954030",
+    "finished_at": "2026-05-13T15:04:55.360991",
+    "duration_s": 1.4,
+    "total_steps": 1,
+    "ok_steps": 0,
+    "success": false,
+    "failed_idx": 0,
+    "failed_context": {}
+  },
+  {
+    "flow_name": "Gerador de Audiobook",
+    "flow_path": "c:\\Users\\ClikSofthouseTI\\pasta4\\pyflow\\PyFlow\\flows\\gerador_audiobook.json",
+    "started_at": "2026-05-13T15:08:24.081846",
+    "finished_at": "2026-05-13T15:08:35.934832",
+    "duration_s": 11.9,
+    "total_steps": 3,
+    "ok_steps": 2,
+    "success": false,
+    "failed_idx": 2,
+    "failed_context": {
+      "url_artigo": "https://g1.globo.com/"
+    }
   }
 ]

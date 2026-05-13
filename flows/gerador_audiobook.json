@@ -1,0 +1,58 @@
+{
+  "flow_name": "Gerador de Audiobook",
+  "steps": [
+    {
+      "_id": "input_url",
+      "block": "InputBlock",
+      "params": {
+        "variable_name": "url_artigo",
+        "label": "Cole a URL do artigo/notícia que deseja ouvir:",
+        "title": "Gerador de Audiobook",
+        "default_value": "https://g1.globo.com/"
+      },
+      "_x": 100, "_y": 200,
+      "_next_success": "open_site"
+    },
+    {
+      "_id": "open_site",
+      "block": "OpenBrowserBlock",
+      "params": {
+        "url": "{{url_artigo}}",
+        "browser_type": "chrome",
+        "headless": true
+      },
+      "_x": 400, "_y": 200,
+      "_next_success": "extract_content"
+    },
+    {
+      "_id": "extract_content",
+      "block": "PythonScriptBlock",
+      "params": {
+        "code": "from bs4 import BeautifulSoup\n\n# Pega o HTML da p\u00e1gina aberta no passo anterior\nhtml = var.get('last_page_source', '')\nif not html:\n    raise Exception('N\u00e3o foi poss\u00edvel ler o conte\u00fado da p\u00e1gina.')\n\nsoup = BeautifulSoup(html, 'html.parser')\n\n# Tenta encontrar o conte\u00fado principal\nfor s in soup(['script', 'style', 'nav', 'footer', 'header', 'aside']):\n    s.decompose()\n\ntexto = soup.get_text(separator=' ', strip=True)\nvar['texto_artigo'] = texto[:5000]\nprint(f'Texto extra\u00eddo: {len(texto)} caracteres.')",
+        "description": "Limpa HTML e extrai texto"
+      },
+      "_x": 700, "_y": 200,
+      "_next_success": "generate_audio"
+    },
+    {
+      "_id": "generate_audio",
+      "block": "PythonScriptBlock",
+      "params": {
+        "code": "from gtts import gTTS\nimport os\n\ntexto = var.get('texto_artigo', 'Texto vazio.')\ntts = gTTS(text=texto, lang='pt')\n\ndesktop = os.path.join(os.path.expanduser('~'), 'Desktop')\nfilename = 'meu_audiobook.mp3'\npath = os.path.join(desktop, filename)\n\ntts.save(path)\nvar['audio_path'] = path\nprint(f'\u2705 \u00c1udio salvo em: {path}')",
+        "description": "Gera MP3 usando gTTS"
+      },
+      "_x": 1000, "_y": 200,
+      "_next_success": "finish_msg"
+    },
+    {
+      "_id": "finish_msg",
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "Sucesso!",
+        "message": "Seu audiobook foi gerado e salvo na \u00c1rea de Trabalho!\nCaminho: {{audio_path}}",
+        "kind": "info"
+      },
+      "_x": 1300, "_y": 200
+    }
+  ]
+}

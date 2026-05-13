@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QSplitter, QPushButton, QLabel, QFileDialog,
     QMessageBox, QStatusBar, QFrame, QSizePolicy, QMenu, QTabWidget
 )
-from PySide6.QtCore import Qt, QThread, Signal, QTimer
+from PySide6.QtCore import Qt, QThread, Signal, QTimer, Slot
 from PySide6.QtGui import QAction, QIcon, QShortcut, QKeySequence
 from pathlib import Path
 
@@ -293,10 +293,14 @@ class MainWindow(QMainWindow):
     def _connect_block_signals(self):
         from blocks.control.show_message import get_signaller
         get_signaller().show_requested.connect(self._on_show_message)
+        
+        from blocks.control.input_block import get_input_signaller
+        get_input_signaller().input_requested.connect(self._on_request_input_v2)
 
     def _connect_scheduler_signals(self):
         get_scheduler_signals().trigger_run.connect(self._on_scheduler_trigger)
 
+    @Slot(str, str, str)
     def _on_show_message(self, title, message, kind):
         box = QMessageBox(self)
         box.setWindowTitle(title)
@@ -314,6 +318,21 @@ class MainWindow(QMainWindow):
             QPushButton:hover { background-color: #d5b8f8; }
         """)
         box.exec()
+
+    @Slot(str, str, str, object)
+    def _on_request_input_v2(self, title, label, default, result_obj):
+        """Abre QInputDialog e sinaliza o objeto ao terminar."""
+        from PySide6.QtWidgets import QInputDialog
+        
+        text, ok = QInputDialog.getText(self, title, label, text=default)
+        
+        if ok:
+            result_obj.text = text
+        else:
+            result_obj.text = None
+            
+        result_obj.event.set()
+        print(f"[DEBUG] Input concluído. OK: {ok}, Valor: {text}")
 
     def _on_scheduler_trigger(self, flow_path):
         try:

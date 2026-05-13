@@ -43,6 +43,7 @@ from blocks.control.set_variable         import SetVariableBlock
 from blocks.control.sequence_start_block import SequenceStartBlock
 from blocks.control.sequence_end_block   import SequenceEndBlock
 from blocks.control.show_message         import ShowMessageBlock
+from blocks.control.input_block          import InputBlock
 from blocks.control.desktop_notification import DesktopNotificationBlock
 from blocks.control.text_manipulation    import TextManipulationBlock
 from blocks.control.subflow_block        import SubfluxoBlock
@@ -110,6 +111,7 @@ ALL_BLOCKS = [
     SequenceStartBlock,
     SequenceEndBlock,
     ShowMessageBlock,
+    InputBlock,
     DesktopNotificationBlock,
     TextManipulationBlock,
     SubfluxoBlock,
