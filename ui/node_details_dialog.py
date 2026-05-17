@@ -5,13 +5,14 @@ from PySide6.QtWidgets import (
     QScrollArea, QFrame, QLineEdit, QTextEdit, QCheckBox, QComboBox
 )
 from PySide6.QtCore import Qt, QMimeData, QPoint
-from PySide6.QtGui import QDrag, QIcon
+from PySide6.QtGui import QDrag, QIcon, QPixmap, QPainter, QColor, QFontMetrics
 import engine.execution_context as ctx
 
 
 class DraggableTreeWidget(QTreeWidget):
     """
     Árvore que permite arrastar itens. O texto gerado no arraste é a sintaxe {{var_name}}.
+    Ao arrastar, exibe um balão/pílula roxa flutuando sob o cursor.
     """
     def __init__(self):
         super().__init__()
@@ -33,7 +34,125 @@ class DraggableTreeWidget(QTreeWidget):
         mime_data = QMimeData()
         mime_data.setText(f"{{{{{var_name}}}}}")
         drag.setMimeData(mime_data)
+
+        # 🎨 Renderiza uma pílula premium para o arraste (Catppuccin Mauve)
+        pixmap = QPixmap(200, 30)
+        pixmap.fill(Qt.transparent)
+        
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # Pílula Mauve
+        painter.setBrush(QColor("#cba6f7"))
+        painter.setPen(Qt.NoPen)
+        painter.drawRoundedRect(0, 0, 190, 26, 6, 6)
+        
+        # Texto escuro contrastante
+        painter.setPen(QColor("#11111b"))
+        font = painter.font()
+        font.setBold(True)
+        painter.setFont(font)
+        
+        display_text = f"{{{{{var_name}}}}}"
+        metrics = QFontMetrics(font)
+        elided = metrics.elidedText(display_text, Qt.ElideRight, 170)
+        painter.drawText(10, 18, elided)
+        painter.end()
+        
+        drag.setPixmap(pixmap)
+        drag.setHotSpot(QPoint(10, 13))
         drag.exec(Qt.CopyAction)
+
+
+class MappableLineEdit(QLineEdit):
+    """
+    QLineEdit customizado que aceita Drops de variáveis.
+    Exibe uma borda brilhante e insere o texto exatamente na posição do cursor do mouse.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+        self.dialog = None
+        self._standard_style = "background-color: #313244; border: 1px solid #45475a; border-radius: 4px; color: #cdd6f4; padding: 6px;"
+        self._drag_hover_style = "background-color: #313244; border: 2px solid #cba6f7; border-radius: 4px; color: #cdd6f4; padding: 5px;"
+        self.setStyleSheet(self._standard_style)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            self.setStyleSheet(self._drag_hover_style)
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragLeaveEvent(self, event):
+        self.setStyleSheet(self._standard_style)
+        event.accept()
+
+    def dropEvent(self, event):
+        self.setStyleSheet(self._standard_style)
+        text_to_drop = event.mimeData().text()
+        
+        if hasattr(event, "position"):
+            pos = event.position().toPoint()
+        else:
+            pos = event.pos()
+            
+        cursor_pos = self.cursorPositionAt(pos)
+        current_text = self.text()
+        new_text = current_text[:cursor_pos] + text_to_drop + current_text[cursor_pos:]
+        self.setText(new_text)
+        self.setFocus()
+        self.setCursorPosition(cursor_pos + len(text_to_drop))
+        event.acceptProposedAction()
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        if self.dialog:
+            self.dialog.last_active_field = self
+
+
+class MappableTextEdit(QTextEdit):
+    """
+    QTextEdit customizado que aceita Drops de variáveis.
+    Exibe uma borda brilhante e insere o texto na posição exata do cursor.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+        self.dialog = None
+        self._standard_style = "background-color: #313244; border: 1px solid #45475a; border-radius: 4px; color: #cdd6f4; padding: 6px;"
+        self._drag_hover_style = "background-color: #313244; border: 2px solid #cba6f7; border-radius: 4px; color: #cdd6f4; padding: 5px;"
+        self.setStyleSheet(self._standard_style)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            self.setStyleSheet(self._drag_hover_style)
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragLeaveEvent(self, event):
+        self.setStyleSheet(self._standard_style)
+        event.accept()
+
+    def dropEvent(self, event):
+        self.setStyleSheet(self._standard_style)
+        text_to_drop = event.mimeData().text()
+        
+        if hasattr(event, "position"):
+            pos = event.position().toPoint()
+        else:
+            pos = event.pos()
+            
+        cursor = self.cursorForPosition(pos)
+        cursor.insertText(text_to_drop)
+        self.setFocus()
+        event.acceptProposedAction()
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        if self.dialog:
+            self.dialog.last_active_field = self
 
 
 class NodeDetailsDialog(QDialog):
@@ -43,6 +162,7 @@ class NodeDetailsDialog(QDialog):
         self.block = canvas_widget.block_instance
         self.params = canvas_widget.params
         self._fields = {}
+        self.last_active_field = None  # Recebe texto ao dar duplo clique
 
         self.setWindowTitle(f"Detalhes do Nó: {self.block.name}")
         self.setMinimumSize(1000, 600)
@@ -86,9 +206,14 @@ class NodeDetailsDialog(QDialog):
         lbl_input.setObjectName("column_title")
         left_layout.addWidget(lbl_input)
         
+        lbl_helper = QLabel("💡 Arraste uma variável ou clique duas vezes para mapear")
+        lbl_helper.setStyleSheet("color: #a6adc8; font-size: 11px; padding-bottom: 5px;")
+        left_layout.addWidget(lbl_helper)
+        
         self.tree_input = DraggableTreeWidget()
         self.tree_input.setHeaderLabels(["Chave", "Valor"])
         self.tree_input.setColumnWidth(0, 150)
+        self.tree_input.itemDoubleClicked.connect(self._on_tree_item_double_clicked)
         left_layout.addWidget(self.tree_input)
         self.splitter.addWidget(self.left_panel)
 
@@ -141,9 +266,14 @@ class NodeDetailsDialog(QDialog):
             self._add_tree_item(self.tree_input, k, v, k)
 
     def _add_tree_item(self, parent, key, value, var_path):
-        """Adiciona itens à árvore recursivamente para JSONs e dicionários."""
+        """Adiciona itens à árvore recursivamente com ícones e valores formatados."""
+        icon = "🔤"
+        val_str = ""
+        
         if isinstance(value, dict):
-            item = QTreeWidgetItem([str(key), "{ ... }"])
+            icon = "📦"
+            val_str = "{ ... }"
+            item = QTreeWidgetItem([f"{icon}  {key}", val_str])
             item.setData(0, Qt.UserRole, var_path)
             for k, v in value.items():
                 self._add_tree_item(item, k, v, f"{var_path}.{k}")
@@ -153,7 +283,9 @@ class NodeDetailsDialog(QDialog):
                 parent.addChild(item)
             item.setExpanded(True)
         elif isinstance(value, list):
-            item = QTreeWidgetItem([str(key), f"[ Lista com {len(value)} itens ]"])
+            icon = "📂"
+            val_str = f"[ Lista com {len(value)} itens ]"
+            item = QTreeWidgetItem([f"{icon}  {key}", val_str])
             item.setData(0, Qt.UserRole, var_path)
             for i, v in enumerate(value[:10]):  # limite visual
                 self._add_tree_item(item, f"[{i}]", v, f"{var_path}[{i}]")
@@ -162,15 +294,41 @@ class NodeDetailsDialog(QDialog):
             else:
                 parent.addChild(item)
         else:
+            if isinstance(value, bool):
+                icon = "☑️"
+            elif isinstance(value, (int, float)):
+                icon = "🔢"
+            
             val_str = str(value)
             if len(val_str) > 50:
                 val_str = val_str[:50] + "..."
-            item = QTreeWidgetItem([str(key), val_str])
+            item = QTreeWidgetItem([f"{icon}  {key}", val_str])
             item.setData(0, Qt.UserRole, var_path)
             if isinstance(parent, QTreeWidget):
                 parent.addTopLevelItem(item)
             else:
                 parent.addChild(item)
+
+    def _on_tree_item_double_clicked(self, item, column):
+        var_name = item.data(0, Qt.UserRole)
+        if not var_name:
+            return
+        
+        text_to_insert = f"{{{{{var_name}}}}}"
+        
+        if hasattr(self, "last_active_field") and self.last_active_field:
+            field = self.last_active_field
+            if isinstance(field, MappableLineEdit):
+                cursor_pos = field.cursorPosition()
+                current_text = field.text()
+                new_text = current_text[:cursor_pos] + text_to_insert + current_text[cursor_pos:]
+                field.setText(new_text)
+                field.setFocus()
+                field.setCursorPosition(cursor_pos + len(text_to_insert))
+            elif isinstance(field, MappableTextEdit):
+                cursor = field.textCursor()
+                cursor.insertText(text_to_insert)
+                field.setFocus()
 
     def _populate_props(self):
         for schema in self.block.params_schema:
@@ -222,19 +380,23 @@ class NodeDetailsDialog(QDialog):
             layout.addWidget(combo)
         elif schema["type"] == "text":
             layout.addWidget(lbl)
-            edit = QTextEdit()
-            edit.setAcceptDrops(True)
+            edit = MappableTextEdit()
+            edit.dialog = self
             edit.setMinimumHeight(100)
             edit.setPlainText(str(current))
             self._fields[schema["name"]] = edit
             layout.addWidget(edit)
+            if self.last_active_field is None:
+                self.last_active_field = edit
         else:
             layout.addWidget(lbl)
-            edit = QLineEdit()
-            edit.setAcceptDrops(True)
+            edit = MappableLineEdit()
+            edit.dialog = self
             edit.setText(str(current))
             self._fields[schema["name"]] = edit
             layout.addWidget(edit)
+            if self.last_active_field is None:
+                self.last_active_field = edit
 
         return container
 
