@@ -475,7 +475,7 @@ class MainWindow(QMainWindow):
 
         self.btn_layout = QPushButton("📐  Organizar")
         self.btn_layout.setObjectName("btn_secondary")
-        self.btn_layout.setToolTip("Organizar nós automaticamente")
+        self.btn_layout.setToolTip("Organizar nós automaticamente  [Ctrl+Shift+L]")
 
         self.btn_record = QPushButton("⏺  Gravar")
         self.btn_record.setObjectName("btn_record")
@@ -627,18 +627,21 @@ class MainWindow(QMainWindow):
 
         root.addWidget(self.splitter, 1)
 
-        # Atalhos para esconder/mostrar barras laterais
+        # Atalhos de teclado
         self.shortcut_toggle_blocks = QShortcut(QKeySequence("Ctrl+B"), self)
         self.shortcut_toggle_blocks.activated.connect(self._toggle_block_panel)
         
         self.shortcut_toggle_inspector = QShortcut(QKeySequence("Ctrl+I"), self)
         self.shortcut_toggle_inspector.activated.connect(self._toggle_right_panel)
 
+        self.shortcut_auto_layout = QShortcut(QKeySequence("Ctrl+Shift+L"), self)
+        self.shortcut_auto_layout.activated.connect(self.canvas.auto_layout)
+
         self.status = QStatusBar()
         self.status.setObjectName("status_bar")
         self.setStatusBar(self.status)
         self.status.showMessage(
-            "Pronto  •  Ctrl+P buscar blocos  •  Ctrl+Enter executar  •  Ctrl+D debug  •  Ctrl+T templates"
+            "Pronto  •  Ctrl+P buscar blocos  •  Ctrl+Enter executar  •  Ctrl+Shift+L organizar  •  Ctrl+D debug"
         )
 
     def _build_menu(self):
