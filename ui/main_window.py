@@ -13,6 +13,7 @@ _ICON_PATH = Path(__file__).parent.parent / "assets" / "icon.png"
 from ui.block_panel import BlockPanel
 from ui.node_canvas import NodeCanvas as Canvas
 from ui.properties_panel import PropertiesPanel
+from ui.preview_panel import PreviewPanel
 from ui.recorder_dialog import RecorderDialog
 from ui.log_panel import LogPanel
 from ui.help_panel import HelpPanel
@@ -586,19 +587,23 @@ class MainWindow(QMainWindow):
         self.right_tabs.setObjectName("right_tabs")
         self.right_tabs.setMinimumWidth(260)
 
-        self.props_panel = PropertiesPanel()
-        self.vars_panel  = VariablesPanel()
-        self.log_panel   = LogPanel()
-        self.help_panel  = HelpPanel()
+        self.props_panel   = PropertiesPanel()
+        self.preview_panel = PreviewPanel()
+        self.vars_panel    = VariablesPanel()
+        self.log_panel     = LogPanel()
+        self.help_panel    = HelpPanel()
 
         self.right_tabs.addTab(self.props_panel, "⚙ Props")
+        self.right_tabs.addTab(self.preview_panel, "👁 Preview")
         self.right_tabs.addTab(self.vars_panel, "𝑥 Vars")
         self.right_tabs.addTab(self.log_panel, "📜 Logs")
         self.right_tabs.addTab(self.help_panel, "❓ Ajuda")
 
         self.canvas.block_selected.connect(self.props_panel.show_block)
+        self.canvas.block_selected.connect(self.preview_panel.show_block)
         self.canvas.block_selected.connect(self.help_panel.show_block)
         self.canvas.canvas_clicked.connect(self.props_panel.clear)
+        self.canvas.canvas_clicked.connect(self.preview_panel.clear)
         self.canvas.canvas_clicked.connect(self.help_panel.clear)
         
         self.canvas.block_updated.connect(self._on_block_updated)
