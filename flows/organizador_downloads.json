@@ -1,5 +1,5 @@
 {
-  "flow_name": "Organizador de Downloads",
+  "flow_name": "organizador_downloads",
   "steps": [
     {
       "block": "PythonScriptBlock",
@@ -8,7 +8,8 @@
         "nota": "Obtém a lista de arquivos do Downloads"
       },
       "_id": "list_files",
-      "_x": 100, "_y": 100,
+      "_x": 100,
+      "_y": 100,
       "_next_success": "for_each"
     },
     {
@@ -19,7 +20,8 @@
         "nota": "Itera sobre cada arquivo encontrado"
       },
       "_id": "for_each",
-      "_x": 350, "_y": 100,
+      "_x": 350,
+      "_y": 100,
       "_next_success": "calc_dest"
     },
     {
@@ -29,7 +31,8 @@
         "nota": "Decide para qual pasta o arquivo deve ir"
       },
       "_id": "calc_dest",
-      "_x": 600, "_y": 100,
+      "_x": 600,
+      "_y": 100,
       "_next_success": "move_file"
     },
     {
@@ -41,7 +44,8 @@
         "nota": "Move o arquivo para a pasta correspondente"
       },
       "_id": "move_file",
-      "_x": 850, "_y": 100,
+      "_x": 850,
+      "_y": 100,
       "_next_success": "end_for"
     },
     {
@@ -50,7 +54,8 @@
         "nota": "Fim do loop de organização"
       },
       "_id": "end_for",
-      "_x": 1100, "_y": 100,
+      "_x": 1100,
+      "_y": 100,
       "_next_success": "finish_msg"
     },
     {
@@ -61,7 +66,8 @@
         "kind": "info"
       },
       "_id": "finish_msg",
-      "_x": 1350, "_y": 100
+      "_x": 1350,
+      "_y": 100
     }
   ]
 }

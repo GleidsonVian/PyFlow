@@ -96,9 +96,18 @@ class FileManagerBlock(BaseBlock):
                 os.makedirs(dest_dir, exist_ok=True)
 
             if action == "move" or action == "rename":
-                shutil.move(source, destination)
-                context[var_name] = destination
-                return {"success": True, "message": f"Movido/Renomeado: {source} → {destination}"}
+                import time
+                max_retries = 3
+                for attempt in range(max_retries):
+                    try:
+                        shutil.move(source, destination)
+                        context[var_name] = destination
+                        return {"success": True, "message": f"Movido/Renomeado: {source} → {destination}"}
+                    except PermissionError as e:
+                        if attempt < max_retries - 1:
+                            time.sleep(1) # Aguarda 1 segundo e tenta de novo
+                            continue
+                        raise e
 
             if action == "copy":
                 if os.path.isdir(source):

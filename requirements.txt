@@ -43,5 +43,10 @@ plyer>=2.1.0
 # ── Agendamento ───────────────────────────────────────────────────────
 schedule>=1.2.1
 
+# ── Bibliotecas Extras (Audio/Web/PDF) ──────────────────────────────
+beautifulsoup4>=4.12.0
+gTTS>=2.5.0
+pdfplumber>=0.11.0
+
 # ── Build / distribuição (opcional) ──────────────────────────────────
 pyinstaller>=6.4.0

@@ -55,6 +55,7 @@ from blocks.files.sqlite_block           import SQLiteBlock
 from blocks.files.excel_block            import ExcelBlock
 from blocks.files.load_env_block          import LoadEnvBlock
 from blocks.files.zip_block              import ZipBlock
+from blocks.files.read_pdf               import ReadPdfBlock
 from blocks.integration.http_request     import HttpRequestBlock
 from blocks.integration.send_email       import SendEmailBlock
 from blocks.integration.send_webhook     import SendWebhookBlock
@@ -69,6 +70,7 @@ from blocks.system.stealth_actions       import ClickCoordinateBlock, KeyboardAc
 from blocks.trigger.timer_trigger        import TimerTriggerBlock
 from blocks.trigger.webhook_trigger      import WebhookTriggerBlock
 from blocks.system.vision_blocks         import LocateImageBlock, GetPixelColorBlock, WaitPixelColorBlock
+from blocks.system.text_to_speech        import TextToSpeechBlock
 
 ALL_BLOCKS = [
     # Navegador
@@ -124,6 +126,7 @@ ALL_BLOCKS = [
     SQLiteBlock,
     ExcelBlock,
     ZipBlock,
+    ReadPdfBlock,
     # Integração
     HttpRequestBlock,
     SendEmailBlock,
@@ -144,6 +147,7 @@ ALL_BLOCKS = [
     GetMousePositionBlock,
     ClickCoordinateBlock,
     KeyboardActionBlock,
+    TextToSpeechBlock,
 ]
 
 BLOCK_BY_NAME: dict[str, type] = {cls.__name__: cls for cls in ALL_BLOCKS}
