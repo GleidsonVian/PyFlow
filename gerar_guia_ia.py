@@ -391,12 +391,12 @@ def build_content():
         make_table(
             ["Item", "Valor"],
             [
-                ["Total de blocos", "49"],
+                ["Total de blocos", "51"],
                 ["Categoria Navegador", "21 blocos"],
                 ["Categoria Controle", "15 blocos (Se, Senão, FimSe, Loop, FimLoop, ParaCada, FimParaCada, ...)"],
-                ["Categoria Arquivos", "7 blocos"],
+                ["Categoria Arquivos", "8 blocos (inclui Ler Texto de PDF)"],
                 ["Categoria Integração", "3 blocos"],
-                ["Categoria Sistema", "4 blocos"],
+                ["Categoria Sistema", "5 blocos (inclui Texto para Voz TTS)"],
                 ["API", "FastAPI + Uvicorn — porta 8080 (auto-detect se ocupada)"],
                 ["Tema", "Catppuccin Mocha (dark only)"],
                 ["ConditionalRetry", "Por categoria: timeout, network, stale, notfound, invalid, custom"],

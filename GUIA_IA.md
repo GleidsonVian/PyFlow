@@ -249,7 +249,7 @@ Paleta de cores:
 - Adicionar novo atalho de teclado
 
 O layout usa `QSplitter` com 3 painéis: `block_panel` | `canvas` | `right_panel`.
-O painel direito tem `QSplitter` vertical com propriedades e variáveis.
+O painel direito é composto por uma única fileira de abas unificada (`QTabWidget` com abas Props, Preview, Vars, Logs, Ajuda). A aba `Props` exibe o formulário vertical de propriedades (`PropertiesPanel`), e a aba `Preview` (`PreviewPanel` em `ui/preview_panel.py`) cuida da validação em tempo real e testes de seletores CSS.
 
 ---
 
@@ -365,12 +365,12 @@ Siga o padrão de criação de fluxos de teste para toda funcionalidade nova.
 
 | Item | Valor |
 |---|---|
-| Total de blocos | 49 |
+| Total de blocos | 51 |
 | Categoria Navegador | 21 blocos |
 | Categoria Controle | 15 blocos (inclui Se, Senão, FimSe, Loop, FimLoop, ParaCada, FimParaCada) |
-| Categoria Arquivos | 7 blocos |
+| Categoria Arquivos | 8 blocos (inclui Ler Texto de PDF) |
 | Categoria Integração | 3 blocos |
-| Categoria Sistema | 4 blocos |
+| Categoria Sistema | 5 blocos (inclui Texto para Voz TTS) |
 | API | FastAPI + Uvicorn, porta 8080 (auto-detect) |
 | Tema | Catppuccin Mocha (dark only) |
 | Fluxos de exemplo | 30+ em `flows/` |

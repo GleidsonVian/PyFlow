@@ -7,7 +7,7 @@
 ![Selenium](https://img.shields.io/badge/Selenium-4.18%2B-orange?logo=selenium)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111%2B-teal?logo=fastapi)
 ![License](https://img.shields.io/badge/License-MIT-purple)
-![Blocos](https://img.shields.io/badge/Blocos%20RPA-49-blue)
+![Blocos](https://img.shields.io/badge/Blocos%20RPA-51-blue)
 
 ---
 
@@ -32,6 +32,9 @@ Os fluxos são salvos como **JSON** e podem ser **exportados como scripts Python
 - **Command Palette** `Ctrl+P` estilo VS Code para buscar e adicionar blocos rapidamente.
 - **Serviço Daemon (Background)** — rode o servidor de webhooks silenciosamente usando a inicialização do Windows.
 - **Gerenciador de assets** para armazenar credenciais e variáveis reutilizáveis.
+- **Mapeador de Dados Visual 🔀** — Arraste variáveis dinâmicas (pílulas Mauve de outputs anteriores) e jogue-as em cima de qualquer campo de entrada nos detalhes do bloco, ou dê duplo clique para mapeá-las de forma instantânea.
+- **Refatoração Premium do Painel Direito 🎨** — Abas duplas e aninhadas foram eliminadas em prol de uma barra de abas unificada de fileira única superior (`Props`, `Preview`, `Vars`, `Logs`, `Ajuda`), introduzindo o novo `PreviewPanel` standalone para testes rápidos de seletores CSS e validação.
+- **Organização Inteligente com Um Clique 📐** — Organize todo o seu Canvas automaticamente com o botão da barra ou o novo atalho de teclado global `Ctrl+Shift+L`.
 - **Tema escuro** Catppuccin Mocha com interface premium e animações.
 
 ---
@@ -95,7 +98,7 @@ python main.py
 
 ---
 
-## 🧩 Blocos disponíveis (49)
+## 🧩 Blocos disponíveis (51)
 
 ### 🌐 Navegador (21)
 | Bloco | O que faz |
@@ -157,9 +160,10 @@ python main.py
 | `variable_empty` | Variável está vazia |
 | `variable_not_empty` | Variável não está vazia |
 
-### 📁 Arquivos (7)
+### 📁 Arquivos (8)
 | Bloco | O que faz |
 |---|---|
+| Ler Texto de PDF | Extrai todo o texto de um arquivo PDF (usando pdfplumber) |
 | Ler CSV | Lê coluna de CSV → lista |
 | Salvar em TXT | Escreve texto em arquivo .txt |
 | Salvar em CSV | Adiciona linha em arquivo CSV |
@@ -175,9 +179,10 @@ python main.py
 | Enviar E-mail | SMTP via Gmail, Outlook, Yahoo ou custom |
 | FTP / SFTP | Upload, download, listar e deletar arquivos remotos |
 
-### 💻 Sistema (4)
+### 💻 Sistema (5)
 | Bloco | O que faz |
 |---|---|
+| Texto para Voz (TTS) | Converte texto em fala (.mp3) usando gTTS em múltiplos idiomas (pt, en, es, fr) |
 | Teclado do Sistema | Digitar, pressionar tecla, atalho via PyAutoGUI |
 | Clipboard | Copiar, colar e limpar o clipboard do sistema |
 | OCR (Extrair Texto de Imagem) | Extrai texto de imagem local, screenshot ou navegador |
@@ -307,6 +312,7 @@ Clique em **🐛 Debug** ou pressione `Ctrl+D` para executar o fluxo passo a pas
 | `Ctrl+A` | Gerenciador de assets |
 | `Ctrl+S` | Salvar fluxo |
 | `Ctrl+L` | Limpar canvas |
+| `Ctrl+Shift+L` | Organizar Canvas automaticamente |
 | `Space` | Próximo passo (modo debug) |
 | `F5` | Continuar sem pausar (modo debug) |
 
@@ -364,6 +370,7 @@ pyflow/
 │   ├── main_window.py             # Janela principal com QSplitter redimensionável
 │   ├── canvas.py                  # Canvas drag & drop + indentação visual por escopo
 │   ├── block_panel.py             # Painel lateral de blocos por categoria
+│   ├── preview_panel.py           # Painel de preview e testes standalone (CSS, URLs, etc.)
 │   ├── log_panel.py               # Log com filtros, busca e exportação
 │   ├── debug_toolbar.py           # Controles do modo debug
 │   ├── command_palette.py         # Busca Ctrl+P
@@ -432,8 +439,8 @@ brew install tesseract
 
 | Métrica | Valor |
 |---|---|
-| Arquivos Python | ~135 |
-| Blocos RPA | 49 |
+| Arquivos Python | ~137 |
+| Blocos RPA | 51 |
 | Fluxos de exemplo | 30+ |
 | Tipos de condição (Se) | 10 |
 
