@@ -5,9 +5,23 @@ from PySide6.QtWidgets import (
     QScrollArea, QFrame, QLineEdit, QTextEdit, QCheckBox, QComboBox
 )
 from PySide6.QtCore import Qt, QMimeData, QPoint
-from PySide6.QtGui import QDrag, QIcon, QPixmap, QPainter, QColor, QFontMetrics
+from PySide6.QtGui import QDrag, QIcon, QPixmap, QPainter, QColor, QFontMetrics, QSyntaxHighlighter, QTextCharFormat, QFont
+import re
 import engine.execution_context as ctx
 
+class VariableHighlighter(QSyntaxHighlighter):
+    """Destaca variáveis do tipo {{var_name}} em roxo com fundo suave para visual n8n."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.format = QTextCharFormat()
+        self.format.setForeground(QColor("#cba6f7")) # Mauve (Roxo)
+        self.format.setFontWeight(QFont.Bold)
+        self.format.setBackground(QColor("#45475a")) # Fundo sutil
+
+    def highlightBlock(self, text):
+        pattern = r"\{\{[^}]*\}\}"
+        for match in re.finditer(pattern, text):
+            self.setFormat(match.start(), match.end() - match.start(), self.format)
 
 class DraggableTreeWidget(QTreeWidget):
     """
@@ -64,18 +78,38 @@ class DraggableTreeWidget(QTreeWidget):
         drag.exec(Qt.CopyAction)
 
 
-class MappableLineEdit(QLineEdit):
+class MappableLineEdit(QTextEdit):
     """
-    QLineEdit customizado que aceita Drops de variáveis.
-    Exibe uma borda brilhante e insere o texto exatamente na posição do cursor do mouse.
+    Simula um QLineEdit com suporte a highlighting e Drops de variáveis.
     """
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAcceptDrops(True)
         self.dialog = None
-        self._standard_style = "background-color: #313244; border: 1px solid #45475a; border-radius: 4px; color: #cdd6f4; padding: 6px;"
-        self._drag_hover_style = "background-color: #313244; border: 2px solid #cba6f7; border-radius: 4px; color: #cdd6f4; padding: 5px;"
+        self._standard_style = "background-color: #313244; border: 1px solid #45475a; border-radius: 4px; color: #cdd6f4; padding: 4px;"
+        self._drag_hover_style = "background-color: #313244; border: 2px dashed #cba6f7; border-radius: 4px; color: #cdd6f4; padding: 3px;"
+        self._active_style = "background-color: #1e1e2e; border: 2px solid #89b4fa; border-radius: 4px; color: #cdd6f4; padding: 3px;"
         self.setStyleSheet(self._standard_style)
+
+        self.setFixedHeight(32)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setLineWrapMode(QTextEdit.NoWrap)
+        self.setTabChangesFocus(True)
+        
+        self.highlighter = VariableHighlighter(self.document())
+
+    def text(self):
+        return self.toPlainText().replace('\n', '')
+
+    def setText(self, text):
+        self.setPlainText(text)
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+            event.ignore()
+            return
+        super().keyPressEvent(event)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasText():
@@ -85,11 +119,13 @@ class MappableLineEdit(QLineEdit):
             event.ignore()
 
     def dragLeaveEvent(self, event):
-        self.setStyleSheet(self._standard_style)
+        if self.dialog and self.dialog.last_active_field == self:
+            self.setStyleSheet(self._active_style)
+        else:
+            self.setStyleSheet(self._standard_style)
         event.accept()
 
     def dropEvent(self, event):
-        self.setStyleSheet(self._standard_style)
         text_to_drop = event.mimeData().text()
         
         if hasattr(event, "position"):
@@ -97,18 +133,17 @@ class MappableLineEdit(QLineEdit):
         else:
             pos = event.pos()
             
-        cursor_pos = self.cursorPositionAt(pos)
-        current_text = self.text()
-        new_text = current_text[:cursor_pos] + text_to_drop + current_text[cursor_pos:]
-        self.setText(new_text)
+        cursor = self.cursorForPosition(pos)
+        cursor.insertText(text_to_drop)
         self.setFocus()
-        self.setCursorPosition(cursor_pos + len(text_to_drop))
         event.acceptProposedAction()
+        if self.dialog:
+            self.dialog.set_active_field(self)
 
     def focusInEvent(self, event):
         super().focusInEvent(event)
         if self.dialog:
-            self.dialog.last_active_field = self
+            self.dialog.set_active_field(self)
 
 
 class MappableTextEdit(QTextEdit):
@@ -121,8 +156,10 @@ class MappableTextEdit(QTextEdit):
         self.setAcceptDrops(True)
         self.dialog = None
         self._standard_style = "background-color: #313244; border: 1px solid #45475a; border-radius: 4px; color: #cdd6f4; padding: 6px;"
-        self._drag_hover_style = "background-color: #313244; border: 2px solid #cba6f7; border-radius: 4px; color: #cdd6f4; padding: 5px;"
+        self._drag_hover_style = "background-color: #313244; border: 2px dashed #cba6f7; border-radius: 4px; color: #cdd6f4; padding: 5px;"
+        self._active_style = "background-color: #1e1e2e; border: 2px solid #89b4fa; border-radius: 4px; color: #cdd6f4; padding: 5px;"
         self.setStyleSheet(self._standard_style)
+        self.highlighter = VariableHighlighter(self.document())
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasText():
@@ -132,11 +169,13 @@ class MappableTextEdit(QTextEdit):
             event.ignore()
 
     def dragLeaveEvent(self, event):
-        self.setStyleSheet(self._standard_style)
+        if self.dialog and self.dialog.last_active_field == self:
+            self.setStyleSheet(self._active_style)
+        else:
+            self.setStyleSheet(self._standard_style)
         event.accept()
 
     def dropEvent(self, event):
-        self.setStyleSheet(self._standard_style)
         text_to_drop = event.mimeData().text()
         
         if hasattr(event, "position"):
@@ -148,11 +187,13 @@ class MappableTextEdit(QTextEdit):
         cursor.insertText(text_to_drop)
         self.setFocus()
         event.acceptProposedAction()
+        if self.dialog:
+            self.dialog.set_active_field(self)
 
     def focusInEvent(self, event):
         super().focusInEvent(event)
         if self.dialog:
-            self.dialog.last_active_field = self
+            self.dialog.set_active_field(self)
 
 
 class NodeDetailsDialog(QDialog):
@@ -172,6 +213,16 @@ class NodeDetailsDialog(QDialog):
         self._populate_input()
         self._populate_props()
         self._populate_output()
+
+    def set_active_field(self, field):
+        """Define qual campo está ativo para receber variáveis via clique duplo e o destaca."""
+        if self.last_active_field and self.last_active_field != field:
+            if hasattr(self.last_active_field, '_standard_style'):
+                self.last_active_field.setStyleSheet(self.last_active_field._standard_style)
+                
+        self.last_active_field = field
+        if hasattr(field, '_active_style'):
+            field.setStyleSheet(field._active_style)
 
     def _build_ui(self):
         main_layout = QVBoxLayout(self)
@@ -206,7 +257,7 @@ class NodeDetailsDialog(QDialog):
         lbl_input.setObjectName("column_title")
         left_layout.addWidget(lbl_input)
         
-        lbl_helper = QLabel("💡 Arraste uma variável ou clique duas vezes para mapear")
+        lbl_helper = QLabel("💡 Dê foco ao campo desejado e clique duas vezes na variável (ou arraste-a)")
         lbl_helper.setStyleSheet("color: #a6adc8; font-size: 11px; padding-bottom: 5px;")
         left_layout.addWidget(lbl_helper)
         
@@ -318,14 +369,7 @@ class NodeDetailsDialog(QDialog):
         
         if hasattr(self, "last_active_field") and self.last_active_field:
             field = self.last_active_field
-            if isinstance(field, MappableLineEdit):
-                cursor_pos = field.cursorPosition()
-                current_text = field.text()
-                new_text = current_text[:cursor_pos] + text_to_insert + current_text[cursor_pos:]
-                field.setText(new_text)
-                field.setFocus()
-                field.setCursorPosition(cursor_pos + len(text_to_insert))
-            elif isinstance(field, MappableTextEdit):
+            if hasattr(field, "textCursor"):
                 cursor = field.textCursor()
                 cursor.insertText(text_to_insert)
                 field.setFocus()
@@ -379,26 +423,62 @@ class NodeDetailsDialog(QDialog):
             self._fields[schema["name"]] = combo
             layout.addWidget(combo)
         elif schema["type"] == "text":
-            layout.addWidget(lbl)
+            header = QHBoxLayout()
+            header.addWidget(lbl)
+            header.addStretch()
+            btn_fx = QPushButton("fx")
+            btn_fx.setObjectName("btn_fx")
+            btn_fx.setToolTip("Abrir Editor de Expressões Avançado")
+            header.addWidget(btn_fx)
+            layout.addLayout(header)
+            
             edit = MappableTextEdit()
             edit.dialog = self
             edit.setMinimumHeight(100)
             edit.setPlainText(str(current))
             self._fields[schema["name"]] = edit
             layout.addWidget(edit)
+            
+            btn_fx.clicked.connect(lambda _, e=edit: self._open_expression_editor(e))
+            
             if self.last_active_field is None:
-                self.last_active_field = edit
+                self.set_active_field(edit)
         else:
-            layout.addWidget(lbl)
+            header = QHBoxLayout()
+            header.addWidget(lbl)
+            header.addStretch()
+            btn_fx = QPushButton("fx")
+            btn_fx.setObjectName("btn_fx")
+            btn_fx.setToolTip("Abrir Editor de Expressões Avançado")
+            header.addWidget(btn_fx)
+            layout.addLayout(header)
+            
             edit = MappableLineEdit()
             edit.dialog = self
             edit.setText(str(current))
             self._fields[schema["name"]] = edit
             layout.addWidget(edit)
+            
+            btn_fx.clicked.connect(lambda _, e=edit: self._open_expression_editor(e))
+            
             if self.last_active_field is None:
-                self.last_active_field = edit
+                self.set_active_field(edit)
 
         return container
+
+    def _open_expression_editor(self, field):
+        from ui.expression_editor_dialog import ExpressionEditorDialog
+        if hasattr(field, "text"):
+            current_text = field.text()
+        else:
+            current_text = field.toPlainText()
+            
+        dialog = ExpressionEditorDialog(current_text, self)
+        if dialog.exec():
+            if hasattr(field, "setText"):
+                field.setText(dialog.result_text)
+            else:
+                field.setPlainText(dialog.result_text)
 
     def _populate_output(self):
         self.txt_output.setPlainText("O nó ainda não foi testado nesta sessão.\n\nClique em 'Testar Nó' acima para executar com os parâmetros atuais.")
@@ -437,6 +517,8 @@ class NodeDetailsDialog(QDialog):
                 self.params[name] = field.isChecked()
             elif isinstance(field, QComboBox):
                 self.params[name] = field.currentData()
+            elif isinstance(field, MappableLineEdit):
+                self.params[name] = field.text().strip()
             elif isinstance(field, QTextEdit):
                 self.params[name] = field.toPlainText()
             elif isinstance(field, QLineEdit):
@@ -470,4 +552,6 @@ class NodeDetailsDialog(QDialog):
             #field_label { color: #a6adc8; font-weight: 600; margin-top: 8px; }
             QLineEdit, QTextEdit, QComboBox { background-color: #313244; border: 1px solid #45475a; border-radius: 4px; color: #cdd6f4; padding: 6px; }
             #separator { color: #313244; margin: 10px 0; }
+            #btn_fx { background-color: transparent; color: #89b4fa; font-weight: 800; border: 1px solid #45475a; border-radius: 4px; padding: 2px 10px; margin-top: 5px; }
+            #btn_fx:hover { background-color: #313244; border-color: #89b4fa; }
         """)
