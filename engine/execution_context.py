@@ -13,12 +13,33 @@ Uso no runner:
     import engine.execution_context as ctx
     ctx.clear()          # limpa antes de cada execução
     ctx.get()            # retorna o dict atual
+
+Expressões suportadas em {{...}}:
+    {{variavel}}              → substituição simples
+    {{variavel.chave}}        → acesso a dict/atributo (dot notation)
+    {{len(variavel)}}         → avaliação de expressão Python segura
+    {{variavel.upper()}}      → métodos de string
+    {{round(valor, 2)}}       → funções matemáticas
 """
 import re
 from engine.asset_manager import AssetManager
 
 # Dict único compartilhado por toda a execução
 _store: dict = {}
+
+# Builtins permitidos na avaliação de expressões
+_SAFE_BUILTINS = {
+    "len": len, "str": str, "int": int, "float": float, "bool": bool,
+    "round": round, "abs": abs, "min": min, "max": max, "sum": sum,
+    "sorted": sorted, "list": list, "dict": dict, "tuple": tuple, "set": set,
+    "range": range, "enumerate": enumerate, "zip": zip,
+    "isinstance": isinstance, "type": type, "repr": repr,
+    "True": True, "False": False, "None": None,
+    "upper": str.upper, "lower": str.lower,  # atalhos diretos
+}
+
+# Padrão de variável/dot-notation pura (sem chamadas de função)
+_SIMPLE_VAR_RE = re.compile(r'^[\w]+(\.\w+)*$')
 
 
 def get() -> dict:
@@ -31,18 +52,53 @@ def clear():
     _store.clear()
 
 
+def _resolve_expr(expr: str, context: dict) -> str:
+    """
+    Resolve uma expressão {{expr}}:
+    - Se for variável simples ou dot-notation → lookup direto
+    - Caso contrário → avalia como expressão Python com builtins seguros
+    """
+    expr = expr.strip()
+
+    if expr.startswith("ASSET:"):
+        return None  # tratado separadamente
+
+    # Variável simples ou dot notation: {{var}} / {{var.chave}}
+    if _SIMPLE_VAR_RE.match(expr):
+        parts = expr.split(".")
+        if parts[0] not in context:
+            raise ValueError(f"Variável não encontrada no contexto: '{parts[0]}'")
+        val = context[parts[0]]
+        for p in parts[1:]:
+            if isinstance(val, dict) and p in val:
+                val = val[p]
+            else:
+                raise ValueError(f"Atributo '{p}' não encontrado em '{expr}'")
+        return str(val)
+
+    # Expressão Python — avalia com contexto + builtins seguros
+    try:
+        local_ns = {**_SAFE_BUILTINS, **context}
+        result = eval(expr, {"__builtins__": {}}, local_ns)  # noqa: S307
+        return str(result)
+    except Exception as e:
+        raise ValueError(f"Erro ao avaliar expressão '{{{{ {expr} }}}}': {e}") from e
+
+
 def resolve_params(params: dict, context: dict = None) -> dict:
     """
     Substitui tokens dinâmicos nos valores de parâmetros.
-      {{ASSET:nome}}  → busca no arquivo de credenciais/configurações
-      {{nome}}        → busca nas variáveis de execução
+      {{ASSET:nome}}        → busca no arquivo de credenciais/configurações
+      {{variavel}}          → busca nas variáveis de execução
+      {{len(variavel)}}     → avalia expressão Python (builtins seguros)
+      {{variavel.upper()}}  → métodos de string/objeto
     """
     if context is None:
         context = _store
 
     resolved = {}
     for key, value in params.items():
-        if key == "nota": # Ignora anotações
+        if key == "nota":
             continue
         if not isinstance(value, str):
             resolved[key] = value
@@ -55,32 +111,11 @@ def resolve_params(params: dict, context: dict = None) -> dict:
 
         temp = re.sub(r"\{\{ASSET:(.+?)\}\}", asset_replacer, value)
 
-        def context_replacer(match):
-            var_name = match.group(1).strip()
-            if var_name.startswith("ASSET:"):
+        def context_replacer(match, _ctx=context):
+            expr = match.group(1).strip()
+            if expr.startswith("ASSET:"):
                 return match.group(0)
-            
-            # Suporte a dot notation (ex: {{posicao.x}})
-            parts = var_name.split(".")
-            
-            if parts[0] not in context:
-                raise ValueError(f"Variável não encontrada no contexto: {parts[0]}")
-            
-            val = context.get(parts[0])
-            
-            if len(parts) == 1:
-                return str(val)
-            
-            curr = val
-            for i in range(1, len(parts)):
-                p = parts[i]
-                if isinstance(curr, dict) and p in curr:
-                    curr = curr[p]
-                else:
-                    path_so_far = ".".join(parts[:i+1])
-                    raise ValueError(f"Atributo '{p}' não encontrado no caminho '{path_so_far}'")
-            
-            return str(curr)
+            return _resolve_expr(expr, _ctx)
 
         resolved[key] = re.sub(r"\{\{(.+?)\}\}", context_replacer, temp)
 
