@@ -273,23 +273,6 @@ BLOCK_DOCS = {
         "tip": "Use increment em loops para contar. Use now para timestamps."
     },
 
-    "SequenceStartBlock": {
-        "title": "Início da Sequência",
-        "description": "Marca o início de um grupo de blocos que pode ser recolhido para organizar visualmente o fluxo. Funciona em par com o bloco 'Fim da Sequência'.",
-        "params": [
-            ("sequence_name", "Texto", "Sim", "Nome descritivo para o grupo. Ex: Login, Processar Itens."),
-        ],
-        "example": "sequence_name: Login no Sistema",
-        "tip": "Clique no ícone ▼ ao lado do número do bloco para recolher ou expandir a sequência."
-    },
-
-    "SequenceEndBlock": {
-        "title": "Fim da Sequência",
-        "description": "Marca o final de um grupo de blocos iniciado com 'Início da Sequência'.",
-        "params": [],
-        "example": "Sem parâmetros.",
-        "tip": "Este bloco serve apenas como delimitador. Será ocultado junto com o grupo ao recolher."
-    },
 
     "ShowMessageBlock": {
         "title": "Exibir Mensagem",

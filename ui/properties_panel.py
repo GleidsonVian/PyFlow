@@ -3,12 +3,38 @@ from PySide6.QtWidgets import (
     QPushButton, QScrollArea, QLineEdit, QCheckBox, QComboBox,
     QTextEdit
 )
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QObject, QEvent
 import engine.execution_context as ctx
+from ui.dynamic_content_panel import DynamicContentPanel
 
 
 def _get_available_variables() -> list[str]:
     return list(ctx.get().keys())
+
+
+class _FocusFilter(QObject):
+    """Event filter que mostra/esconde o painel de conteúdo dinâmico ao focar campos."""
+    def __init__(self, panel: DynamicContentPanel, get_nodes_fn, parent=None):
+        super().__init__(parent)
+        self._panel = panel
+        self._get_nodes = get_nodes_fn
+
+    def _any_dialog_open(self) -> bool:
+        from PySide6.QtWidgets import QApplication, QDialog
+        for w in QApplication.topLevelWidgets():
+            if isinstance(w, QDialog) and w.isVisible():
+                return True
+        return False
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.FocusIn:
+            if self._any_dialog_open():
+                return False
+            self._panel.cancel_hide()
+            self._panel.show_for(obj, ctx.get(), self._get_nodes())
+        elif event.type() == QEvent.FocusOut:
+            self._panel.schedule_hide()
+        return False
 
 
 class PropertiesPanel(QWidget):
@@ -20,6 +46,9 @@ class PropertiesPanel(QWidget):
         self.setMinimumWidth(260)
         self._current_widget = None
         self._fields = {}
+        self._dyn_panel = DynamicContentPanel()
+        self._focus_filter = _FocusFilter(self._dyn_panel, self._collect_nodes_data, self)
+        self._dyn_panel.variable_selected.connect(self._insert_token)
         self._build_ui()
         self._apply_styles()
 
@@ -178,6 +207,7 @@ class PropertiesPanel(QWidget):
                 if schema.get("placeholder"):
                     edit.setPlaceholderText(schema["placeholder"])
                 self._fields[field_name] = edit
+                self._attach_dynamic(edit)
                 row.addWidget(edit, 1)
 
                 btn_pick = QPushButton("📍")
@@ -204,6 +234,7 @@ class PropertiesPanel(QWidget):
                     edit.setPlainText(str(current))
                     edit.setStyleSheet("font-family: Consolas, monospace; font-size: 11px;")
                     self._fields[field_name] = edit
+                    self._attach_dynamic(edit)
                     layout.addWidget(edit)
                 else:
                     edit = QLineEdit()
@@ -212,9 +243,41 @@ class PropertiesPanel(QWidget):
                     if schema.get("placeholder"):
                         edit.setPlaceholderText(schema["placeholder"])
                     self._fields[field_name] = edit
+                    self._attach_dynamic(edit)
                     layout.addWidget(edit)
 
         return container
+
+    # ── conteúdo dinâmico ─────────────────────────────────────────────────
+
+    def _collect_nodes_data(self) -> list[dict]:
+        result = []
+        if not self._current_widget:
+            return result
+        try:
+            from ui.node_canvas import NodeItem
+            scene = self._current_widget.scene()
+            for item in scene.items():
+                if isinstance(item, NodeItem) and item is not self._current_widget:
+                    if item._last_data and isinstance(item._last_data, dict):
+                        label = f"🔷  #{item._idx + 1} — {item.block_instance.name}"
+                        result.append({"label": label, "vars": dict(item._last_data)})
+        except Exception:
+            pass
+        return result
+
+    def _insert_token(self, token: str):
+        focused = self.focusWidget()
+        if focused is None:
+            return
+        if isinstance(focused, QTextEdit):
+            focused.insertPlainText(token)
+        elif isinstance(focused, QLineEdit):
+            focused.insert(token)
+
+    def _attach_dynamic(self, field):
+        """Instala o event filter de conteúdo dinâmico num campo de texto."""
+        field.installEventFilter(self._focus_filter)
 
     def _apply_changes(self):
         if not self._current_widget:

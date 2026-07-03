@@ -36,17 +36,21 @@ from blocks.control.for_each_block       import ForEachBlock
 from blocks.control.end_foreach_block    import EndForEachBlock
 from blocks.control.while_block          import WhileBlock
 from blocks.control.end_while_block      import EndWhileBlock
+from blocks.control.do_until_block       import DoUntilBlock
+from blocks.control.end_do_until_block   import EndDoUntilBlock
+from blocks.control.parallel_block       import ParallelBlock
 from blocks.control.try_block            import TryBlock
 from blocks.control.catch_block          import CatchBlock
 from blocks.control.end_try_block        import EndTryBlock
 from blocks.control.set_variable         import SetVariableBlock
-from blocks.control.sequence_start_block import SequenceStartBlock
-from blocks.control.sequence_end_block   import SequenceEndBlock
 from blocks.control.show_message         import ShowMessageBlock
 from blocks.control.input_block          import InputBlock
 from blocks.control.desktop_notification import DesktopNotificationBlock
 from blocks.control.text_manipulation    import TextManipulationBlock
 from blocks.control.subflow_block        import SubfluxoBlock
+from blocks.control.filter_list_block    import FilterListBlock
+from blocks.control.parse_json_block     import ParseJsonBlock
+from blocks.control.select_list_block    import SelectListBlock
 from blocks.files.read_csv               import ReadCsvBlock
 from blocks.files.save_text              import SaveTextBlock
 from blocks.files.save_csv               import SaveCsvBlock
@@ -106,17 +110,21 @@ ALL_BLOCKS = [
     EndForEachBlock,
     WhileBlock,
     EndWhileBlock,
+    DoUntilBlock,
+    EndDoUntilBlock,
+    ParallelBlock,
     TryBlock,
     CatchBlock,
     EndTryBlock,
     SetVariableBlock,
-    SequenceStartBlock,
-    SequenceEndBlock,
     ShowMessageBlock,
     InputBlock,
     DesktopNotificationBlock,
     TextManipulationBlock,
     SubfluxoBlock,
+    FilterListBlock,
+    ParseJsonBlock,
+    SelectListBlock,
     # Arquivos
     LoadEnvBlock,
     ReadCsvBlock,

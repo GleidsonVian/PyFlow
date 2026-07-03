@@ -36,7 +36,9 @@ def validate_flow(steps: list) -> list[dict]:
                 ref = ref.strip()
                 if ref.startswith("ASSET:"):
                     continue
-                if ref not in defined_vars:
+                # notação de ponto: http_resposta.bairro → base é http_resposta
+                base = ref.split(".")[0].split("[")[0]
+                if base not in defined_vars and ref not in defined_vars:
                     issues.append({
                         "level": "warning", "step": i + 1,
                         "block": block_name,
@@ -44,19 +46,20 @@ def validate_flow(steps: list) -> list[dict]:
                     })
 
         # 3. Rastreia variáveis definidas por este bloco
-        cls_name = type(block_instance).__name__ if block_instance else ""
-        if cls_name == "SetVariableBlock":
-            var = params.get("variable_name", "").strip()
-            if var:
-                defined_vars.add(var)
-        elif cls_name in ("GetCurrentUrlBlock", "ExtractTextBlock", "ExtractListBlock",
-                          "ReadCsvBlock", "HttpRequestBlock", "HashBlock", "ClipboardBlock"):
-            var = params.get("variable_name", "").strip()
-            if var:
-                defined_vars.add(var)
-        elif cls_name == "LoadEnvBlock":
-            # não sabemos as keys em tempo de validação estática
-            pass
+        # Abordagem genérica: qualquer campo cujo nome sugere "saída de variável"
+        _OUTPUT_KEYS = (
+            "variable_name", "output_variable", "var_name",
+            "save_as", "result_variable", "output_var",
+        )
+        for key in _OUTPUT_KEYS:
+            var = params.get(key, "")
+            if isinstance(var, str):
+                var = var.strip()
+                if var:
+                    defined_vars.add(var)
+
+        # LoadEnvBlock: não sabemos as keys em tempo de validação estática
+        # ParseJsonBlock: pode gerar N variáveis com prefixo — aceita sem rastrear
 
         # 4. Seletores CSS com sintaxe XPath misturada
         for key in ("selector",):

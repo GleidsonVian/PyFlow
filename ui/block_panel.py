@@ -8,7 +8,14 @@ from PySide6.QtGui import QDrag, QColor, QFont, QCursor
 
 from engine.blocks_registry import ALL_BLOCKS
 
-AVAILABLE_BLOCKS = ALL_BLOCKS
+# Blocos de fim/marcador — criados automaticamente pelo canvas, não aparecem no painel
+_HIDDEN_BLOCKS = frozenset({
+    "EndLoopBlock", "EndForEachBlock", "EndIfBlock", "ElseBlock",
+    "EndWhileBlock", "EndTryBlock", "CatchBlock",
+    "EndDoUntilBlock",
+})
+
+AVAILABLE_BLOCKS = [b for b in ALL_BLOCKS if b.__name__ not in _HIDDEN_BLOCKS]
 
 # Ícone e cor de destaque por categoria
 CATEGORY_META = {
@@ -33,6 +40,10 @@ class BlockListItem(QListWidgetItem):
 
 
 class BlockListWidget(QListWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setCursor(Qt.PointingHandCursor)
+
     def startDrag(self, supported_actions):
         item = self.currentItem()
         if not isinstance(item, BlockListItem):
@@ -195,25 +206,19 @@ class BlockPanel(QWidget):
         h_layout.setContentsMargins(12, 12, 12, 8)
         h_layout.setSpacing(8)
 
-        # Título + botões expandir/recolher tudo
+        # Título + botão colapsar tudo (discreto, só ícone)
         title_row = QHBoxLayout()
         title = QLabel("Blocos")
         title.setObjectName("panel_title")
 
-        self.btn_expand_all = QPushButton("⊞")
-        self.btn_expand_all.setObjectName("btn_expand_all")
-        self.btn_expand_all.setFixedSize(22, 22)
-        self.btn_expand_all.setToolTip("Expandir todas as categorias")
-        self.btn_expand_all.clicked.connect(self._expand_all)
-
         self.btn_collapse_all = QPushButton("⊟")
+        self.btn_collapse_all.setFixedSize(24, 24)
+        self.btn_collapse_all.setToolTip("Recolher / Expandir categorias")
         self.btn_collapse_all.setObjectName("btn_collapse_all")
-        self.btn_collapse_all.setFixedSize(22, 22)
-        self.btn_collapse_all.setToolTip("Recolher todas as categorias")
-        self.btn_collapse_all.clicked.connect(self._collapse_all)
+        self._all_collapsed = False
+        self.btn_collapse_all.clicked.connect(self._toggle_all)
 
         title_row.addWidget(title, 1)
-        title_row.addWidget(self.btn_expand_all)
         title_row.addWidget(self.btn_collapse_all)
 
         # Busca
@@ -275,6 +280,16 @@ class BlockPanel(QWidget):
         for section in self._sections:
             section.set_filter(text)
 
+    def _toggle_all(self):
+        self._all_collapsed = not self._all_collapsed
+        self.btn_collapse_all.setText("⊞" if self._all_collapsed else "⊟")
+        self.search.clear()
+        for section in self._sections:
+            if self._all_collapsed:
+                section.collapse_all()
+            else:
+                section.expand_all()
+
     def _expand_all(self):
         self.search.clear()
         for section in self._sections:
@@ -300,14 +315,12 @@ class BlockPanel(QWidget):
             }
             #search_box:focus { border-color: #cba6f7; }
 
-            #btn_expand_all, #btn_collapse_all {
-                background-color: #313244; color: #6c7086;
+            #btn_collapse_all {
+                background-color: transparent; color: #6c7086;
                 border: none; border-radius: 4px;
                 font-size: 14px; font-weight: 700;
             }
-            #btn_expand_all:hover, #btn_collapse_all:hover {
-                background-color: #45475a; color: #cdd6f4;
-            }
+            #btn_collapse_all:hover { color: #cdd6f4; background-color: #313244; }
 
             #cat_icon  { font-size: 13px; }
             #cat_name  { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; }

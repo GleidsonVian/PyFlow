@@ -9,8 +9,6 @@ from PySide6.QtGui import QPainter, QColor, QPen, QDrag, QPixmap, QCursor
 
 from ui.param_dialog import ParamDialog
 from engine.blocks_registry import BLOCK_BY_NAME, ALL_BLOCKS
-from blocks.control.sequence_start_block import SequenceStartBlock
-from blocks.control.sequence_end_block   import SequenceEndBlock
 
 BLOCK_REGISTRY = BLOCK_BY_NAME
 
@@ -45,7 +43,7 @@ class CanvasBlockWidget(QFrame):
         self.params = params
         self.index = index
         self.state = "idle"
-        self.is_sequence_start = isinstance(self.block_instance, SequenceStartBlock)
+        self.is_sequence_start = False
         self.is_collapsed = False
         self._drag_start_pos = None
         self._build_ui()
@@ -537,9 +535,9 @@ class Canvas(QWidget):
         end_index = -1
         for i in range(start_index + 1, len(self._blocks)):
             block = self._blocks[i]
-            if isinstance(block.block_instance, SequenceStartBlock):
+            if False:
                 nesting_level += 1
-            elif isinstance(block.block_instance, SequenceEndBlock):
+            elif False and isinstance(block.block_instance, object):
                 if nesting_level == 0:
                     end_index = i
                     break

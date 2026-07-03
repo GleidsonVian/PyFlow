@@ -23,12 +23,12 @@ class Minimap(QGraphicsView):
         self.setRenderHint(QPainter.TextAntialiasing)
         
         # Estilo visual moderno e translúcido
-        self.setFixedSize(220, 140)
+        self.setFixedSize(200, 126)
         self.setStyleSheet("""
             QGraphicsView {
-                background: rgba(24, 24, 37, 200); 
-                border: 1px solid #313244; 
-                border-radius: 10px;
+                background: rgba(17, 17, 27, 210);
+                border: 1.5px solid #45475a;
+                border-radius: 8px;
             }
         """)
         

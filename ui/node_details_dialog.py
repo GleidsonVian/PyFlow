@@ -2,12 +2,14 @@ import json
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QWidget,
     QSplitter, QTreeWidget, QTreeWidgetItem, QPushButton,
-    QScrollArea, QFrame, QLineEdit, QTextEdit, QCheckBox, QComboBox
+    QScrollArea, QFrame, QLineEdit, QTextEdit, QCheckBox, QComboBox,
+    QApplication, QMenu
 )
 from PySide6.QtCore import Qt, QMimeData, QPoint
 from PySide6.QtGui import QDrag, QIcon, QPixmap, QPainter, QColor, QFontMetrics, QSyntaxHighlighter, QTextCharFormat, QFont
 import re
 import engine.execution_context as ctx
+from ui.dynamic_content_panel import DynamicContentPanel
 
 class VariableHighlighter(QSyntaxHighlighter):
     """Destaca variáveis do tipo {{var_name}} em roxo com fundo suave para visual n8n."""
@@ -144,6 +146,12 @@ class MappableLineEdit(QTextEdit):
         super().focusInEvent(event)
         if self.dialog:
             self.dialog.set_active_field(self)
+            self.dialog._show_dynamic_panel(self)
+
+    def focusOutEvent(self, event):
+        super().focusOutEvent(event)
+        if self.dialog and hasattr(self.dialog, "_dyn_panel"):
+            self.dialog._dyn_panel.schedule_hide()
 
 
 class MappableTextEdit(QTextEdit):
@@ -194,6 +202,12 @@ class MappableTextEdit(QTextEdit):
         super().focusInEvent(event)
         if self.dialog:
             self.dialog.set_active_field(self)
+            self.dialog._show_dynamic_panel(self)
+
+    def focusOutEvent(self, event):
+        super().focusOutEvent(event)
+        if self.dialog and hasattr(self.dialog, "_dyn_panel"):
+            self.dialog._dyn_panel.schedule_hide()
 
 
 class NodeDetailsDialog(QDialog):
@@ -206,13 +220,20 @@ class NodeDetailsDialog(QDialog):
         self.last_active_field = None  # Recebe texto ao dar duplo clique
 
         self.setWindowTitle(f"Detalhes do Nó: {self.block.name}")
-        self.setMinimumSize(1000, 600)
+        self.setMinimumSize(1100, 680)
+        self.resize(1380, 780)
         self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint)
         self._build_ui()
         self._apply_styles()
         self._populate_input()
         self._populate_props()
         self._populate_output()
+
+        # Painel de conteúdo dinâmico (Power Automate style)
+        self._dyn_panel = DynamicContentPanel(self)
+        self._dyn_panel.variable_selected.connect(self._insert_dynamic_token)
+
+        self._update_nav()
 
     def set_active_field(self, field):
         """Define qual campo está ativo para receber variáveis via clique duplo e o destaca."""
@@ -226,14 +247,37 @@ class NodeDetailsDialog(QDialog):
 
     def _build_ui(self):
         main_layout = QVBoxLayout(self)
-        
+
         # Header
         header = QHBoxLayout()
-        title = QLabel(f"📝 {self.block.name}")
-        title.setObjectName("dialog_title")
-        header.addWidget(title)
+
+        self._btn_prev = QPushButton("← Anterior")
+        self._btn_prev.setObjectName("btn_nav")
+        self._btn_prev.setAutoDefault(False)
+        self._btn_prev.setDefault(False)
+        self._btn_prev.clicked.connect(self._go_prev)
+        header.addWidget(self._btn_prev)
+
+        self._lbl_nav = QLabel("")
+        self._lbl_nav.setObjectName("lbl_nav")
+        self._lbl_nav.setAlignment(Qt.AlignCenter)
+        header.addWidget(self._lbl_nav)
+
+        self._btn_next = QPushButton("Próximo →")
+        self._btn_next.setObjectName("btn_nav")
+        self._btn_next.setAutoDefault(False)
+        self._btn_next.setDefault(False)
+        self._btn_next.clicked.connect(self._go_next)
+        header.addWidget(self._btn_next)
+
         header.addStretch()
-        
+
+        self._title_lbl = QLabel(f"📝 {self.block.name}")
+        self._title_lbl.setObjectName("dialog_title")
+        header.addWidget(self._title_lbl)
+
+        header.addStretch()
+
         btn_test = QPushButton("▶ Testar Nó")
         btn_test.setObjectName("btn_test")
         btn_test.clicked.connect(self._test_node)
@@ -241,6 +285,8 @@ class NodeDetailsDialog(QDialog):
 
         btn_save = QPushButton("✔️ Aplicar e Voltar")
         btn_save.setObjectName("btn_save")
+        btn_save.setAutoDefault(False)
+        btn_save.setDefault(False)
         btn_save.clicked.connect(self._save_and_close)
         header.addWidget(btn_save)
 
@@ -253,18 +299,34 @@ class NodeDetailsDialog(QDialog):
         self.left_panel = QWidget()
         left_layout = QVBoxLayout(self.left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
+
+        hdr_row = QHBoxLayout()
         lbl_input = QLabel("📥 Dados de Entrada (Contexto Atual)")
         lbl_input.setObjectName("column_title")
-        left_layout.addWidget(lbl_input)
-        
-        lbl_helper = QLabel("💡 Dê foco ao campo desejado e clique duas vezes na variável (ou arraste-a)")
+        hdr_row.addWidget(lbl_input, 1)
+        self._btn_copy_ctx = QPushButton("📋 Tokens")
+        self._btn_copy_ctx.setObjectName("btn_copy_ctx")
+        self._btn_copy_ctx.setToolTip("Copia todos os {{tokens}} para o clipboard")
+        self._btn_copy_ctx.clicked.connect(self._copy_all_ctx)
+        hdr_row.addWidget(self._btn_copy_ctx)
+
+        self._btn_copy_json = QPushButton("{ } JSON")
+        self._btn_copy_json.setObjectName("btn_copy_ctx")
+        self._btn_copy_json.setToolTip("Copia todo o contexto como JSON formatado")
+        self._btn_copy_json.clicked.connect(self._copy_ctx_as_json)
+        hdr_row.addWidget(self._btn_copy_json)
+        left_layout.addLayout(hdr_row)
+
+        lbl_helper = QLabel("💡 Duplo clique insere no campo ativo · Clique direito copia o token")
         lbl_helper.setStyleSheet("color: #a6adc8; font-size: 11px; padding-bottom: 5px;")
         left_layout.addWidget(lbl_helper)
-        
+
         self.tree_input = DraggableTreeWidget()
         self.tree_input.setHeaderLabels(["Chave", "Valor"])
         self.tree_input.setColumnWidth(0, 150)
         self.tree_input.itemDoubleClicked.connect(self._on_tree_item_double_clicked)
+        self.tree_input.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree_input.customContextMenuRequested.connect(self._tree_context_menu)
         left_layout.addWidget(self.tree_input)
         self.splitter.addWidget(self.left_panel)
 
@@ -301,8 +363,17 @@ class NodeDetailsDialog(QDialog):
         right_layout.addWidget(self.txt_output)
         self.splitter.addWidget(self.right_panel)
 
-        # Configura proporções do splitter
-        self.splitter.setSizes([300, 400, 300])
+        # Configura proporções do splitter — restaura última posição salva
+        import json as _json, os as _os
+        _cfg = _os.path.join(_os.path.expanduser("~"), ".pyflow_dialog_splitter.json")
+        try:
+            with open(_cfg) as _f:
+                sizes = _json.load(_f)
+        except Exception:
+            sizes = [190, 680, 380]
+        self.splitter.setSizes(sizes)
+        self.splitter.setChildrenCollapsible(True)
+        self.splitter.splitterMoved.connect(lambda: self._save_splitter())
         main_layout.addWidget(self.splitter)
 
     def _populate_input(self):
@@ -359,6 +430,83 @@ class NodeDetailsDialog(QDialog):
                 parent.addTopLevelItem(item)
             else:
                 parent.addChild(item)
+
+    def _copy_all_ctx(self):
+        """Copia todos os {{tokens}} da árvore de contexto para o clipboard."""
+        tokens = []
+        def _collect(parent):
+            for i in range(parent.childCount()):
+                child = parent.child(i)
+                var = child.data(0, Qt.UserRole)
+                if var:
+                    tokens.append(f"{{{{{var}}}}}")
+                _collect(child)
+        root = self.tree_input.invisibleRootItem()
+        for i in range(root.childCount()):
+            item = root.child(i)
+            var = item.data(0, Qt.UserRole)
+            if var:
+                tokens.append(f"{{{{{var}}}}}")
+            _collect(item)
+        if tokens:
+            QApplication.clipboard().setText(" ".join(tokens))
+            orig = self._btn_copy_ctx.text()
+            self._btn_copy_ctx.setText(f"✔ {len(tokens)} copiados")
+            from PySide6.QtCore import QTimer
+            QTimer.singleShot(1800, lambda: self._btn_copy_ctx.setText(orig))
+
+    def _copy_ctx_as_json(self):
+        """Copia o contexto atual como JSON formatado para o clipboard."""
+        import json as _json
+        data = ctx.get()
+        if not data:
+            return
+        try:
+            text = _json.dumps(data, indent=2, ensure_ascii=False, default=str)
+        except Exception:
+            text = str(data)
+        QApplication.clipboard().setText(text)
+        orig = self._btn_copy_json.text()
+        self._btn_copy_json.setText("✔ Copiado!")
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(1800, lambda: self._btn_copy_json.setText(orig))
+
+    def _tree_context_menu(self, pos):
+        item = self.tree_input.itemAt(pos)
+        if not item:
+            return
+        var = item.data(0, Qt.UserRole)
+        if not var:
+            return
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu { background:#1e1e2e; border:1px solid #45475a; color:#cdd6f4; }
+            QMenu::item:selected { background:#313244; }
+        """)
+        token = f"{{{{{var}}}}}"
+        act_token  = menu.addAction(f"📋  Copiar token  {token}")
+        act_value  = menu.addAction(f"📄  Copiar valor")
+        act_insert = menu.addAction(f"⌨   Inserir no campo ativo")
+        chosen = menu.exec(self.tree_input.viewport().mapToGlobal(pos))
+        if chosen == act_token:
+            QApplication.clipboard().setText(token)
+        elif chosen == act_value:
+            import json as _json
+            raw = ctx.get().get(var.split(".")[0], "")
+            # navega dot-notation se necessário
+            if "." in var:
+                parts = var.split(".")
+                val = ctx.get()
+                for p in parts:
+                    val = val.get(p, "") if isinstance(val, dict) else ""
+                raw = val
+            try:
+                text = _json.dumps(raw, ensure_ascii=False, default=str) if isinstance(raw, (dict, list)) else str(raw)
+            except Exception:
+                text = str(raw)
+            QApplication.clipboard().setText(text)
+        elif chosen == act_insert:
+            self._insert_dynamic_token(token)
 
     def _on_tree_item_double_clicked(self, item, column):
         var_name = item.data(0, Qt.UserRole)
@@ -481,7 +629,26 @@ class NodeDetailsDialog(QDialog):
                 field.setPlainText(dialog.result_text)
 
     def _populate_output(self):
-        self.txt_output.setPlainText("O nó ainda não foi testado nesta sessão.\n\nClique em 'Testar Nó' acima para executar com os parâmetros atuais.")
+        node = self.canvas_widget
+        if node._last_result or node._last_data is not None:
+            result = {
+                "success":  node._last_ok,
+                "message":  node._last_result,
+                "duration": f"{node._last_duration:.2f}s",
+            }
+            if node._last_data:
+                result["data"] = node._last_data
+            try:
+                import json as _json
+                text = _json.dumps(result, indent=2, ensure_ascii=False, default=str)
+            except Exception:
+                text = str(result)
+            self.txt_output.setPlainText(text)
+        else:
+            self.txt_output.setPlainText(
+                "O nó ainda não foi executado.\n\n"
+                "Clique em 'Testar Nó' para executar com os parâmetros atuais."
+            )
 
     def _test_node(self):
         # Primeiro, pega os valores atuais da UI
@@ -527,15 +694,117 @@ class NodeDetailsDialog(QDialog):
     def _save_and_close(self):
         self._apply_to_params()
         self.canvas_widget.update_params_label()
-        
-        # Tenta emitir o signal request_save no canvas para já gravar no JSON se houver um arquivo aberto
-        if hasattr(self.canvas_widget.scene(), "views"):
-            for view in self.canvas_widget.scene().views():
-                if hasattr(view, "_canvas") and hasattr(view._canvas, "request_save"):
-                    view._canvas.request_save.emit()
-                    break
-                    
         self.accept()
+
+    def _save_splitter(self):
+        import json as _json, os as _os
+        _cfg = _os.path.join(_os.path.expanduser("~"), ".pyflow_dialog_splitter.json")
+        try:
+            with open(_cfg, "w") as _f:
+                _json.dump(self.splitter.sizes(), _f)
+        except Exception:
+            pass
+
+    def _clear_layout(self, layout):
+        while layout.count():
+            item = layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+    # ── navegação entre nós ───────────────────────────────────────────────
+
+    def _ordered_nodes(self) -> list:
+        """Retorna todos os NodeItems do canvas ordenados por posição X (esquerda→direita)."""
+        try:
+            from ui.node_canvas import NodeItem
+            scene = self.canvas_widget.scene()
+            nodes = [item for item in scene.items() if isinstance(item, NodeItem)]
+            nodes.sort(key=lambda n: (n.scenePos().x(), n.scenePos().y()))
+            return nodes
+        except Exception:
+            return [self.canvas_widget]
+
+    def _update_nav(self):
+        nodes = self._ordered_nodes()
+        try:
+            idx = nodes.index(self.canvas_widget)
+        except ValueError:
+            idx = 0
+        total = len(nodes)
+        self._lbl_nav.setText(f"{idx + 1} / {total}")
+        self._btn_prev.setEnabled(idx > 0)
+        self._btn_next.setEnabled(idx < total - 1)
+
+    def _go_prev(self):
+        self._navigate(-1)
+
+    def _go_next(self):
+        self._navigate(+1)
+
+    def _navigate(self, delta: int):
+        nodes = self._ordered_nodes()
+        try:
+            idx = nodes.index(self.canvas_widget)
+        except ValueError:
+            return
+        new_idx = idx + delta
+        if not (0 <= new_idx < len(nodes)):
+            return
+        # salva params do nó atual
+        self._apply_to_params()
+        self.canvas_widget.update_params_label()
+        # carrega novo nó
+        target = nodes[new_idx]
+        self.canvas_widget = target
+        self.block = target.block_instance
+        self.params = target.params
+        self._fields = {}
+        self.last_active_field = None
+        self._title_lbl.setText(f"📝 {self.block.name}")
+        self.setWindowTitle(f"Detalhes do Nó: {self.block.name}")
+        # limpa e repopula painéis
+        self._clear_layout(self.props_content_layout)
+        self._populate_props()
+        self._populate_input()
+        self._populate_output()
+        self._update_nav()
+
+    # ── conteúdo dinâmico ─────────────────────────────────────────────────
+
+    def _collect_nodes_data(self) -> list[dict]:
+        """Coleta _last_data de todos os nós do canvas (exceto o atual)."""
+        result = []
+        try:
+            from ui.node_canvas import NodeItem
+            scene = self.canvas_widget.scene()
+            for item in scene.items():
+                if isinstance(item, NodeItem) and item is not self.canvas_widget:
+                    if item._last_data and isinstance(item._last_data, dict):
+                        label = f"🔷  #{item._idx + 1} — {item.block_instance.name}"
+                        result.append({"label": label, "vars": dict(item._last_data)})
+        except Exception:
+            pass
+        return result
+
+    def _show_dynamic_panel(self, field):
+        """Exibe o painel de conteúdo dinâmico ancorado abaixo do campo."""
+        context_vars = ctx.get()
+        nodes_data = self._collect_nodes_data()
+        self._dyn_panel.cancel_hide()
+        self._dyn_panel.show_for(field, context_vars, nodes_data)
+
+    def _insert_dynamic_token(self, token: str):
+        """Insere o token selecionado no campo atualmente ativo."""
+        field = self.last_active_field
+        if field is None:
+            return
+        if hasattr(field, "textCursor"):
+            cursor = field.textCursor()
+            cursor.insertText(token)
+            field.setFocus()
+        elif hasattr(field, "insert"):
+            field.insert(token)
+            field.setFocus()
 
     def _apply_styles(self):
         self.setStyleSheet("""
@@ -554,4 +823,10 @@ class NodeDetailsDialog(QDialog):
             #separator { color: #313244; margin: 10px 0; }
             #btn_fx { background-color: transparent; color: #89b4fa; font-weight: 800; border: 1px solid #45475a; border-radius: 4px; padding: 2px 10px; margin-top: 5px; }
             #btn_fx:hover { background-color: #313244; border-color: #89b4fa; }
+            #btn_copy_ctx { background:#313244; color:#a6adc8; border:1px solid #45475a; border-radius:5px; padding:3px 10px; font-size:11px; }
+            #btn_copy_ctx:hover { background:#45475a; color:#cdd6f4; }
+            #btn_nav { background-color: #313244; color: #cdd6f4; border: 1px solid #45475a; border-radius: 6px; padding: 5px 14px; font-size: 12px; }
+            #btn_nav:hover { background-color: #45475a; }
+            #btn_nav:disabled { color: #45475a; border-color: #313244; background-color: #1e1e2e; }
+            #lbl_nav { color: #6c7086; font-size: 12px; min-width: 44px; }
         """)

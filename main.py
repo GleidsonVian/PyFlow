@@ -63,6 +63,8 @@ def _ensure_requirements():
 def main():
     _ensure_requirements()
 
+    from version import __version__
+
     # Importa a UI só depois de garantir as dependências
     from PySide6.QtWidgets import QApplication
     from PySide6.QtGui import QIcon
@@ -70,7 +72,7 @@ def main():
 
     app = QApplication(sys.argv)
     app.setApplicationName("PyFlow RPA")
-    app.setApplicationVersion("1.0.0")
+    app.setApplicationVersion(__version__)
 
     # Ícone da aplicação (janela + taskbar)
     icon_path = Path(__file__).parent / "assets" / "icon.png"
@@ -90,6 +92,18 @@ def main():
     from ui.main_window import MainWindow
     window = MainWindow()
     window.show()
+
+    # Verifica atualizações em background após a janela abrir
+    def _on_update(latest: str, release_url: str, notes: str):
+        from PySide6.QtCore import QTimer
+        from ui.update_dialog import UpdateDialog
+        def _show():
+            dlg = UpdateDialog(__version__, latest, release_url, notes, window)
+            dlg.exec()
+        QTimer.singleShot(0, _show)
+
+    from engine.updater import check_for_update
+    check_for_update(_on_update)
 
     sys.exit(app.exec())
 

@@ -7,7 +7,8 @@
 ![Selenium](https://img.shields.io/badge/Selenium-4.18%2B-orange?logo=selenium)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111%2B-teal?logo=fastapi)
 ![License](https://img.shields.io/badge/License-MIT-purple)
-![Blocos](https://img.shields.io/badge/Blocos%20RPA-51-blue)
+![Versão](https://img.shields.io/github/v/release/GleidsonCruz/pyflow-rpa?label=vers%C3%A3o&color=cba6f7)
+![Blocos](https://img.shields.io/badge/Blocos%20RPA-54-blue)
 
 ---
 
@@ -50,7 +51,7 @@ Os fluxos são salvos como **JSON** e podem ser **exportados como scripts Python
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/seu-usuario/pyflow-rpa.git
+git clone https://github.com/GleidsonCruz/pyflow-rpa.git
 cd pyflow-rpa
 ```
 
@@ -443,6 +444,28 @@ brew install tesseract
 | Blocos RPA | 51 |
 | Fluxos de exemplo | 30+ |
 | Tipos de condição (Se) | 10 |
+
+---
+
+## 🔄 Atualizações automáticas
+
+O PyFlow verifica automaticamente se há uma nova versão disponível ao iniciar.
+
+Quando uma atualização for encontrada, aparece uma janela discreta com:
+- Versão atual vs. versão nova
+- Notas de release (changelog)
+- Botão **"Baixar atualização"** que abre a página de releases no GitHub
+
+A verificação acontece em background e nunca bloqueia a inicialização.
+
+### Como lançar uma nova versão
+
+1. Atualize `version.py`:
+   ```python
+   __version__ = "1.1.0"
+   ```
+2. Crie uma **Release** no GitHub com a tag `v1.1.0`
+3. Todos os usuários verão a notificação na próxima vez que abrirem o app
 
 ---
 

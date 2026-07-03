@@ -309,7 +309,7 @@ class Runner:
         # Tipos de marcadores — consumidos pelo bloco de controle, não executar diretamente
         _SKIP_TYPES = frozenset({
             "EndLoopBlock", "EndForEachBlock", "EndIfBlock", "ElseBlock",
-            "EndTryBlock", "CatchBlock", "EndWhileBlock",
+            "EndTryBlock", "CatchBlock", "EndWhileBlock", "EndDoUntilBlock",
         })
 
         while i < total:
@@ -545,6 +545,56 @@ class Runner:
 
                 if iteration >= max_iter and condition_met:
                     print(f"  ⚠ Enquanto: limite de {max_iter} iterações atingido — encerrando.")
+
+                i = end_idx + 1
+                continue
+
+            # ── Do Until ──────────────────────────────────────────────
+            if data.get("do_until"):
+                end_idx = self._find_scope_end(steps, i + 1, "EndDoUntilBlock", "DoUntilBlock")
+                if end_idx == -1:
+                    print("  ⚠ Repetir Até sem 'Fim do Repetir Até' — pulando.")
+                    i += 1
+                    continue
+
+                max_iter   = data.get("max_iterations", 100)
+                delay      = data.get("delay_between", 0)
+                ctype      = data.get("condition_type", "variable_equals")
+                var_name   = data.get("variable_name", "")
+                expected   = data.get("expected_value", "")
+                body_steps = steps[i + 1: end_idx]
+                iteration  = 0
+
+                print(f"  → Repetir Até: '{var_name}' {ctype} '{expected}' (máx {max_iter}x)")
+
+                while iteration < max_iter:
+                    iteration += 1
+                    print(f"    Iteração {iteration}/{max_iter}")
+                    sub = self._run_sub(body_steps, i + 1)
+                    results.extend(sub)
+
+                    if any(not r.get("success") for r in sub) and self.config.stop_on_failure:
+                        print("  ↳ Repetir Até interrompido por falha.")
+                        break
+
+                    if delay > 0:
+                        time.sleep(delay)
+
+                    # Reavalia a condição via block.execute()
+                    re_params = resolve_params(raw_params, self._get_context())
+                    re_result = block.execute(re_params)
+                    re_data   = re_result.get("data", {})
+                    stop_now  = block._check_condition(
+                        re_data.get("condition_type", ctype),
+                        re_data.get("variable_name",  var_name),
+                        re_data.get("expected_value",  expected),
+                    )
+                    if stop_now:
+                        print(f"  ↳ Condição atingida após {iteration} iteração(ões).")
+                        break
+
+                if iteration >= max_iter:
+                    print(f"  ⚠ Repetir Até: limite de {max_iter} iterações atingido.")
 
                 i = end_idx + 1
                 continue

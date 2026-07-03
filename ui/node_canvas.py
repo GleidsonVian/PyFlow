@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QGraphicsObject, QGraphicsItem, QGraphicsPathItem,
     QMenu, QApplication,
 )
-from PySide6.QtCore import Qt, Signal, QPointF, QRectF
+from PySide6.QtCore import Qt, Signal, QPointF, QRectF, QPropertyAnimation, QEasingCurve, QSequentialAnimationGroup
 from PySide6.QtGui import (
     QPainter, QColor, QPen, QBrush, QPainterPath,
     QFont, QFontMetrics, QTransform,
@@ -30,6 +30,17 @@ from ui.connection_style import (
     CONN_WIDTH_MAIN, CONN_WIDTH_GLOW, CONN_WIDTH_HOVER, COLORS
 )
 BLOCK_REGISTRY = BLOCK_BY_NAME
+
+# Mapeamento: bloco de escopo → (bloco de fim, bloco intermediário opcional)
+# Quando o usuário arrasta um escopo, o(s) par(es) são criados automaticamente
+_SCOPE_PAIRS: dict[str, list[str]] = {
+    "LoopBlock":     ["EndLoopBlock"],
+    "ForEachBlock":  ["EndForEachBlock"],
+    "IfBlock":       ["ElseBlock", "EndIfBlock"],
+    "WhileBlock":    ["EndWhileBlock"],
+    "DoUntilBlock":  ["EndDoUntilBlock"],
+    "TryBlock":      ["CatchBlock", "EndTryBlock"],
+}
 
 CATEGORY_COLORS = {
     "Navegador":  ("#1a2a40", "#89b4fa"),
@@ -362,6 +373,23 @@ class NodeItem(QGraphicsObject):
         for c in self.success_port.conns: c.update()
         for c in self.error_port.conns: c.update()
 
+    def shake(self):
+        """Chacoalha o nó horizontalmente para sinalizar erro."""
+        origin = self.pos()
+        anim = QPropertyAnimation(self, b"pos")
+        anim.setDuration(350)
+        anim.setEasingCurve(QEasingCurve.Linear)
+        dx = 6
+        anim.setKeyValueAt(0.0,  QPointF(origin.x(),      origin.y()))
+        anim.setKeyValueAt(0.15, QPointF(origin.x() - dx, origin.y()))
+        anim.setKeyValueAt(0.30, QPointF(origin.x() + dx, origin.y()))
+        anim.setKeyValueAt(0.45, QPointF(origin.x() - dx, origin.y()))
+        anim.setKeyValueAt(0.60, QPointF(origin.x() + dx, origin.y()))
+        anim.setKeyValueAt(0.75, QPointF(origin.x() - dx, origin.y()))
+        anim.setKeyValueAt(1.0,  QPointF(origin.x(),      origin.y()))
+        self._shake_anim = anim  # mantém referência para não ser coletado
+        anim.start()
+
     def toggle_pin(self):
         self.prepareGeometryChange()
         self._pinned = not self._pinned
@@ -392,17 +420,23 @@ class NodeItem(QGraphicsObject):
 
         # Fundo
         painter.setBrush(QColor(bg))
-        bw = 2 if (self.isSelected() or self._hov) else 1
+        if self.state in ("success", "error"):
+            bw = 2.5
+        elif self.isSelected() or self._hov:
+            bw = 2
+        else:
+            bw = 1
         painter.setPen(QPen(color, bw))
         painter.drawRoundedRect(rect, 10, 10)
 
-        # Barra de cor no topo
+        # Barra de cor no topo — mais grossa nos estados de resultado
+        bar_h = 8 if self.state in ("success", "error") else 5
         clip = QPainterPath()
         clip.addRoundedRect(rect, 10, 10)
         painter.setClipPath(clip)
         painter.setPen(Qt.NoPen)
         painter.setBrush(color)
-        painter.drawRect(QRectF(0, 0, NODE_W, 5))
+        painter.drawRect(QRectF(0, 0, NODE_W, bar_h))
         painter.setClipping(False)
 
         # Ícone categoria
@@ -456,10 +490,11 @@ class NodeItem(QGraphicsObject):
         if self.state in ("success", "error", "running"):
             badge_color = "#a6e3a1" if self.state == "success" else "#f38ba8"
             if self.state == "running": badge_color = "#89b4fa"
-            
-            # Círculo de fundo do badge (com sombra leve)
-            badge_r = 9
-            center = QPointF(NODE_W - 5, 5)
+
+            # Círculo de fundo do badge
+            badge_r = 10
+            bar_h_used = 8 if self.state in ("success", "error") else 5
+            center = QPointF(NODE_W - 14, bar_h_used + badge_r + 2)
             badge_rect = QRectF(center.x() - badge_r, center.y() - badge_r, badge_r*2, badge_r*2)
             
             painter.setPen(Qt.NoPen)
@@ -1371,6 +1406,27 @@ class _NodeView(QGraphicsView):
             node = NodeItem(block_inst, dialog.get_params())
             self.scene().add_node(node, scene_pos)
             self._canvas._auto_connect(node)
+
+            # Auto-cria blocos de fim/intermediários para blocos de escopo
+            pair_names = _SCOPE_PAIRS.get(text, [])
+            prev_node = node
+            offset_x = NODE_W + 80
+            for pair_name in pair_names:
+                pair_cls = BLOCK_REGISTRY.get(pair_name)
+                if not pair_cls:
+                    continue
+                pair_node = NodeItem(pair_cls(), {})
+                pair_pos  = QPointF(scene_pos.x() + offset_x, scene_pos.y())
+                self.scene().add_node(pair_node, pair_pos)
+                # Conecta sucesso do nó anterior ao par
+                if not prev_node.success_port.conns:
+                    conn = ConnectionItem(prev_node.success_port, pair_node.in_port)
+                    self.scene()._conns.append(conn)
+                    self.scene().addItem(conn)
+                    self.scene()._reindex()
+                prev_node = pair_node
+                offset_x += NODE_W + 80
+
             self._canvas._select_node(node)
             self._canvas.block_updated.emit()
         e.acceptProposedAction()
@@ -1466,7 +1522,11 @@ class NodeCanvas(QWidget):
     def set_block_state(self, index: int, state: str):
         ordered = self.scene._ordered_nodes()
         if 0 <= index < len(ordered):
-            try: ordered[index].set_state(state)
+            try:
+                node = ordered[index]
+                node.set_state(state)
+                if state == "error":
+                    node.shake()
             except RuntimeError: pass
 
     def set_block_result(self, index: int, message: str, ok: bool = True, duration: float = 0.0, data: object = None):
@@ -1497,10 +1557,14 @@ class NodeCanvas(QWidget):
         """Retorna grafo completo para execução condicional (runner graph-aware)."""
         return self.scene.get_graph()
 
-    def load_from_data(self, steps: list):
+    def load_from_data(self, steps: list, run_auto_layout: bool = False):
         self._push_history()
         self.scene.load_from_steps(steps)
         self._selected = None; self.canvas_clicked.emit(); self.block_updated.emit()
+        if self.scene._nodes:
+            if run_auto_layout:
+                self.scene.auto_layout()
+            self.fit_all()
 
     def clear_canvas(self):
         if self.scene._nodes: self._push_history()

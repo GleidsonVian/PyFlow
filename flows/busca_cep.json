@@ -1,0 +1,50 @@
+{
+  "flow_name": "busca_cep",
+  "saved_at": "2026-06-30T10:12:09.986819",
+  "steps": [
+    {
+      "block": "InputBlock",
+      "params": {
+        "variable_name": "cep_usuario",
+        "label": "Digite seu CEP(ex. 29128478)",
+        "title": "Entrada de Dados",
+        "default_value": "",
+        "nota": ""
+      },
+      "_x": 0.0,
+      "_y": 0.0,
+      "_id": "85a8e5bd",
+      "_next_success": "a4d8adfc"
+    },
+    {
+      "block": "HttpRequestBlock",
+      "params": {
+        "method": "GET",
+        "url": "https://viacep.com.br/ws/{{cep_usuario}}/json/",
+        "headers": "",
+        "body": "",
+        "json_field": "",
+        "variable_name": "http_resposta",
+        "timeout": "15",
+        "verify_ssl": true,
+        "nota": ""
+      },
+      "_x": 336.0,
+      "_y": 0.0,
+      "_id": "a4d8adfc",
+      "_next_success": "98284667"
+    },
+    {
+      "block": "ShowMessageBlock",
+      "params": {
+        "title": "PyFlow RPA",
+        "message": "Voce mora na {{http_resposta.logradouro}}no bairro {{http_resposta.bairro}}localizado em {{http_resposta.localidade}} - {{http_resposta.estado}} na região {{http_resposta.regiao}} e o DDD é o {{http_resposta.ddd}}",
+        "kind": "info",
+        "nota": ""
+      },
+      "_x": 648.0,
+      "_y": 0.0,
+      "_id": "98284667"
+    }
+  ]
+}

@@ -95,15 +95,32 @@ QPushButton {{
     border: none; border-radius: 6px;
     padding: 6px 14px; font-size: 12px; font-weight: 500;
 }}
-#btn_run {{ background-color: {c['run_btn']}; color: {c['run_btn_text']}; font-weight: 700; }}
-#btn_run:hover {{ background-color: {c['green']}; }}
+#btn_run {{
+    background-color: {c['run_btn']}; color: {c['run_btn_text']};
+    font-weight: 700; font-size: 13px;
+    padding: 7px 22px; min-width: 110px;
+}}
+#btn_run:hover {{ background-color: #b6f3b1; }}
 #btn_run:disabled {{ background-color: {c['muted']}; color: {c['subtle']}; }}
-#btn_debug {{ background-color: {c['surface']}; color: {c['green']}; border: 1px solid {c['green']}; font-weight: 600; }}
-#btn_debug:hover {{ background-color: {c['green']}; color: {c['bg']}; }}
-#btn_debug:disabled {{ background-color: {c['muted']}; color: {c['subtle']}; border-color: {c['muted']}; }}
+#btn_run_stop {{
+    background-color: {c['red']}; color: {c['run_btn_text']};
+    font-weight: 700; font-size: 13px;
+    padding: 7px 22px; min-width: 110px;
+}}
+#btn_run_stop:hover {{ background-color: #f9a8c1; }}
+#btn_debug {{
+    background-color: transparent; color: {c['subtle']};
+    border: 1px solid {c['border']}; font-weight: 500; font-size: 12px;
+    padding: 6px 14px;
+}}
+#btn_debug:hover {{ background-color: {c['overlay']}; color: {c['text']}; border-color: {c['muted']}; }}
+#btn_debug:disabled {{ background-color: transparent; color: {c['muted']}; border-color: {c['border']}; }}
 
-#btn_save {{ background-color: {c['surface']}; color: {c['blue']}; border: 1px solid {c['blue']}; font-weight: 600; }}
-#btn_save:hover {{ background-color: {c['blue']}; color: {c['bg']}; }}
+#btn_save {{
+    background-color: transparent; color: {c['subtle']};
+    border: 1px solid {c['border']}; font-weight: 500; font-size: 12px;
+}}
+#btn_save:hover {{ background-color: {c['overlay']}; color: {c['text']}; border-color: {c['muted']}; }}
 
 #btn_more {{ background-color: {c['surface']}; color: {c['text2']}; font-size: 16px; border: 1px solid {c['border']}; }}
 #btn_more:hover {{ background-color: {c['overlay']}; color: {c['text']}; }}
@@ -142,8 +159,44 @@ QSplitter::handle:hover {{ background-color: {c['accent']}; }}
     background-color: {c['surface']};
     color: {c['subtle']};
     border-top: 1px solid {c['border']};
-    font-size: 12px;
+    font-size: 11px;
+    padding: 0 8px;
+    min-height: 22px; max-height: 22px;
 }}
+
+#right_tabs_props::pane {{
+    border: none;
+    border-top: 1px solid {c['border']};
+    background-color: {c['surface']};
+}}
+#right_tabs_props QTabBar::tab {{
+    background-color: {c['surface']}; color: {c['subtle']};
+    padding: 6px 14px; font-size: 11px; font-weight: 600;
+    border: none; border-bottom: 2px solid transparent;
+    letter-spacing: 0.03em;
+}}
+#right_tabs_props QTabBar::tab:selected {{
+    color: {c['accent']}; border-bottom: 2px solid {c['accent']};
+}}
+#right_tabs_props QTabBar::tab:hover {{ color: {c['text']}; }}
+
+#right_tabs_exec {{
+    border-top: 2px solid {c['border']};
+}}
+#right_tabs_exec::pane {{
+    border: none;
+    background-color: {c['bg']};
+}}
+#right_tabs_exec QTabBar::tab {{
+    background-color: {c['bg']}; color: {c['subtle']};
+    padding: 5px 14px; font-size: 11px; font-weight: 600;
+    border: none; border-bottom: 2px solid transparent;
+    letter-spacing: 0.03em;
+}}
+#right_tabs_exec QTabBar::tab:selected {{
+    color: {c['blue']}; border-bottom: 2px solid {c['blue']};
+}}
+#right_tabs_exec QTabBar::tab:hover {{ color: {c['text']}; }}
 
 QTabWidget::pane {{
     border: none;

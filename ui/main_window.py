@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QSplitter, QPushButton, QLabel, QFileDialog,
     QMessageBox, QStatusBar, QFrame, QSizePolicy, QMenu, QTabWidget
 )
-from PySide6.QtCore import Qt, QThread, Signal, QTimer, Slot
+from PySide6.QtCore import Qt, QThread, Signal, QTimer, Slot, QPropertyAnimation, QEasingCurve, QPoint
 from PySide6.QtGui import QAction, QIcon, QShortcut, QKeySequence
 from pathlib import Path
 
@@ -48,43 +48,46 @@ class RunnerThread(QThread):
         self.graph       = graph or []
 
     def run(self):
-        self.runner = Runner(
-            on_step_start=lambda i, b: self.step_started.emit(i, b.name, getattr(b, "category", "")),
-            on_step_done= lambda i, b, r: self.step_done.emit(i, b.name, getattr(b, "category", ""), True,  r.get("message", ""), r.get("data", {})),
-            on_step_error=lambda i, b, r: self.step_done.emit(i, b.name, getattr(b, "category", ""), False, r.get("message", ""), r.get("data", {})),
-            on_step_retry=lambda i, b, a, m: self.step_retry.emit(i, b.name, a, m),
-            config=get_runner_config(),
-        )
-        if self.graph:
-            results = self.runner.run_graph(self.graph, start_index=self.start_index)
-        else:
-            results = self.runner.run(self.steps, start_index=self.start_index)
-            
-        ok = sum(1 for r in results if r.get("success"))
-        
-        failed_idx = -1
-        for r in results:
-            if not r.get("success"):
-                failed_idx = r.get("step_index", -1)
-                break
-                
-        import engine.execution_context as context_mod
+        results = []
         try:
-            import copy
-            # Usa str() para valores complexos (como drivers ou elementos) para evitar TypeError no JSON 
-            ctx_snapshot = {}
-            for k, v in context_mod.get().items():
-                if isinstance(v, (dict, list, str, int, float, bool, type(None))):
-                    try:
-                        ctx_snapshot[k] = copy.deepcopy(v)
-                    except:
+            self.runner = Runner(
+                on_step_start=lambda i, b: self.step_started.emit(i, b.name, getattr(b, "category", "")),
+                on_step_done= lambda i, b, r: self.step_done.emit(i, b.name, getattr(b, "category", ""), True,  r.get("message", ""), r.get("data", {})),
+                on_step_error=lambda i, b, r: self.step_done.emit(i, b.name, getattr(b, "category", ""), False, r.get("message", ""), r.get("data", {})),
+                on_step_retry=lambda i, b, a, m: self.step_retry.emit(i, b.name, a, m),
+                config=get_runner_config(),
+            )
+            if self.graph:
+                results = self.runner.run_graph(self.graph, start_index=self.start_index)
+            else:
+                results = self.runner.run(self.steps, start_index=self.start_index)
+        except Exception:
+            pass
+        finally:
+            ok = sum(1 for r in results if r.get("success"))
+
+            failed_idx = -1
+            for r in results:
+                if not r.get("success"):
+                    failed_idx = r.get("step_index", -1)
+                    break
+
+            import engine.execution_context as context_mod
+            try:
+                import copy
+                ctx_snapshot = {}
+                for k, v in context_mod.get().items():
+                    if isinstance(v, (dict, list, str, int, float, bool, type(None))):
+                        try:
+                            ctx_snapshot[k] = copy.deepcopy(v)
+                        except Exception:
+                            ctx_snapshot[k] = str(v)
+                    else:
                         ctx_snapshot[k] = str(v)
-                else:
-                    ctx_snapshot[k] = str(v)
-        except:
-            ctx_snapshot = {k: str(v) for k, v in context_mod.get().items()}
-            
-        self.run_finished.emit(ok, len(results), failed_idx, ctx_snapshot)
+            except Exception:
+                ctx_snapshot = {k: str(v) for k, v in context_mod.get().items()}
+
+            self.run_finished.emit(ok, len(results), failed_idx, ctx_snapshot)
 
     def stop(self):
         if hasattr(self, "runner"):
@@ -156,7 +159,7 @@ class MainWindow(QMainWindow):
         self._start_api_server()
         self._apply_styles()
         self._setup_autosave()
-        self._check_autosave_recovery()
+        QTimer.singleShot(300, self._check_autosave_recovery)
 
     def _on_compile_exe(self):
         """Chama o script de build para gerar o executável standalone."""
@@ -271,6 +274,37 @@ class MainWindow(QMainWindow):
         self._unsaved_changes   = False
         self.setWindowTitle(f"{name}  —  PyFlow RPA")
         self.flow_manager.clear_autosave()
+
+    def _show_toast(self, message: str, duration: int = 2000):
+        """Exibe um toast flutuante que some após `duration` ms."""
+        toast = QLabel(message, self)
+        toast.setStyleSheet("""
+            QLabel {
+                background-color: #a6e3a1;
+                color: #1e1e2e;
+                font-size: 13px;
+                font-weight: 700;
+                padding: 8px 18px;
+                border-radius: 8px;
+            }
+        """)
+        toast.adjustSize()
+        # Posiciona no centro superior da janela
+        x = (self.width() - toast.width()) // 2
+        toast.move(x, 54)
+        toast.show()
+        toast.raise_()
+        # Fade out via opacidade
+        anim = QPropertyAnimation(toast, b"windowOpacity")
+        anim.setDuration(400)
+        anim.setStartValue(1.0)
+        anim.setEndValue(0.0)
+        anim.setEasingCurve(QEasingCurve.InQuad)
+        def _cleanup():
+            anim.start()
+            QTimer.singleShot(420, toast.deleteLater)
+        QTimer.singleShot(duration, _cleanup)
+        self._toast_anim = anim  # mantém referência
 
     # ── API Server ────────────────────────────────────────────────────
 
@@ -548,27 +582,28 @@ class MainWindow(QMainWindow):
         self.btn_toggle_blocks.setToolTip("Mostrar/Esconder Blocos [Ctrl+B]")
         self.btn_toggle_blocks.setFixedWidth(40)
         self.btn_toggle_blocks.clicked.connect(self._toggle_block_panel)
-        
+
         tb.addWidget(self.btn_toggle_blocks)
         tb.addWidget(title)
         tb.addWidget(self.lbl_retry)
         tb.addStretch()
-        tb.addWidget(self.btn_run)
-        tb.addWidget(self.btn_debug)
-        tb.addWidget(self.btn_stop)
-        tb.addSpacing(10)
-        tb.addWidget(self.btn_more)
+
+        # Grupo secundário: ações de arquivo e mais
         tb.addWidget(self.btn_save)
-        
+
         sep_v = QFrame()
         sep_v.setFrameShape(QFrame.VLine)
         sep_v.setObjectName("toolbar_sep")
         tb.addWidget(sep_v)
 
-        tb.addWidget(self.btn_stop)
+        # Grupo de execução: Debug | Parar | Executar (destaque)
         tb.addWidget(self.btn_debug)
+        tb.addWidget(self.btn_stop)
         tb.addWidget(self.btn_run)
-        
+
+        tb.addSpacing(4)
+        tb.addWidget(self.btn_more)
+
         root.addWidget(toolbar)
 
         # Debug toolbar
@@ -582,36 +617,50 @@ class MainWindow(QMainWindow):
         self.splitter = QSplitter(Qt.Horizontal)
         self.splitter.setObjectName("main_splitter")
 
-        # Painel Inspetor Contextual (Tabs)
-        self.right_tabs = QTabWidget()
-        self.right_tabs.setObjectName("right_tabs")
-        self.right_tabs.setMinimumWidth(260)
-
+        # Painel direito: dois grupos separados por splitter vertical
         self.props_panel   = PropertiesPanel()
         self.preview_panel = PreviewPanel()
         self.vars_panel    = VariablesPanel()
         self.log_panel     = LogPanel()
         self.help_panel    = HelpPanel()
 
-        self.right_tabs.addTab(self.props_panel, "⚙ Props")
-        self.right_tabs.addTab(self.preview_panel, "👁 Preview")
-        self.right_tabs.addTab(self.vars_panel, "𝑥 Vars")
-        self.right_tabs.addTab(self.log_panel, "📜 Logs")
-        self.right_tabs.addTab(self.help_panel, "❓ Ajuda")
+        # Grupo superior — Propriedades do nó selecionado
+        self.right_tabs = QTabWidget()
+        self.right_tabs.setObjectName("right_tabs_props")
+        self.right_tabs.addTab(self.props_panel,   "Props")
+        self.right_tabs.addTab(self.preview_panel, "Preview")
+        self.right_tabs.addTab(self.help_panel,    "Ajuda")
+
+        # Grupo inferior — Execução
+        self.exec_tabs = QTabWidget()
+        self.exec_tabs.setObjectName("right_tabs_exec")
+        self.exec_tabs.addTab(self.vars_panel, "Vars")
+        self.exec_tabs.addTab(self.log_panel,  "Logs")
+
+        # Container do painel direito
+        self.right_panel = QSplitter(Qt.Vertical)
+        self.right_panel.setObjectName("right_panel_splitter")
+        self.right_panel.addWidget(self.right_tabs)
+        self.right_panel.addWidget(self.exec_tabs)
+        self.right_panel.setSizes([420, 260])
+        self.right_panel.setMinimumWidth(260)
 
         self.canvas.block_selected.connect(self.props_panel.show_block)
         self.canvas.block_selected.connect(self.preview_panel.show_block)
         self.canvas.block_selected.connect(self.help_panel.show_block)
+        self.canvas.block_selected.connect(self._on_block_selected_expand)
+        self.canvas.block_selected.connect(self._update_preview_tab_visibility)
         self.canvas.canvas_clicked.connect(self.props_panel.clear)
         self.canvas.canvas_clicked.connect(self.preview_panel.clear)
         self.canvas.canvas_clicked.connect(self.help_panel.clear)
-        
+        # canvas_clicked: não recolhe mais o painel (causava reposicionamento visual dos nós)
+
         self.canvas.block_updated.connect(self._on_block_updated)
         self.canvas.block_updated.connect(self._mark_unsaved)
         self.canvas.run_from_index.connect(self._on_run_from)
         self.canvas.request_save.connect(self._on_save)
         self.btn_layout.clicked.connect(self.canvas.auto_layout)
-        
+
         # Undo/Redo: salva histórico antes de aplicar edição de parâmetros
         self.props_panel.params_about_to_change.connect(self.canvas._push_history)
 
@@ -619,11 +668,11 @@ class MainWindow(QMainWindow):
         self.splitter.addWidget(self.canvas)
         self.canvas.scene.sig_quick_add.connect(self._on_quick_add)
         self.canvas.request_enter_subflow.connect(self._on_enter_subflow)
-        self.splitter.addWidget(self.right_tabs)
-        self.splitter.setSizes([220, 780, 320])
+        self.splitter.addWidget(self.right_panel)
+        self.splitter.setSizes([220, 840, 300])
         self.splitter.setCollapsible(0, True)
-        # Permite colapsar o painel direito (agora feito via atalho)
         self.splitter.setCollapsible(2, True)
+        self._right_collapsed = False
 
         root.addWidget(self.splitter, 1)
 
@@ -637,11 +686,13 @@ class MainWindow(QMainWindow):
         self.shortcut_auto_layout = QShortcut(QKeySequence("Ctrl+Shift+L"), self)
         self.shortcut_auto_layout.activated.connect(self.canvas.auto_layout)
 
+        self.splitter.setSizes([220, 840, 300])
+
         self.status = QStatusBar()
         self.status.setObjectName("status_bar")
         self.setStatusBar(self.status)
         self.status.showMessage(
-            "Pronto  •  Ctrl+P buscar blocos  •  Ctrl+Enter executar  •  Ctrl+Shift+L organizar  •  Ctrl+D debug"
+            "Pronto  •  Ctrl+P buscar blocos  •  Ctrl+Enter executar  •  Ctrl+D debug"
         )
 
     def _build_menu(self):
@@ -654,6 +705,7 @@ class MainWindow(QMainWindow):
         file_menu.addAction(QAction("Salvar como  [Ctrl+Shift+S]", self, triggered=self._on_save_as))
         file_menu.addAction(QAction("Gerenciar fluxos",            self, triggered=self._on_open_flow_manager))
         file_menu.addAction(QAction("Exportar como .py",           self, triggered=self._on_export))
+        file_menu.addAction(QAction("Exportar como imagem PNG",    self, triggered=self._on_export_png))
         file_menu.addSeparator()
         file_menu.addAction(QAction("📦 Compilar para .EXE",       self, triggered=self._on_compile_exe))
         file_menu.addSeparator()
@@ -690,14 +742,36 @@ class MainWindow(QMainWindow):
             self.splitter.setSizes([size, sizes[1] - size, sizes[2]])
 
     def _toggle_right_panel(self):
-        """Alterna a visibilidade do painel direito (Inspetor)."""
         sizes = self.splitter.sizes()
         if sizes[2] > 0:
             self._last_right_size = sizes[2]
             self.splitter.setSizes([sizes[0], sizes[1] + sizes[2], 0])
+            self._right_collapsed = True
         else:
-            size = getattr(self, "_last_right_size", 320)
+            size = getattr(self, "_last_right_size", 300)
             self.splitter.setSizes([sizes[0], sizes[1] - size, size])
+            self._right_collapsed = False
+
+    def _on_block_selected_expand(self, _block):
+        self.right_tabs.setCurrentIndex(0)
+
+    def _update_preview_tab_visibility(self, node):
+        """Mostra a aba Preview só para blocos que têm parâmetro 'selector'."""
+        schema = getattr(node.block_instance, "params_schema", [])
+        has_selector = any(p.get("name") == "selector" for p in schema)
+        tab_bar = self.right_tabs.tabBar()
+        # aba Preview é índice 1
+        tab_bar.setTabVisible(1, has_selector)
+        if not has_selector and self.right_tabs.currentIndex() == 1:
+            self.right_tabs.setCurrentIndex(0)
+
+    def _on_canvas_deselect(self):
+        """Recolhe o painel de propriedades quando clica no canvas vazio."""
+        sizes = self.splitter.sizes()
+        if sizes[2] > 80:
+            self._last_right_size = sizes[2]
+            self.splitter.setSizes([sizes[0], sizes[1] + sizes[2], 0])
+            self._right_collapsed = True
 
 
     # ── Assets ────────────────────────────────────────────────────────
@@ -838,6 +912,7 @@ class MainWindow(QMainWindow):
             self.log_panel.log("info", f"▶ Iniciando a partir do passo {start_index + 1}: {steps[start_index]['block_instance'].name}")
         if cfg.retry_enabled:
             self.log_panel.log("info", f"↻ Retry: {cfg.retry_attempts}x / {cfg.retry_delay}s")
+        self.canvas.reset_block_states()
         self.vars_panel.start_live()
         graph = self.canvas.get_graph()
         self.runner_thread = RunnerThread(steps, start_index=start_index, graph=graph)
@@ -912,9 +987,25 @@ class MainWindow(QMainWindow):
         self._debug_thread = None
 
     def _set_running(self, running, debug=False):
-        self.btn_run.setEnabled(not running)
+        if running and not debug:
+            # Executar vira Parar durante execução
+            self.btn_run.setText("■  Parar")
+            self.btn_run.setObjectName("btn_run_stop")
+            self.btn_run.clicked.disconnect()
+            self.btn_run.clicked.connect(self._on_stop)
+            self.btn_run.setEnabled(True)
+        else:
+            self.btn_run.setText("▶  Executar")
+            self.btn_run.setObjectName("btn_run")
+            try: self.btn_run.clicked.disconnect()
+            except RuntimeError: pass
+            self.btn_run.clicked.connect(self._on_run)
+            self.btn_run.setEnabled(not running)
+        self.btn_run.style().unpolish(self.btn_run)
+        self.btn_run.style().polish(self.btn_run)
         self.btn_debug.setEnabled(not running)
-        self.btn_stop.setEnabled(running and not debug)
+        self.btn_stop.setEnabled(False)   # btn_stop agora é o próprio btn_run
+        self.btn_stop.setVisible(False)
         if not running:
             self.debug_toolbar.hide()
 
@@ -1064,7 +1155,7 @@ class MainWindow(QMainWindow):
     def _load_flow_from_path(self, filepath):
         try:
             data = self.flow_manager.load(filepath)
-            self.canvas.load_from_data(data.get("steps", []))
+            self.canvas.load_from_data(data.get("steps", []), run_auto_layout=True)
             name = data.get("flow_name", filepath)
             self._mark_saved(name, filepath)
             self.status.showMessage(f"Fluxo carregado: {name}")
@@ -1089,6 +1180,31 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Erro na exportação", str(e))
 
+    def _on_export_png(self):
+        if not self.canvas.scene._nodes:
+            self.status.showMessage("Canvas vazio — nada para exportar."); return
+        name = (self._current_flow_name or "fluxo").replace(" ", "_")
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Exportar como PNG", f"{name}.png", "Imagem PNG (*.png)")
+        if not path: return
+        from PySide6.QtGui import QImage, QPainter as _QPainter
+        from PySide6.QtCore import QRectF as _QRectF
+        scene = self.canvas.scene
+        rect  = scene.itemsBoundingRect().adjusted(-40, -40, 40, 40)
+        scale = 2
+        img   = QImage(int(rect.width() * scale), int(rect.height() * scale),
+                       QImage.Format_ARGB32)
+        img.fill(0xFF11111B)
+        p = _QPainter(img)
+        p.setRenderHint(_QPainter.Antialiasing)
+        scene.render(p, _QRectF(img.rect()), rect)
+        p.end()
+        if img.save(path):
+            self.log_panel.log("success", f"🖼 Imagem salva: {path}")
+            QMessageBox.information(self, "Exportação concluída", f"Imagem salva em:\n{path}")
+        else:
+            QMessageBox.critical(self, "Erro", "Não foi possível salvar a imagem.")
+
     def _on_save(self):
         """Salva direto se já tem caminho; caso contrário age como Salvar como."""
         steps = self.canvas.get_serialized_steps()
@@ -1101,6 +1217,7 @@ class MainWindow(QMainWindow):
             self._mark_saved(self._current_flow_name, path)
             self.status.showMessage(f"Salvo: {path}")
             self.log_panel.log("info", f"Fluxo salvo: {path}")
+            self._show_toast("✓  Salvo")
         else:
             self._on_save_as()
 
@@ -1118,6 +1235,7 @@ class MainWindow(QMainWindow):
             self._mark_saved(name, saved)
             self.status.showMessage(f"Fluxo salvo: {saved}")
             self.log_panel.log("info", f"Fluxo salvo: {saved}")
+            self._show_toast("✓  Salvo")
 
     def _on_clear(self):
         if QMessageBox.question(self, "Limpar canvas", "Remover todos os blocos?",

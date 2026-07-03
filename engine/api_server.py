@@ -252,6 +252,7 @@ def dashboard():
       <span id="current-flow" class="no-flow">Nenhum fluxo em execução</span>
     </div>
     <button class="btn-stop" id="btn-stop" onclick="stopFlow()">■  Parar execução</button>
+    <button class="btn-stop" id="btn-reset" onclick="resetState()" style="margin-top:6px;background:#f38ba8;display:none">⚠ Forçar Reset</button>
   </div>
 
   <div class="card">
@@ -290,6 +291,7 @@ async function refresh() {
     ]);
     setBadge(document.getElementById('header-badge'), status.status==='running');
     setBadge(document.getElementById('status-badge'), status.status==='running');
+    updateResetBtn(status.status==='running');
     const cf = document.getElementById('current-flow');
     if (status.current_flow) {
       cf.textContent = status.current_flow; cf.className = 'current-flow';
@@ -307,7 +309,7 @@ async function refresh() {
         <div class="flow-item">
           <span class="flow-name">📄 ${f.name}</span>
           <span class="flow-meta">${f.steps} blocos</span>
-          <button class="btn-run" onclick="runFlow('${f.name.replace(/'/g,"\\\\'")}')"
+          <button class="btn-run" onclick="runFlow('${f.file.replace(/'/g,"\\\\'")}')"
             ${status.status==='running'?'disabled':''}>▶ Executar</button>
         </div>`).join('');
     }
@@ -347,6 +349,19 @@ async function stopFlow() {
     showToast(data.success ? '■ Parada solicitada' : '❌ ' + (data.detail || data.error));
     refresh();
   } catch(e) { showToast('Erro: ' + e.message); }
+}
+async function resetState() {
+  if (!confirm('Forçar reset do estado para idle? Use apenas se a execucao estiver travada.')) return;
+  try {
+    const r = await fetch('/reset', {method:'POST'});
+    const data = await r.json();
+    showToast('🔄 ' + data.message);
+    refresh();
+  } catch(e) { showToast('Erro: ' + e.message); }
+}
+function updateResetBtn(running) {
+  const btn = document.getElementById('btn-reset');
+  if (btn) btn.style.display = running ? 'block' : 'none';
 }
 refresh();
 setInterval(refresh, 3000);
@@ -433,6 +448,14 @@ def stop_flow():
         _stop_callback()
 
     return {"success": True, "message": "Sinal de parada enviado."}
+
+
+@app.post("/reset")
+def reset_state():
+    """Força reset para idle — use quando a execução travar."""
+    _state["running"]      = False
+    _state["current_flow"] = None
+    return {"success": True, "message": "Estado resetado para idle."}
 
 
 # ── Webhook Inbound ────────────────────────────────────────────────────
