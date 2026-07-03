@@ -1,5 +1,13 @@
 @echo off
 chcp 65001 >nul
+
+:: Se ainda nao foi relancado, abre uma nova janela persistente e sai
+if "%RELAUNCHED%"=="" (
+    set RELAUNCHED=1
+    start cmd /k ""%~f0""
+    exit
+)
+
 echo.
 echo ============================================================
 echo   PyFlow RPA - Testes Automatizados
@@ -12,7 +20,8 @@ where pytest >nul 2>&1
 if errorlevel 1 (
     echo [ERRO] pytest nao encontrado. Instale com:
     echo        pip install pytest
-    cmd /k
+    echo.
+    pause
     exit /b 1
 )
 
@@ -21,6 +30,5 @@ echo.
 pytest tests/ -v --tb=short
 echo.
 echo ============================================================
-echo   Pressione qualquer tecla para fechar.
+echo   88 testes concluidos. Feche esta janela quando quiser.
 echo ============================================================
-cmd /k
