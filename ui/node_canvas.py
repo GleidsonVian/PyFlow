@@ -576,10 +576,90 @@ class NodeItem(QGraphicsObject):
     # ── eventos ───────────────────────────────────────────────────────────────
 
     def hoverEnterEvent(self, e):
-        self._hov = True;  self.update(); super().hoverEnterEvent(e)
+        self._hov = True
+        self.setToolTip(self._build_tooltip())
+        self.update()
+        super().hoverEnterEvent(e)
 
     def hoverLeaveEvent(self, e):
         self._hov = False; self.update(); super().hoverLeaveEvent(e)
+
+    def _build_tooltip(self) -> str:
+        bi   = self.block_instance
+        cat  = getattr(bi, "category", "")
+        desc = getattr(bi, "description", "")
+        cat_icons = {
+            "Navegador": "🌐", "Controle": "🔧", "Arquivos": "📁",
+            "Integração": "🔌", "Sistema": "💻", "Gatilhos": "⚡",
+        }
+        cat_colors = {
+            "Navegador": "#89b4fa", "Controle": "#cba6f7", "Arquivos": "#a6e3a1",
+            "Integração": "#fab387", "Sistema": "#f38ba8", "Gatilhos": "#f9e2af",
+        }
+        icon       = cat_icons.get(cat, "•")
+        cat_color  = cat_colors.get(cat, "#cdd6f4")
+
+        # parâmetros configurados (exclui vazios e internos)
+        param_rows = ""
+        schema = getattr(bi, "params_schema", [])
+        for p in schema:
+            key   = p.get("name", "")
+            label = p.get("label", key)
+            val   = self.params.get(key)
+            if val in (None, "", False):
+                continue
+            val_str = str(val)
+            if len(val_str) > 48:
+                val_str = val_str[:45] + "…"
+            val_str = val_str.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            param_rows += (
+                f"<tr>"
+                f"<td style='color:#6c7086;padding:1px 8px 1px 0;white-space:nowrap'>{label}</td>"
+                f"<td style='color:#cdd6f4'>{val_str}</td>"
+                f"</tr>"
+            )
+        params_section = ""
+        if param_rows:
+            params_section = (
+                f"<hr style='border:none;border-top:1px solid #313244;margin:6px 0'/>"
+                f"<table cellspacing='0' cellpadding='0'>{param_rows}</table>"
+            )
+
+        # último resultado
+        result_section = ""
+        if self.state in ("success", "error") and self._last_result:
+            ok_color = "#a6e3a1" if self._last_ok else "#f38ba8"
+            ok_icon  = "✓" if self._last_ok else "✗"
+            msg = self._last_result.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
+            if len(msg) > 80:
+                msg = msg[:77] + "…"
+            dur = f"  <span style='color:#6c7086'>({self._last_duration:.1f}s)</span>" if self._last_duration else ""
+            result_section = (
+                f"<hr style='border:none;border-top:1px solid #313244;margin:6px 0'/>"
+                f"<div style='color:{ok_color}'>{ok_icon} {msg}{dur}</div>"
+            )
+
+        desc_section = ""
+        if desc:
+            d = desc[:80] + ("…" if len(desc) > 80 else "")
+            d = d.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
+            desc_section = f"<div style='color:#6c7086;font-size:11px;margin-top:2px'>{d}</div>"
+
+        return (
+            f"<div style='"
+            f"background:#1e1e2e;color:#cdd6f4;font-family:Segoe UI,sans-serif;"
+            f"font-size:12px;padding:10px 12px;border-radius:8px;"
+            f"border:1px solid #313244;min-width:220px'>"
+            f"<div style='display:flex;align-items:center;gap:6px;margin-bottom:2px'>"
+            f"  <span style='font-size:14px'>{icon}</span>"
+            f"  <b style='font-size:13px;color:#cdd6f4'>{bi.name}</b>"
+            f"  &nbsp;<span style='color:{cat_color};font-size:10px;font-weight:600'>{cat.upper()}</span>"
+            f"</div>"
+            f"{desc_section}"
+            f"{params_section}"
+            f"{result_section}"
+            f"</div>"
+        )
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemPositionChange:

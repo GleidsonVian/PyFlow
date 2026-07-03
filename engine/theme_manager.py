@@ -152,6 +152,16 @@ QPushButton {{
 #btn_headless_on {{ background-color: {c['overlay']}; color: {c['orange']}; border: 1px solid {c['orange']}; font-size: 12px; font-weight: 700; }}
 #btn_headless_on:hover {{ background-color: #3a2a1c; }}
 
+QToolTip {{
+    background-color: {c['bg']};
+    color: {c['text']};
+    border: 1px solid {c['border']};
+    border-radius: 8px;
+    padding: 0px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 12px;
+    opacity: 240;
+}}
 #flow_name_sep {{ color: {c['muted']}; font-size: 14px; padding: 0 4px; }}
 #flow_name_label {{
     color: {c['text2']}; font-size: 13px; font-weight: 500;
