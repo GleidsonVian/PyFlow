@@ -152,6 +152,18 @@ QPushButton {{
 #btn_headless_on {{ background-color: {c['overlay']}; color: {c['orange']}; border: 1px solid {c['orange']}; font-size: 12px; font-weight: 700; }}
 #btn_headless_on:hover {{ background-color: #3a2a1c; }}
 
+#flow_name_sep {{ color: {c['muted']}; font-size: 14px; padding: 0 4px; }}
+#flow_name_label {{
+    color: {c['text2']}; font-size: 13px; font-weight: 500;
+    padding: 3px 8px; border-radius: 5px;
+}}
+#flow_name_label:hover {{ background-color: {c['overlay']}; color: {c['text']}; }}
+#flow_name_edit {{
+    background-color: {c['overlay']}; color: {c['text']};
+    border: 1px solid {c['accent']}; border-radius: 5px;
+    padding: 3px 8px; font-size: 13px; font-weight: 500;
+    min-width: 120px;
+}}
 #right_panel {{ background-color: {c['surface']}; border-left: 1px solid {c['border']}; }}
 QSplitter::handle {{ background-color: {c['border']}; width: 2px; }}
 QSplitter::handle:hover {{ background-color: {c['accent']}; }}

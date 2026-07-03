@@ -2,7 +2,8 @@ import time
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
     QSplitter, QPushButton, QLabel, QFileDialog,
-    QMessageBox, QStatusBar, QFrame, QSizePolicy, QMenu, QTabWidget
+    QMessageBox, QStatusBar, QFrame, QSizePolicy, QMenu, QTabWidget,
+    QLineEdit, QStackedWidget
 )
 from PySide6.QtCore import Qt, QThread, Signal, QTimer, Slot, QPropertyAnimation, QEasingCurve, QPoint
 from PySide6.QtGui import QAction, QIcon, QShortcut, QKeySequence
@@ -126,6 +127,71 @@ class DebugSignals(QThread):
     def current_index(self): return self.runner.current_index
     @property
     def total(self):          return self.runner.total
+
+
+class FlowNameWidget(QWidget):
+    """Nome do fluxo editável inline na toolbar. Clique para renomear."""
+
+    name_changed = Signal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._name = "sem título"
+        self._unsaved = False
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        self._stack = QStackedWidget()
+        self._stack.setFixedHeight(30)
+
+        # Página 0: label clicável
+        self._label = QLabel()
+        self._label.setObjectName("flow_name_label")
+        self._label.setCursor(Qt.IBeamCursor)
+        self._label.setToolTip("Clique para renomear o fluxo")
+        self._label.mousePressEvent = lambda _e: self._start_edit()
+        self._stack.addWidget(self._label)
+
+        # Página 1: input inline
+        self._edit = QLineEdit()
+        self._edit.setObjectName("flow_name_edit")
+        self._edit.returnPressed.connect(self._commit)
+        self._edit.editingFinished.connect(self._commit)
+        self._stack.addWidget(self._edit)
+
+        layout.addWidget(self._stack)
+        self._refresh_label()
+
+    def set_name(self, name: str, unsaved: bool = False):
+        self._name = name or "sem título"
+        self._unsaved = unsaved
+        self._refresh_label()
+
+    def _refresh_label(self):
+        dot = "● " if self._unsaved else ""
+        self._label.setText(f"{dot}{self._name}")
+        w = max(120, self._label.fontMetrics().horizontalAdvance(self._label.text()) + 24)
+        self._stack.setFixedWidth(w)
+
+    def _start_edit(self):
+        self._edit.setText(self._name)
+        self._stack.setCurrentIndex(1)
+        self._edit.setFocus()
+        self._edit.selectAll()
+
+    def _commit(self):
+        if self._stack.currentIndex() != 1:
+            return
+        new_name = self._edit.text().strip() or self._name
+        self._stack.setCurrentIndex(0)
+        if new_name != self._name:
+            self._name = new_name
+            self._refresh_label()
+            self.name_changed.emit(new_name)
+        else:
+            self._refresh_label()
 
 
 class MainWindow(QMainWindow):
@@ -267,13 +333,22 @@ class MainWindow(QMainWindow):
         self._unsaved_changes = True
         name = self._current_flow_name or "sem título"
         self.setWindowTitle(f"● {name}  —  PyFlow RPA")
+        if hasattr(self, "flow_name_widget"):
+            self.flow_name_widget.set_name(name, unsaved=True)
 
     def _mark_saved(self, name: str, path: str):
         self._current_flow_name = name
         self._current_flow_path = path
         self._unsaved_changes   = False
         self.setWindowTitle(f"{name}  —  PyFlow RPA")
+        if hasattr(self, "flow_name_widget"):
+            self.flow_name_widget.set_name(name, unsaved=False)
         self.flow_manager.clear_autosave()
+
+    def _on_flow_name_changed(self, new_name: str):
+        """Usuário renomeou o fluxo clicando no breadcrumb da toolbar."""
+        self._current_flow_name = new_name
+        self._mark_unsaved()
 
     def _show_toast(self, message: str, duration: int = 2000):
         """Exibe um toast flutuante que some após `duration` ms."""
@@ -400,8 +475,14 @@ class MainWindow(QMainWindow):
         self.block_panel = BlockPanel()
         self.canvas      = Canvas()
 
-        title = QLabel("⚡ PyFlow RPA")
+        title = QLabel("⚡")
         title.setObjectName("app_title")
+
+        sep_slash = QLabel("/")
+        sep_slash.setObjectName("flow_name_sep")
+
+        self.flow_name_widget = FlowNameWidget()
+        self.flow_name_widget.name_changed.connect(self._on_flow_name_changed)
 
         self.btn_run = QPushButton("▶  Executar")
         self.btn_run.setObjectName("btn_run")
@@ -503,12 +584,17 @@ class MainWindow(QMainWindow):
         self.btn_save.setToolTip("Salvar  [Ctrl+S]")
         self.btn_save.clicked.connect(self._on_save)
 
+        self.btn_dashboard = QPushButton("📊  Dashboard")
+        self.btn_dashboard.setObjectName("btn_save")
+        self.btn_dashboard.setToolTip("Histórico de execuções e estatísticas")
+        self.btn_dashboard.clicked.connect(self._on_open_history)
+
         self.btn_export = QPushButton("🐍  Exportar")
         self.btn_export.setObjectName("btn_export")
         self.btn_export.clicked.connect(self._on_export)
 
         self.btn_layout = QPushButton("📐  Organizar")
-        self.btn_layout.setObjectName("btn_secondary")
+        self.btn_layout.setObjectName("btn_save")
         self.btn_layout.setToolTip("Organizar nós automaticamente  [Ctrl+Shift+L]")
 
         self.btn_record = QPushButton("⏺  Gravar")
@@ -585,11 +671,15 @@ class MainWindow(QMainWindow):
 
         tb.addWidget(self.btn_toggle_blocks)
         tb.addWidget(title)
+        tb.addWidget(sep_slash)
+        tb.addWidget(self.flow_name_widget)
         tb.addWidget(self.lbl_retry)
         tb.addStretch()
 
         # Grupo secundário: ações de arquivo e mais
         tb.addWidget(self.btn_save)
+        tb.addWidget(self.btn_layout)
+        tb.addWidget(self.btn_dashboard)
 
         sep_v = QFrame()
         sep_v.setFrameShape(QFrame.VLine)
@@ -1246,6 +1336,7 @@ class MainWindow(QMainWindow):
             self._current_flow_name = ""
             self._unsaved_changes   = False
             self.setWindowTitle("PyFlow RPA")
+            self.flow_name_widget.set_name("sem título", unsaved=False)
             self.status.showMessage("Canvas limpo.")
 
     def _on_block_updated(self):
