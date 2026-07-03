@@ -1,0 +1,52 @@
+{
+  "flow_name": "Teste Subfluxo",
+  "steps": [
+    {
+      "block": "SetVariableBlock",
+      "_id": "var01",
+      "_index": 0,
+      "params": {
+        "variable_name": "mensagem_pai",
+        "value": "Olá do fluxo principal!"
+      },
+      "_next_success": "sub01",
+      "_next_error": null
+    },
+    {
+      "block": "SubfluxoBlock",
+      "_id": "sub01",
+      "_index": 1,
+      "params": {
+        "flow_name": "teste_excel",
+        "share_variables": true,
+        "export_variables": true,
+        "stop_on_failure": true,
+        "flows_dir": "flows"
+      },
+      "_next_success": "msg01",
+      "_next_error": "msg_err"
+    },
+    {
+      "block": "ShowMessageBlock",
+      "_id": "msg01",
+      "_index": 2,
+      "params": {
+        "title": "Subfluxo OK",
+        "message": "Subfluxo concluído! Status: {{teste_excel_status}}"
+      },
+      "_next_success": null,
+      "_next_error": null
+    },
+    {
+      "block": "ShowMessageBlock",
+      "_id": "msg_err",
+      "_index": 3,
+      "params": {
+        "title": "Subfluxo Falhou",
+        "message": "O subfluxo encontrou um erro."
+      },
+      "_next_success": null,
+      "_next_error": null
+    }
+  ]
+}

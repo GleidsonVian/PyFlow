@@ -17,12 +17,20 @@ class ExcelBlock(BaseBlock):
 
     params_schema = [
         {
-            "name":        "action",
-            "label":       "Ação",
-            "type":        "str",
-            "required":    True,
-            "default":     "read_cell",
-            "placeholder": "read_cell | read_column | read_row | read_sheet | write_cell | append_row | create"
+            "name":    "action",
+            "label":   "Ação",
+            "type":    "select",
+            "required": True,
+            "default": "read_cell",
+            "options": [
+                {"value": "read_cell",   "label": "Ler célula"},
+                {"value": "read_column", "label": "Ler coluna inteira"},
+                {"value": "read_row",    "label": "Ler linha inteira"},
+                {"value": "read_sheet",  "label": "Ler planilha completa"},
+                {"value": "write_cell",  "label": "Escrever em célula"},
+                {"value": "append_row",  "label": "Adicionar linha no final"},
+                {"value": "create",      "label": "Criar arquivo novo"},
+            ],
         },
         {
             "name":        "filepath",

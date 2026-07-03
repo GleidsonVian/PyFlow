@@ -1,0 +1,88 @@
+{
+  "flow_name": "Teste Excel",
+  "steps": [
+    {
+      "block": "ExcelBlock",
+      "_id": "excel01",
+      "_index": 0,
+      "params": {
+        "action": "create",
+        "filepath": "teste_pyflow.xlsx",
+        "sheet": "",
+        "cell": "",
+        "column": "",
+        "row": "",
+        "value": "",
+        "skip_header": true,
+        "variable_name": "excel_resultado"
+      },
+      "_next_success": "excel02",
+      "_next_error": null
+    },
+    {
+      "block": "ExcelBlock",
+      "_id": "excel02",
+      "_index": 1,
+      "params": {
+        "action": "write_cell",
+        "filepath": "teste_pyflow.xlsx",
+        "sheet": "",
+        "cell": "A1",
+        "column": "",
+        "row": "",
+        "value": "Nome",
+        "skip_header": true,
+        "variable_name": "excel_resultado"
+      },
+      "_next_success": "excel03",
+      "_next_error": null
+    },
+    {
+      "block": "ExcelBlock",
+      "_id": "excel03",
+      "_index": 2,
+      "params": {
+        "action": "append_row",
+        "filepath": "teste_pyflow.xlsx",
+        "sheet": "",
+        "cell": "",
+        "column": "",
+        "row": "",
+        "value": "PyFlow;RPA;Automação",
+        "skip_header": true,
+        "variable_name": "excel_resultado"
+      },
+      "_next_success": "excel04",
+      "_next_error": null
+    },
+    {
+      "block": "ExcelBlock",
+      "_id": "excel04",
+      "_index": 3,
+      "params": {
+        "action": "read_cell",
+        "filepath": "teste_pyflow.xlsx",
+        "sheet": "",
+        "cell": "A1",
+        "column": "",
+        "row": "",
+        "value": "",
+        "skip_header": true,
+        "variable_name": "celula_a1"
+      },
+      "_next_success": "msg01",
+      "_next_error": null
+    },
+    {
+      "block": "ShowMessageBlock",
+      "_id": "msg01",
+      "_index": 4,
+      "params": {
+        "title": "Teste Excel OK",
+        "message": "Célula A1: {{celula_a1}}"
+      },
+      "_next_success": null,
+      "_next_error": null
+    }
+  ]
+}

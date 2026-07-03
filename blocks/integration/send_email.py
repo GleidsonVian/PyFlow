@@ -1,7 +1,10 @@
+import os
 import smtplib
 import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 
 from blocks.base_block import BaseBlock
 
@@ -93,6 +96,14 @@ class SendEmailBlock(BaseBlock):
             "default": "",
             "placeholder": "<h1>Olá!</h1><p>Resultado: {{texto_extraido}}</p>"
         },
+        {
+            "name": "attachment",
+            "label": "Anexo (caminho do arquivo, opcional)",
+            "type": "str",
+            "required": False,
+            "default": "",
+            "placeholder": "Ex: relatorios/resultado.xlsx  ou  {{caminho_arquivo}}"
+        },
     ]
 
     def execute(self, params: dict) -> dict:
@@ -109,6 +120,7 @@ class SendEmailBlock(BaseBlock):
         subject        = params.get("subject", "").strip()
         body_text      = params.get("body_text", "").strip()
         body_html      = params.get("body_html", "").strip()
+        attachment     = params.get("attachment", "").strip()
 
         # Resolve servidor SMTP
         preset = SMTP_PRESETS.get(provider, SMTP_PRESETS["custom"])
@@ -141,6 +153,16 @@ class SendEmailBlock(BaseBlock):
             if body_html:
                 msg.attach(MIMEText(body_html, "html", "utf-8"))
 
+            if attachment:
+                if not os.path.exists(attachment):
+                    return {"success": False, "message": f"Anexo não encontrado: {attachment}"}
+                with open(attachment, "rb") as f:
+                    part = MIMEBase("application", "octet-stream")
+                    part.set_payload(f.read())
+                encoders.encode_base64(part)
+                part.add_header("Content-Disposition", f'attachment; filename="{os.path.basename(attachment)}"')
+                msg.attach(part)
+
             # Envia via STARTTLS (porta 587) ou SSL (porta 465)
             context = ssl.create_default_context()
 
@@ -156,9 +178,10 @@ class SendEmailBlock(BaseBlock):
                     server.login(sender_email, sender_password)
                     server.sendmail(sender_email, recipients, msg.as_string())
 
+            anexo_msg = f" + anexo: {os.path.basename(attachment)}" if attachment else ""
             return {
                 "success": True,
-                "message": f"E-mail enviado para {', '.join(recipients)} — Assunto: \"{subject}\""
+                "message": f"E-mail enviado para {', '.join(recipients)} — Assunto: \"{subject}\"{anexo_msg}"
             }
 
         except smtplib.SMTPAuthenticationError:

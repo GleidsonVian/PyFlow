@@ -1,0 +1,24 @@
+{
+  "flow_name": "Teste Enviar E-mail",
+  "steps": [
+    {
+      "block": "SendEmailBlock",
+      "_id": "email01",
+      "_index": 0,
+      "params": {
+        "provider": "gmail",
+        "smtp_host": "",
+        "smtp_port": "587",
+        "sender_email": "seuemail@gmail.com",
+        "sender_password": "sua_app_password",
+        "recipient": "destinatario@exemplo.com",
+        "subject": "Teste PyFlow RPA",
+        "body_text": "E-mail enviado automaticamente pelo PyFlow RPA.",
+        "body_html": "<h2>PyFlow RPA</h2><p>Este e-mail foi enviado automaticamente.</p>",
+        "attachment": ""
+      },
+      "_next_success": null,
+      "_next_error": null
+    }
+  ]
+}
