@@ -1,7 +1,8 @@
 @echo off
+chcp 65001 >nul
 echo.
 echo ============================================================
-echo   PyFlow RPA — Testes Automatizados
+echo   PyFlow RPA - Testes Automatizados
 echo ============================================================
 echo.
 
@@ -18,12 +19,9 @@ if errorlevel 1 (
 echo Rodando todos os testes...
 echo.
 pytest tests/ -v --tb=short
-
 echo.
 echo ============================================================
-echo   Cobertura de codigo (opcional):
-echo   pip install pytest-cov
-echo   pytest tests/ --cov=blocks --cov-report=term-missing
+echo   Resultado acima. Pressione qualquer tecla para fechar.
 echo ============================================================
 echo.
-pause
+pause >nul
