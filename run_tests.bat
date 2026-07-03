@@ -12,16 +12,18 @@ where pytest >nul 2>&1
 if errorlevel 1 (
     echo [ERRO] pytest nao encontrado. Instale com:
     echo        pip install pytest
-    pause
-    exit /b 1
+    goto :fim
 )
 
 echo Rodando todos os testes...
 echo.
 pytest tests/ -v --tb=short
 echo.
-echo ============================================================
-echo   Resultado acima. Pressione qualquer tecla para fechar.
-echo ============================================================
+echo Exit code: %errorlevel%
 echo.
-pause >nul
+
+:fim
+echo ============================================================
+echo   Pressione qualquer tecla para fechar.
+echo ============================================================
+pause
